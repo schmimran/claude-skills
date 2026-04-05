@@ -1,11 +1,9 @@
 ---
 name: feature-planner
-description: >-
-  Fetch GitHub issues labeled "feature - ready for claude", analyze the target
-  repo's context and codebase, then post a detailed implementation plan as a
-  comment on each issue. Use when you want to plan features before implementation.
-argument-hint: "[repo-owner/repo-name]"
-allowed-tools: Bash(gh *), Read, Grep, Glob, Agent
+description: Fetches GitHub issues labeled "feature - ready for claude", analyzes the target repo's context and codebase, then posts a detailed implementation plan as a comment on each issue
+tools: Bash, Read, Grep, Glob, Agent, TodoWrite
+model: sonnet
+color: blue
 ---
 
 # Feature Planner
@@ -16,16 +14,9 @@ implementation plan, and post that plan as a comment on the issue.
 
 ## Prerequisites
 
-1. Verify GitHub CLI authentication:
-   ```
-   gh auth status
-   ```
-   If not authenticated, stop and tell the user to run `gh auth login`.
-
-2. Resolve the target repository:
-   - If `$ARGUMENTS` is provided, use it as the `OWNER/REPO` identifier.
-   - Otherwise, detect from the current directory: `gh repo view --json nameWithOwner -q .nameWithOwner`
-   - If neither works, stop and ask the user for the repository.
+Use the `OWNER/REPO` identifier from your prompt. The orchestrator has already verified
+`gh` authentication and label setup. If running standalone, ensure `gh auth status`
+passes and the required labels exist before proceeding.
 
 ## Step 1: Fetch Issues
 
@@ -39,7 +30,8 @@ If no issues are returned, output "No issues labeled 'feature - ready for claude
 ## Step 2: Gather Repository Context
 
 Read the target repo's context to understand its conventions, stack, and structure.
-Follow the checklist in `repo-analysis-guide.md` (in this skill's directory).
+Follow the checklist in `repo-analysis-guide.md` (in the `references/` directory
+of this plugin).
 
 Key items to gather:
 - CLAUDE.md (project conventions, build/test commands)
@@ -73,7 +65,8 @@ Use Grep and Glob to find files that will need to change. Look for:
 ### 3c. Generate the Plan
 
 Create an implementation plan following the template in `plan-template.md`
-(in this skill's directory). Read that file for the exact format.
+(in the `references/` directory of this plugin). Read that file for the exact
+format.
 
 The plan must include:
 - Summary of what the feature does and why
@@ -96,7 +89,7 @@ gh issue comment <NUMBER> --repo <OWNER/REPO> --body-file /tmp/plan-comment.md
 ```
 
 The plan comment MUST begin with `<!-- claude-feature-planner-v1 -->` on the
-first line. This marker is used by downstream skills to locate the plan.
+first line. This marker is used by downstream agents to locate the plan.
 
 ### 3e. Update the Label
 

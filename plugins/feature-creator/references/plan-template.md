@@ -2,7 +2,7 @@
 
 Use this template when posting implementation plans as issue comments.
 The `<!-- claude-feature-planner-v1 -->` marker on the first line is required —
-downstream skills use it to locate the plan programmatically.
+downstream agents use it to locate the plan programmatically.
 
 ---
 

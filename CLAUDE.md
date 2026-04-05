@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-A Claude Code plugin **marketplace** containing reusable skill plugins. Install the marketplace once to get access to all plugins. Each plugin is self-contained under `plugins/` with its own manifest, skills, and documentation.
+A Claude Code plugin **marketplace** containing reusable plugins. Install the marketplace once to get access to all plugins. Each plugin is self-contained under `plugins/` with its own manifest, commands, agents, and documentation.
 
 ## Directory Structure
 
@@ -15,25 +15,23 @@ plugins/
   feature-creator/                # Plugin: feature development pipeline
     .claude-plugin/
       plugin.json                 # Plugin manifest
-    skills/
-      feature-creator/
-        SKILL.md                  # Orchestrator — chains the three phases
-      feature-planner/
-        SKILL.md                  # Phase 1: fetch issues, analyze repo, post plans
-        plan-template.md          # Template for plan comments
-        repo-analysis-guide.md    # What to look for in the target repo
-      feature-reviewer/
-        SKILL.md                  # Phase 2: risk assessment, combined plan, review
-        risk-criteria.md          # Risk rubric (HIGH/MEDIUM/LOW)
-        review-checklist.md       # Instructions for the review subagent
-      feature-implementer/
-        SKILL.md                  # Phase 3: branch, code, test, PR
-        merge-checklist.md        # Pre-merge steps
-        pr-template.md            # PR body template
+    commands/
+      feature-creator.md          # Orchestrator command — chains the three agents
+    agents/
+      feature-planner.md          # Agent: fetch issues, analyze repo, post plans
+      feature-reviewer.md         # Agent: risk assessment, combined plan, review
+      feature-implementer.md      # Agent: branch, code, test, PR
+    references/
+      plan-template.md            # Template for plan comments
+      repo-analysis-guide.md      # What to look for in the target repo
+      risk-criteria.md            # Risk rubric (HIGH/MEDIUM/LOW)
+      review-checklist.md         # Instructions for the review subagent
+      merge-checklist.md          # Pre-merge steps
+      pr-template.md              # PR body template
     README.md                     # Plugin-specific documentation
 ```
 
-Each plugin lives under `plugins/<name>/` and is independently installable. Skills are discovered one level deep under each plugin's `skills/` directory. Supporting `.md` files inside a skill directory are loaded on-demand, not as separate skills.
+Each plugin lives under `plugins/<name>/` and is independently installable. Plugins use the **commands + agents** pattern: commands are user-invocable orchestrators, agents are specialized workers launched by commands.
 
 ## Feature-Creator Pipeline
 
@@ -51,25 +49,25 @@ ready for claude  -->  planned  -------->  in progress  ------->  complete
 | Label | Set by | Meaning |
 |-------|--------|---------|
 | `feature - ready for claude` | Human | Issue is scoped and ready for automated planning |
-| `feature - planned` | feature-planner | Plan posted as issue comment |
-| `feature - human review` | feature-reviewer or feature-implementer | Flagged as high-risk or implementation failed |
-| `feature - in progress` | feature-implementer | Branch created, coding underway |
-| `feature - complete` | feature-implementer | PR created and code-reviewed |
+| `feature - planned` | feature-planner agent | Plan posted as issue comment |
+| `feature - human review` | feature-reviewer or feature-implementer agent | Flagged as high-risk or implementation failed |
+| `feature - in progress` | feature-implementer agent | Branch created, coding underway |
+| `feature - complete` | feature-implementer agent | PR created and code-reviewed |
 
 ### Plan Comments
 
-Plans are posted as **comments** on the issue (the issue body is never modified). Every plan comment is prefixed with `<!-- claude-feature-planner-v1 -->` so downstream skills can locate it programmatically.
+Plans are posted as **comments** on the issue (the issue body is never modified). Every plan comment is prefixed with `<!-- claude-feature-planner-v1 -->` so downstream agents can locate it programmatically.
 
 ### Error Handling Pattern
 
-When any skill encounters a failure for a specific issue:
+When any agent encounters a failure for a specific issue:
 1. Post a comment on the issue explaining the error
 2. Change the label to `feature - human review`
 3. Continue processing remaining issues
 
 ### Stuck State Recovery
 
-If the agent crashes or is interrupted while a feature is labeled `feature - in progress`, that issue will be skipped on the next run (since sub-skills query for `feature - planned`, not `feature - in progress`). To recover, manually relabel the stuck issue:
+If an agent crashes or is interrupted while a feature is labeled `feature - in progress`, that issue will be skipped on the next run (since agents query for `feature - planned`, not `feature - in progress`). To recover, manually relabel the stuck issue:
 ```
 gh issue edit <NUMBER> --remove-label "feature - in progress" --add-label "feature - planned"
 ```
@@ -77,13 +75,7 @@ Then delete the orphaned branch if one was created.
 
 ### Batch Size
 
-The orchestrator (`feature-creator`) warns when more than 5 issues are labeled `feature - ready for claude`, but this guard is **advisory only**. The sub-skills each fetch up to 20 issues independently. If strict batch limiting is needed, manually control which issues carry the trigger label.
-
-### Running Skills Independently
-
-Each sub-skill can be run without the orchestrator. When doing so, be aware:
-- `feature-implementer` fetches all `feature - planned` issues, including those that were never reviewed by `feature-reviewer`. It will use the planner's plan if no reviewer plan exists.
-- `feature-reviewer` only processes issues labeled `feature - planned`. If you skip the planner, there will be nothing to review.
+The orchestrator command warns when more than 5 issues are labeled `feature - ready for claude`, but this guard is **advisory only**. The agents each fetch up to 20 issues independently. If strict batch limiting is needed, manually control which issues carry the trigger label.
 
 ### Concurrency
 
@@ -97,7 +89,8 @@ All `gh` commands that pass untrusted content (issue titles, plan text, error me
 
 ### Plugin structure requirements
 
-- Each plugin is a self-contained directory under `plugins/<name>/` with its own `.claude-plugin/plugin.json`, `skills/`, and `README.md`
+- Each plugin is a self-contained directory under `plugins/<name>/` with its own `.claude-plugin/plugin.json` and `README.md`
+- Plugins use the **commands + agents** pattern: `commands/` for user-facing orchestrators, `agents/` for specialized workers, `references/` for supporting docs
 - Plugin directory names must be lowercase with hyphens and match the `name` field in the plugin's `plugin.json`
 - After adding a plugin, register it in `.claude-plugin/marketplace.json`
 
@@ -108,60 +101,64 @@ All `gh` commands that pass untrusted content (issue titles, plan text, error me
 
 ### Plugin isolation
 
-- Skills within a plugin can reference sibling skills via `${CLAUDE_SKILL_DIR}/../<sibling>/SKILL.md`
-- Skills must NOT reference files outside their plugin's directory
+- Agents within a plugin can reference sibling files in `references/`
+- Agents must NOT reference files outside their plugin's directory
 - No shared code between plugins — each plugin is independently installable
 
 ### Adding a new plugin checklist
 
-1. Create `plugins/<name>/` with `.claude-plugin/plugin.json` and `skills/`
+1. Create `plugins/<name>/` with `.claude-plugin/plugin.json`, `commands/`, `agents/`, and `references/`
 2. Add a `README.md` in the plugin directory
 3. Add an entry to `.claude-plugin/marketplace.json`
 4. Update the root `README.md` plugin catalog table
 5. Update the Directory Structure section above if the layout pattern changes
 
-## Skill Authoring Reference
+## Command Authoring Reference
 
-### SKILL.md Frontmatter
+### Command Frontmatter
 
-Every skill requires a `SKILL.md` with YAML frontmatter:
+Commands live in `commands/*.md` and are user-invocable orchestrators:
 
 | Field | Required | Description |
 |-------|----------|-------------|
-| `name` | Yes | Skill identifier, lowercase with hyphens, matches directory name |
-| `description` | Yes | One-line summary. Claude uses this to decide when to auto-invoke. Front-load the use case. |
+| `description` | Yes | One-line summary shown in the `/` menu |
 | `argument-hint` | No | Shown during autocomplete (e.g., `"[repo-owner/repo-name]"`) |
-| `allowed-tools` | No | Tools the skill can use without per-use permission |
-| `context` | No | Set to `fork` to run in an isolated subagent |
-| `agent` | No | Subagent type when `context: fork` is set: `Explore`, `Plan`, or `general-purpose` |
-| `disable-model-invocation` | No | `true` to prevent Claude from auto-invoking (use for side-effect operations) |
-| `user-invocable` | No | `false` to hide from `/` menu (use for background knowledge) |
-| `model` | No | Override model for this skill (`sonnet`, `opus`, `haiku`) |
-| `effort` | No | Override effort level: `low`, `medium`, `high`, `max` |
-| `paths` | No | Glob patterns to auto-activate only when working with matching files |
-
-### Tool Restrictions
-
-Restrict Bash access with pattern syntax: `Bash(gh *)` allows only `gh` commands. Full `Bash` grants unrestricted shell access.
 
 ### Dynamic Variables
 
-- `$ARGUMENTS` — all arguments passed to the skill
+- `$ARGUMENTS` — all arguments passed to the command
 - `$0`, `$1`, etc. — specific arguments by index
-- `${CLAUDE_SKILL_DIR}` — path to the skill's directory
+
+## Agent Authoring Reference
+
+### Agent Frontmatter
+
+Agents live in `agents/*.md` and are specialized workers launched by commands:
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `name` | Yes | Agent identifier, lowercase with hyphens |
+| `description` | Yes | One-line summary of the agent's expertise |
+| `tools` | Yes | Comma-separated list of tools the agent can use |
+| `model` | No | Model to run the agent on: `sonnet`, `opus`, `haiku` |
+| `color` | No | UI color indicator: `red`, `yellow`, `green`, `blue` |
+
+### Tool Access
+
+Agents declare tool access with the `tools:` field. Common tool sets:
+- Read-only analysis: `Glob, Grep, Read, WebSearch, TodoWrite`
+- Full implementation: `Bash, Read, Write, Edit, Grep, Glob, Agent, TodoWrite`
 
 ### Guidelines
 
-- Keep SKILL.md under 500 lines; move detail into supporting files
-- Do not nest skill directories under `skills/`
-- Test changes by editing SKILL.md and re-invoking (no restart needed)
-- Use `context: fork` + `agent: Explore` for read-only research tasks
-- Use `context: fork` + `agent: Plan` for planning tasks that should not modify files
+- Keep agent files focused — one agent, one responsibility
+- Use `model: sonnet` for analysis/planning work, `model: opus` for code generation
+- Commands launch agents via the `Agent` tool; agents are not independently invocable
+- Move reference material to `references/` rather than embedding in agent files
 
 ## Conventions
 
-- **Naming**: Directory names are lowercase with hyphens (e.g., `feature-planner`)
-- **Multi-stage skills**: Use a flat layout with shared prefix. Each stage is independently invocable.
+- **Naming**: Directory names are lowercase with hyphens (e.g., `feature-creator`)
 - **Issue interaction**: Plans are posted as comments, never by modifying the issue body.
 - **Branching**: One branch per feature (`feature/<number>-<slug>`), plus a release branch after all features.
 - **Max batch size**: The orchestrator warns when more than 5 features are queued, but the guard is advisory only.
@@ -175,13 +172,10 @@ Restrict Bash access with pattern syntax: `Bash(gh *)` allows only `gh` commands
 # Or test a single plugin directly
 claude --plugin-dir /path/to/claude-skills/plugins/feature-creator
 
-# Skills are available as:
-/claude-skills:feature-planner
-/claude-skills:feature-reviewer
-/claude-skills:feature-implementer
-/claude-skills:feature-creator
+# The command is available as:
+/feature-creator
 
-# After editing any SKILL.md, re-invoke the skill — no restart needed
+# After editing any command or agent file, re-invoke — no restart needed
 ```
 
 ## Prerequisites
@@ -196,7 +190,7 @@ claude --plugin-dir /path/to/claude-skills/plugins/feature-creator
 
 ## Build & Test Commands
 
-No build or test commands. This is a pure-markdown skills repository.
+No build or test commands. This is a pure-markdown plugin repository.
 
 
 ## Behavioral rules for AI contributors

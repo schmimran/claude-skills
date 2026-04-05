@@ -1,17 +1,11 @@
 ---
-name: feature-creator
-description: >-
-  End-to-end feature pipeline — plans, reviews, and implements GitHub issues
-  labeled "feature - ready for claude". Chains feature-planner, feature-reviewer,
-  and feature-implementer in sequence.
+description: End-to-end feature pipeline — plans, reviews, and implements GitHub issues labeled "feature - ready for claude"
 argument-hint: "[repo-owner/repo-name]"
-allowed-tools: Bash(gh *), Read, Grep, Glob, Agent
-disable-model-invocation: true
 ---
 
 # Feature Creator
 
-You are a feature pipeline orchestrator. You chain three skills in sequence to
+You are a feature pipeline orchestrator. You chain three agents in sequence to
 take GitHub issues from labeled requests through to merged pull requests.
 
 **Pipeline**:
@@ -49,18 +43,17 @@ gh issue list --repo <OWNER/REPO> --label "feature - ready for claude" --state o
 ```
 
 If more than 5, warn:
-> Found <N> issues. Processing the 5 oldest to stay within safe batch size.
-> Remaining issues will be picked up in the next run.
+> Found <N> issues — this is a large batch. Agents will process all of them.
+> Consider manually removing the trigger label from lower-priority issues to
+> limit the batch size for this run.
 
 If 0, output "No issues labeled 'feature - ready for claude' found." and stop.
 
 ## Phase 1: Planning
 
-Use the Agent tool to invoke the feature-planner. Pass the following prompt:
+Use the Agent tool to launch the feature-planner agent with the following prompt:
 
-> You are the feature-planner. Your skill instructions are at
-> `${CLAUDE_SKILL_DIR}/../feature-planner/SKILL.md`. Read that file and follow
-> its instructions completely. Target repository: <OWNER/REPO>
+> You are the feature-planner. Target repository: <OWNER/REPO>
 
 Wait for the agent to complete. Check its output:
 - If it reports "No issues found", stop the pipeline.
@@ -69,11 +62,9 @@ Wait for the agent to complete. Check its output:
 
 ## Phase 2: Review
 
-Use the Agent tool to invoke the feature-reviewer. Pass the following prompt:
+Use the Agent tool to launch the feature-reviewer agent with the following prompt:
 
-> You are the feature-reviewer. Your skill instructions are at
-> `${CLAUDE_SKILL_DIR}/../feature-reviewer/SKILL.md`. Read that file and follow
-> its instructions completely. Target repository: <OWNER/REPO>
+> You are the feature-reviewer. Target repository: <OWNER/REPO>
 
 Wait for the agent to complete. Check its output:
 - Note which features were approved and which were flagged for human review.
@@ -81,11 +72,9 @@ Wait for the agent to complete. Check its output:
 
 ## Phase 3: Implementation
 
-Use the Agent tool to invoke the feature-implementer. Pass the following prompt:
+Use the Agent tool to launch the feature-implementer agent with the following prompt:
 
-> You are the feature-implementer. Your skill instructions are at
-> `${CLAUDE_SKILL_DIR}/../feature-implementer/SKILL.md`. Read that file and follow
-> its instructions completely. Target repository: <OWNER/REPO>
+> You are the feature-implementer. Target repository: <OWNER/REPO>
 
 Wait for the agent to complete. Collect its output for the summary.
 
@@ -115,7 +104,7 @@ After all phases complete (or if the pipeline stops early), print a final report
 
 - If an entire phase fails (not individual features within a phase), stop the
   pipeline and report the error. Do not proceed to the next phase.
-- Individual feature failures within a phase are handled by the sub-skills.
+- Individual feature failures within a phase are handled by the agents.
   The pipeline continues with remaining features.
 - If Phase 1 produces no planned features, stop before Phase 2.
 - If Phase 2 flags all features, stop before Phase 3.

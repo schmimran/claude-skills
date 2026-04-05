@@ -1,11 +1,9 @@
 ---
 name: feature-implementer
-description: >-
-  Implement approved features — create branches, write code, run tests, follow
-  the merge checklist, and open PRs. Creates a release branch linking all
-  feature PRs. Use after feature-planner or feature-reviewer.
-argument-hint: "[repo-owner/repo-name]"
-allowed-tools: Bash, Read, Write, Edit, Grep, Glob, Agent
+description: Implements approved features by creating branches, writing code, running tests, following the merge checklist, and opening PRs, then creates a release branch linking all feature PRs
+tools: Bash, Read, Write, Edit, Grep, Glob, Agent, TodoWrite
+model: opus
+color: green
 ---
 
 # Feature Implementer
@@ -16,27 +14,16 @@ checklist, and open a PR. After all features, you create a release branch.
 
 ## Prerequisites
 
-1. Verify GitHub CLI authentication:
-   ```
-   gh auth status
-   ```
-   If not authenticated, stop and tell the user to run `gh auth login`.
+Use the `OWNER/REPO` identifier from your prompt. The orchestrator has already verified
+`gh` authentication and label setup. If running standalone, ensure `gh auth status`
+passes and the required labels exist before proceeding.
 
-2. Resolve the target repository:
-   - If `$ARGUMENTS` is provided, use it as the `OWNER/REPO` identifier.
-   - Otherwise, detect from the current directory: `gh repo view --json nameWithOwner -q .nameWithOwner`
-   - If neither works, stop and ask the user for the repository.
-
-3. Verify clean working tree:
-   ```
-   git status --porcelain
-   ```
-   If there are uncommitted changes, stop and tell the user to commit or stash them.
-
-4. Ensure you are on the main branch:
-   ```
-   git checkout main && git pull
-   ```
+Verify clean working tree and correct branch:
+```
+git status --porcelain
+git checkout main && git pull
+```
+If there are uncommitted changes, stop and report the error.
 
 ## Step 1: Fetch Planned Issues
 
@@ -106,7 +93,8 @@ If tests or build fail:
 
 ### 2d. Follow Merge Checklist
 
-Follow the steps in `merge-checklist.md` (in this skill's directory):
+Follow the steps in `merge-checklist.md` (in the `references/` directory of
+this plugin):
 
 1. Run `/simplify` on all changed files
 2. Stage and commit changes
@@ -120,7 +108,10 @@ Follow the steps in `merge-checklist.md` (in this skill's directory):
 Post a comment on the issue with the PR link. Always use `--body-file` to
 avoid shell injection:
 ```
-echo "Implementation complete. PR: <PR_URL>" | gh issue comment <NUMBER> --repo <OWNER/REPO> --body-file -
+cat > /tmp/impl-complete.md << 'DONE_EOF'
+Implementation complete. PR: <PR_URL>
+DONE_EOF
+gh issue comment <NUMBER> --repo <OWNER/REPO> --body-file /tmp/impl-complete.md
 ```
 
 Update the label:
@@ -165,7 +156,10 @@ If implementation or verification fails for a feature after exhausting retries:
 
 1. Post a comment on the issue with the error details (use `--body-file`):
    ```
-   echo "Implementation failed: <ERROR_DETAILS>" | gh issue comment <NUMBER> --repo <OWNER/REPO> --body-file -
+   cat > /tmp/impl-error.md << 'ERR_EOF'
+   Implementation failed: <ERROR_DETAILS>
+   ERR_EOF
+   gh issue comment <NUMBER> --repo <OWNER/REPO> --body-file /tmp/impl-error.md
    ```
 
 2. Change the label:

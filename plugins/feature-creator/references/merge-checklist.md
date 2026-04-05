@@ -32,8 +32,8 @@ git push -u origin <BRANCH_NAME>
 
 ## 4. Create PR
 
-Create a pull request using the template in `pr-template.md`. Read that file
-for the exact format.
+Create a pull request using the template in `pr-template.md` (in the
+`references/` directory of this plugin). Read that file for the exact format.
 
 Always use `--body-file` to avoid shell injection from untrusted content:
 ```

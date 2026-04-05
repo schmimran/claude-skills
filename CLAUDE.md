@@ -4,31 +4,36 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-A Claude Code plugin containing the **feature-creator** pipeline. It automates the flow from GitHub issues to implementation plans to reviewed code to pull requests. Install as a plugin, update via `git pull`.
+A Claude Code plugin **marketplace** containing reusable skill plugins. Install the marketplace once to get access to all plugins. Each plugin is self-contained under `plugins/` with its own manifest, skills, and documentation.
 
 ## Directory Structure
 
 ```
 .claude-plugin/
-  plugin.json                     # Plugin manifest (required)
-skills/
-  feature-creator/
-    SKILL.md                      # Orchestrator — chains the three phases
-  feature-planner/
-    SKILL.md                      # Phase 1: fetch issues, analyze repo, post plans
-    plan-template.md              # Template for plan comments
-    repo-analysis-guide.md        # What to look for in the target repo
-  feature-reviewer/
-    SKILL.md                      # Phase 2: risk assessment, combined plan, review
-    risk-criteria.md              # Risk rubric (HIGH/MEDIUM/LOW)
-    review-checklist.md           # Instructions for the review subagent
-  feature-implementer/
-    SKILL.md                      # Phase 3: branch, code, test, PR
-    merge-checklist.md            # Pre-merge steps
-    pr-template.md                # PR body template
+  marketplace.json                # Marketplace catalog — lists all plugins
+plugins/
+  feature-creator/                # Plugin: feature development pipeline
+    .claude-plugin/
+      plugin.json                 # Plugin manifest
+    skills/
+      feature-creator/
+        SKILL.md                  # Orchestrator — chains the three phases
+      feature-planner/
+        SKILL.md                  # Phase 1: fetch issues, analyze repo, post plans
+        plan-template.md          # Template for plan comments
+        repo-analysis-guide.md    # What to look for in the target repo
+      feature-reviewer/
+        SKILL.md                  # Phase 2: risk assessment, combined plan, review
+        risk-criteria.md          # Risk rubric (HIGH/MEDIUM/LOW)
+        review-checklist.md       # Instructions for the review subagent
+      feature-implementer/
+        SKILL.md                  # Phase 3: branch, code, test, PR
+        merge-checklist.md        # Pre-merge steps
+        pr-template.md            # PR body template
+    README.md                     # Plugin-specific documentation
 ```
 
-Skills are discovered **one level deep** under `skills/`. Supporting `.md` files inside a skill directory are loaded on-demand, not as separate skills.
+Each plugin lives under `plugins/<name>/` and is independently installable. Skills are discovered one level deep under each plugin's `skills/` directory. Supporting `.md` files inside a skill directory are loaded on-demand, not as separate skills.
 
 ## Feature-Creator Pipeline
 
@@ -88,6 +93,33 @@ This pipeline is single-operator tooling. Do not run multiple instances against 
 
 All `gh` commands that pass untrusted content (issue titles, plan text, error messages) must use `--body-file` instead of `--body` to prevent shell injection. Never interpolate issue content directly into shell command strings.
 
+## Plugin Onboarding
+
+### Plugin structure requirements
+
+- Each plugin is a self-contained directory under `plugins/<name>/` with its own `.claude-plugin/plugin.json`, `skills/`, and `README.md`
+- Plugin directory names must be lowercase with hyphens and match the `name` field in the plugin's `plugin.json`
+- After adding a plugin, register it in `.claude-plugin/marketplace.json`
+
+### Version management
+
+- Each plugin tracks its own version in its `plugin.json`
+- The `version` in `marketplace.json` entries must match the plugin's `plugin.json` version
+
+### Plugin isolation
+
+- Skills within a plugin can reference sibling skills via `${CLAUDE_SKILL_DIR}/../<sibling>/SKILL.md`
+- Skills must NOT reference files outside their plugin's directory
+- No shared code between plugins — each plugin is independently installable
+
+### Adding a new plugin checklist
+
+1. Create `plugins/<name>/` with `.claude-plugin/plugin.json` and `skills/`
+2. Add a `README.md` in the plugin directory
+3. Add an entry to `.claude-plugin/marketplace.json`
+4. Update the root `README.md` plugin catalog table
+5. Update the Directory Structure section above if the layout pattern changes
+
 ## Skill Authoring Reference
 
 ### SKILL.md Frontmatter
@@ -132,15 +164,18 @@ Restrict Bash access with pattern syntax: `Bash(gh *)` allows only `gh` commands
 - **Multi-stage skills**: Use a flat layout with shared prefix. Each stage is independently invocable.
 - **Issue interaction**: Plans are posted as comments, never by modifying the issue body.
 - **Branching**: One branch per feature (`feature/<number>-<slug>`), plus a release branch after all features.
-- **Max batch size**: The orchestrator processes at most 5 features per run.
+- **Max batch size**: The orchestrator warns when more than 5 features are queued, but the guard is advisory only.
 
 ## Local Development
 
 ```bash
-# Test the plugin during development
-claude --plugin-dir /path/to/claude-skills
+# Add the marketplace during development
+/plugin marketplace add /path/to/claude-skills
 
-# Individual skills are available as:
+# Or test a single plugin directly
+claude --plugin-dir /path/to/claude-skills/plugins/feature-creator
+
+# Skills are available as:
 /claude-skills:feature-planner
 /claude-skills:feature-reviewer
 /claude-skills:feature-implementer
@@ -152,7 +187,7 @@ claude --plugin-dir /path/to/claude-skills
 ## Prerequisites
 
 - **`gh` CLI**: Must be installed and authenticated (`gh auth status`)
-- **Labels**: The target repository must have these labels created (see README for setup commands):
+- **Labels**: The target repository must have these labels created (see the feature-creator plugin README for setup commands):
   - `feature - ready for claude`
   - `feature - planned`
   - `feature - human review`
@@ -168,5 +203,5 @@ No build or test commands. This is a pure-markdown skills repository.
 
 These apply to every Claude Code session in this repo.
 
-1. **Documentation targets.**  When updating docs per the global documentation rule, this includes: CLAUDE.md schema tables, the valid README
+1. **Documentation targets.**  When updating docs per the global documentation rule, this includes: CLAUDE.md schema tables, the root README plugin catalog, and each affected plugin's README.
 2. **No silent additions.**  Do not add new files, directories, or environment variables without stating what you are adding and why.

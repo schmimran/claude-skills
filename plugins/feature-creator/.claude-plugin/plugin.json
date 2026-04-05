@@ -1,5 +1,5 @@
 {
-  "name": "claude-skills",
+  "name": "feature-creator",
   "description": "Feature development pipeline — GitHub issues to implementation plans to PRs.",
   "version": "0.2.0",
   "skills": "./skills/"

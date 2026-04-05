@@ -1,0 +1,14 @@
+{
+  "name": "claude-skills",
+  "owner": {
+    "name": "schmimran"
+  },
+  "plugins": [
+    {
+      "name": "feature-creator",
+      "source": "./plugins/feature-creator",
+      "description": "Feature development pipeline — GitHub issues to implementation plans to PRs.",
+      "version": "0.2.0"
+    }
+  ]
+}

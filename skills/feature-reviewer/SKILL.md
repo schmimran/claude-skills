@@ -61,9 +61,13 @@ For each feature, produce a risk summary:
 
 For features determined to be high-risk:
 
-1. Post a comment on the issue explaining the risk:
+1. Post a comment on the issue explaining the risk. Always use `--body-file`
+   to avoid shell injection from issue content:
    ```
-   gh issue comment <NUMBER> --repo <OWNER/REPO> --body "<RISK_EXPLANATION>"
+   cat > /tmp/risk-comment.md << 'RISK_EOF'
+   <RISK_EXPLANATION>
+   RISK_EOF
+   gh issue comment <NUMBER> --repo <OWNER/REPO> --body-file /tmp/risk-comment.md
    ```
    The comment should include:
    - Which risk factors triggered the flag
@@ -120,9 +124,13 @@ Incorporate the subagent's feedback into the final plan.
 ## Step 7: Post Final Plan
 
 Post the final combined plan as a comment on **each** approved issue, so the
-implementer can find it from any issue:
+implementer can find it from any issue. Always use `--body-file` to avoid
+shell injection:
 ```
-gh issue comment <NUMBER> --repo <OWNER/REPO> --body "<COMBINED_PLAN>"
+cat > /tmp/combined-plan.md << 'PLAN_EOF'
+<COMBINED_PLAN>
+PLAN_EOF
+gh issue comment <NUMBER> --repo <OWNER/REPO> --body-file /tmp/combined-plan.md
 ```
 
 Prefix the comment with `<!-- claude-feature-reviewer-v1 -->` as a marker.

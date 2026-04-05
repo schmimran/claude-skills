@@ -62,9 +62,10 @@ Process features **sequentially**, one at a time. For each feature:
 
 ### 2a. Create Branch
 
-Generate a slug from the issue title (lowercase, hyphens, max 40 chars):
+Generate a sanitized slug from the issue title:
 ```
-git checkout -b feature/<NUMBER>-<SLUG> main
+SLUG=$(echo "<TITLE>" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | sed 's/^-//;s/-$//' | cut -c1-40)
+git checkout -b "feature/<NUMBER>-${SLUG}" main
 ```
 
 Update the issue label:
@@ -116,9 +117,10 @@ Follow the steps in `merge-checklist.md` (in this skill's directory):
 
 ### 2e. Update Issue
 
-Post a comment on the issue with the PR link:
+Post a comment on the issue with the PR link. Always use `--body-file` to
+avoid shell injection:
 ```
-gh issue comment <NUMBER> --repo <OWNER/REPO> --body "Implementation complete. PR: <PR_URL>"
+echo "Implementation complete. PR: <PR_URL>" | gh issue comment <NUMBER> --repo <OWNER/REPO> --body-file -
 ```
 
 Update the label:
@@ -140,9 +142,13 @@ After all features are implemented:
 git checkout -b release/<YYYY-MM-DD> main
 ```
 
-Create a PR for the release branch:
+Create a PR for the release branch. Always use `--body-file` to avoid shell
+injection:
 ```
-gh pr create --repo <OWNER/REPO> --title "Release <YYYY-MM-DD>" --body "<RELEASE_BODY>"
+cat > /tmp/release-pr.md << 'RELEASE_EOF'
+<RELEASE_BODY>
+RELEASE_EOF
+gh pr create --repo <OWNER/REPO> --title "Release <YYYY-MM-DD>" --body-file /tmp/release-pr.md
 ```
 
 The release PR body should list all feature PRs with links:
@@ -157,9 +163,9 @@ The release PR body should list all feature PRs with links:
 
 If implementation or verification fails for a feature after exhausting retries:
 
-1. Post a comment on the issue with the error details:
+1. Post a comment on the issue with the error details (use `--body-file`):
    ```
-   gh issue comment <NUMBER> --repo <OWNER/REPO> --body "Implementation failed: <ERROR_DETAILS>"
+   echo "Implementation failed: <ERROR_DETAILS>" | gh issue comment <NUMBER> --repo <OWNER/REPO> --body-file -
    ```
 
 2. Change the label:

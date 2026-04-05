@@ -85,9 +85,14 @@ The plan must include:
 
 ### 3d. Post the Plan
 
-Post the plan as a comment on the issue:
+Post the plan as a comment on the issue. Always use `--body-file` to avoid
+shell injection from issue content:
 ```
-gh issue comment <NUMBER> --repo <OWNER/REPO> --body "<PLAN_CONTENT>"
+# Write plan to a temp file first — never use --body with untrusted content
+cat > /tmp/plan-comment.md << 'PLAN_EOF'
+<PLAN_CONTENT>
+PLAN_EOF
+gh issue comment <NUMBER> --repo <OWNER/REPO> --body-file /tmp/plan-comment.md
 ```
 
 The plan comment MUST begin with `<!-- claude-feature-planner-v1 -->` on the

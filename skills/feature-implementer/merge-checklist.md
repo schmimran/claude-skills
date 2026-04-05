@@ -35,8 +35,12 @@ git push -u origin <BRANCH_NAME>
 Create a pull request using the template in `pr-template.md`. Read that file
 for the exact format.
 
+Always use `--body-file` to avoid shell injection from untrusted content:
 ```
-gh pr create --repo <OWNER/REPO> --title "<TITLE>" --body "<BODY>" --base main
+cat > /tmp/pr-body.md << 'PR_EOF'
+<BODY>
+PR_EOF
+gh pr create --repo <OWNER/REPO> --title "<TITLE>" --body-file /tmp/pr-body.md --base main
 ```
 
 ## 5. Code Review

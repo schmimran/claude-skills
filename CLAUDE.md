@@ -62,9 +62,31 @@ When any skill encounters a failure for a specific issue:
 2. Change the label to `feature - human review`
 3. Continue processing remaining issues
 
+### Stuck State Recovery
+
+If the agent crashes or is interrupted while a feature is labeled `feature - in progress`, that issue will be skipped on the next run (since sub-skills query for `feature - planned`, not `feature - in progress`). To recover, manually relabel the stuck issue:
+```
+gh issue edit <NUMBER> --remove-label "feature - in progress" --add-label "feature - planned"
+```
+Then delete the orphaned branch if one was created.
+
+### Batch Size
+
+The orchestrator (`feature-creator`) warns when more than 5 issues are labeled `feature - ready for claude`, but this guard is **advisory only**. The sub-skills each fetch up to 20 issues independently. If strict batch limiting is needed, manually control which issues carry the trigger label.
+
+### Running Skills Independently
+
+Each sub-skill can be run without the orchestrator. When doing so, be aware:
+- `feature-implementer` fetches all `feature - planned` issues, including those that were never reviewed by `feature-reviewer`. It will use the planner's plan if no reviewer plan exists.
+- `feature-reviewer` only processes issues labeled `feature - planned`. If you skip the planner, there will be nothing to review.
+
 ### Concurrency
 
 This pipeline is single-operator tooling. Do not run multiple instances against the same repository simultaneously.
+
+### Shell Safety
+
+All `gh` commands that pass untrusted content (issue titles, plan text, error messages) must use `--body-file` instead of `--body` to prevent shell injection. Never interpolate issue content directly into shell command strings.
 
 ## Skill Authoring Reference
 

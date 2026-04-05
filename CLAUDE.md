@@ -53,3 +53,11 @@ agent: Plan                       # Optional — subagent type (Explore, Plan, g
 ## Build & Test Commands
 
 No build or test commands. This is a pure-markdown skills repository.
+
+
+## Behavioral rules for AI contributors
+
+These apply to every Claude Code session in this repo.
+
+1. **Documentation targets.**  When updating docs per the global documentation rule, this includes: CLAUDE.md schema tables, the valid README
+2. **No silent additions.**  Do not add new files, directories, or environment variables without stating what you are adding and why.

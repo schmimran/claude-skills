@@ -1,51 +1,88 @@
 # claude-skills
 
-A personal collection of reusable [Claude Code](https://claude.ai/code) skills, structured as a plugin repository. Install once, use everywhere, update via `git pull`.
+A Claude Code plugin that automates feature development from GitHub issues through implementation. It plans, reviews for risk, implements, and opens PRs — all from a single command.
 
 ## Installation
 
 ```bash
-# Clone the repo (one-time setup)
+# Clone the repo
 git clone https://github.com/schmimran/claude-skills.git ~/claude-skills
 
-# In any project, register the plugin
+# Register the plugin in any project
 claude plugins add ~/claude-skills
 ```
 
-All skills in the `skills/` directory are automatically discovered.
+Updates propagate automatically via `git pull` in the cloned repo. No reinstallation needed.
 
 ## Available Skills
 
-| Skill | Description |
-|-------|-------------|
-| `daily-code-scrub` | Daily maintenance pass — linting, dependency checks, dead code removal |
-| `feature-creator` | Multi-agent workflow: GitHub issue to plan to review to implementation |
+| Skill | Description | Usage |
+|-------|-------------|-------|
+| `feature-creator` | Full pipeline: plan, review, implement, PR | `/claude-skills:feature-creator` |
+| `feature-planner` | Fetch labeled issues, analyze repo, post implementation plans | `/claude-skills:feature-planner` |
+| `feature-reviewer` | Review plans for risk, flag dangerous ones, create combined plan | `/claude-skills:feature-reviewer` |
+| `feature-implementer` | Create branches, write code, run tests, open PRs | `/claude-skills:feature-implementer` |
 
-### feature-creator Sub-skills
+Each skill can be run independently or chained via the `feature-creator` orchestrator.
 
-| Stage | Skill | Description |
-|-------|-------|-------------|
-| 1 | `feature-creator-planning` | Analyze GitHub issue and create implementation plan |
-| 2 | `feature-creator-reviewing` | Review plan against project architecture |
-| 3 | `feature-creator-implementing` | Execute plan, write code, open PR |
-
-## Usage
+## Pipeline Overview
 
 ```
-/daily-code-scrub
-/feature-creator 42
+GitHub Issues                    Skills Pipeline                     Output
+ labeled
+"feature - ready       feature-planner                        Plan comments
+ for claude"    ------> (analyze repo, create plans) -------> on each issue
+                                    |
+                              feature-reviewer
+                        (risk assessment, combined plan) ---> High-risk flagged
+                                    |                         for human review
+                             feature-implementer
+                        (branch, code, test, PR) ----------> Pull requests
+                                    |                         opened
+                              Release branch
+                        (links all feature PRs) ------------> Integration PR
 ```
 
-## Creating New Skills
+### Label Lifecycle
 
-1. Create a directory under `skills/` with a hyphenated lowercase name
-2. Add a `SKILL.md` with YAML frontmatter (`name`, `description` at minimum)
-3. Keep `SKILL.md` under 500 lines — use supporting files for additional detail
-4. See [CLAUDE.md](CLAUDE.md) for full authoring conventions
+```
+ready for claude  -->  planned  -->  in progress  -->  complete
+                          |               |
+                          +-> human review <-+
+```
 
-## How Updates Work
+## Prerequisites
 
-This repo is installed as a plugin via a local path. When you `git pull` in the cloned repo, every project using the plugin picks up the changes on the next invocation. No reinstallation needed.
+1. **GitHub CLI** must be installed and authenticated:
+   ```bash
+   gh auth status
+   ```
+
+2. **Labels** must exist on the target repository. Run these once per repo:
+   ```bash
+   gh label create "feature - ready for claude" --color 0E8A16 --description "Scoped and ready for automated planning"
+   gh label create "feature - planned" --color 1D76DB --description "Implementation plan posted as comment"
+   gh label create "feature - human review" --color D93F0B --description "Flagged for human review (high-risk or failed)"
+   gh label create "feature - in progress" --color FBCA04 --description "Branch created, implementation underway"
+   gh label create "feature - complete" --color 0E8A16 --description "PR created and code-reviewed"
+   ```
+
+## Usage Examples
+
+**Run the full pipeline:**
+```
+/claude-skills:feature-creator
+```
+
+**Plan features only** (useful for reviewing plans before implementation):
+```
+/claude-skills:feature-planner
+```
+
+**Implement already-planned features** (skip planning and review):
+```
+/claude-skills:feature-implementer
+```
 
 ## License
 

@@ -1,6 +1,6 @@
 {
   "name": "claude-skills",
-  "description": "Personal collection of reusable Claude Code skills and plugins.",
-  "version": "0.1.0",
+  "description": "Feature development pipeline — GitHub issues to implementation plans to PRs.",
+  "version": "0.2.0",
   "skills": "./skills/"
 }

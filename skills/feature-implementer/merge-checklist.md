@@ -4,8 +4,9 @@ Follow these steps in order after implementation and verification pass.
 
 ## 1. Simplify
 
-Run `/simplify` on all files changed in the branch. This checks for code reuse
-opportunities, quality issues, and efficiency improvements. Fix any issues found.
+Run `/simplify` (a built-in Claude Code skill) on all files changed in the branch.
+This checks for code reuse opportunities, quality issues, and efficiency
+improvements. Fix any issues found.
 
 ## 2. Stage and Commit
 
@@ -21,7 +22,7 @@ git commit -m "<type>: <description>
 Closes #<ISSUE_NUMBER>"
 ```
 
-Use conventional commit types: `feat`, `fix`, `refactor`, `test`, `docs`.
+Use conventional commit types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`.
 
 ## 3. Push
 
@@ -40,7 +41,7 @@ gh pr create --repo <OWNER/REPO> --title "<TITLE>" --body "<BODY>" --base main
 
 ## 5. Code Review
 
-Run `/code-review` on the PR. This checks for:
+Run `/code-review` (a built-in Claude Code skill) on the PR. This checks for:
 - Security vulnerabilities
 - Logic errors
 - Performance issues

@@ -31,7 +31,7 @@ and create a combined implementation plan for the approved features.
 
 Run:
 ```
-gh issue list --repo <OWNER/REPO> --label "feature - planned" --state open --json number,title,body,labels --limit 20
+gh issue list --repo <OWNER/REPO> --label "feature - planned" --state open --json number,title,labels --limit 20
 ```
 
 If no issues are returned, output "No issues labeled 'feature - planned' found." and stop.

@@ -31,7 +31,7 @@ implementation plan, and post that plan as a comment on the issue.
 
 Run:
 ```
-gh issue list --repo <OWNER/REPO> --label "feature - ready for claude" --state open --json number,title,body,labels --limit 20
+gh issue list --repo <OWNER/REPO> --label "feature - ready for claude" --state open --json number,title,labels --limit 20
 ```
 
 If no issues are returned, output "No issues labeled 'feature - ready for claude' found." and stop.

@@ -42,7 +42,7 @@ checklist, and open a PR. After all features, you create a release branch.
 
 Run:
 ```
-gh issue list --repo <OWNER/REPO> --label "feature - planned" --state open --json number,title,body,labels --limit 10
+gh issue list --repo <OWNER/REPO> --label "feature - planned" --state open --json number,title,labels --limit 20
 ```
 
 If no issues are returned, output "No issues labeled 'feature - planned' found." and stop.

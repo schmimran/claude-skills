@@ -1,11 +1,9 @@
 ---
 name: feature-reviewer
-description: >-
-  Review all planned features holistically, assess risk against defined criteria,
-  flag high-risk features for human review, and produce a combined implementation
-  plan. Use after feature-planner or when reviewing existing plans.
-argument-hint: "[repo-owner/repo-name]"
-allowed-tools: Bash(gh *), Read, Grep, Glob, Agent
+description: Reviews planned features for risk, flags high-risk items for human review, and produces a combined implementation plan for approved features
+tools: Bash, Read, Grep, Glob, Agent, TodoWrite
+model: sonnet
+color: yellow
 ---
 
 # Feature Reviewer
@@ -16,16 +14,9 @@ and create a combined implementation plan for the approved features.
 
 ## Prerequisites
 
-1. Verify GitHub CLI authentication:
-   ```
-   gh auth status
-   ```
-   If not authenticated, stop and tell the user to run `gh auth login`.
-
-2. Resolve the target repository:
-   - If `$ARGUMENTS` is provided, use it as the `OWNER/REPO` identifier.
-   - Otherwise, detect from the current directory: `gh repo view --json nameWithOwner -q .nameWithOwner`
-   - If neither works, stop and ask the user for the repository.
+Use the `OWNER/REPO` identifier from your prompt. The orchestrator has already verified
+`gh` authentication and label setup. If running standalone, ensure `gh auth status`
+passes and the required labels exist before proceeding.
 
 ## Step 1: Fetch Planned Issues
 
@@ -50,7 +41,8 @@ output as "No plan found."
 ## Step 3: Individual Risk Assessment
 
 For each feature's plan, evaluate it against the risk criteria defined in
-`risk-criteria.md` (in this skill's directory). Read that file for the full rubric.
+`risk-criteria.md` (in the `references/` directory of this plugin). Read that
+file for the full rubric.
 
 For each feature, produce a risk summary:
 - List each risk factor and its level (LOW / MEDIUM / HIGH)
@@ -110,7 +102,8 @@ Structure the combined plan as:
 ## Step 6: Review Subagent
 
 Use the Agent tool to spawn a review subagent. Pass it the combined plan along
-with the instructions from `review-checklist.md` (in this skill's directory).
+with the instructions from `review-checklist.md` (in the `references/` directory
+of this plugin).
 
 The subagent should review for:
 - Dependency ordering correctness

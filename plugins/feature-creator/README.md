@@ -2,29 +2,29 @@
 
 Automates feature development from GitHub issues through implementation. It plans, reviews for risk, implements, and opens PRs.
 
-## Skills
+## Architecture
 
-| Skill | Description |
-|-------|-------------|
-| `feature-creator` | Full pipeline: plan, review, implement, PR |
-| `feature-planner` | Fetch labeled issues, analyze repo, post implementation plans |
-| `feature-reviewer` | Review plans for risk, flag dangerous ones, create combined plan |
-| `feature-implementer` | Create branches, write code, run tests, open PRs |
+| Component | Type | Model | Description |
+|-----------|------|-------|-------------|
+| `feature-creator` | Command | (inherits) | Full pipeline: plan, review, implement, PR |
+| `feature-planner` | Agent | sonnet | Fetch labeled issues, analyze repo, post implementation plans |
+| `feature-reviewer` | Agent | sonnet | Review plans for risk, flag dangerous ones, create combined plan |
+| `feature-implementer` | Agent | opus | Create branches, write code, run tests, open PRs |
 
-Each skill can be run independently or chained via the `feature-creator` orchestrator.
+The command orchestrates the three agents in sequence. Agents are not independently invocable — use the command to run the full pipeline.
 
 ## Pipeline Overview
 
 ```
-GitHub Issues                    Skills Pipeline                     Output
+GitHub Issues                    Pipeline                            Output
  labeled
-"feature - ready       feature-planner                        Plan comments
+"feature - ready       feature-planner agent                   Plan comments
  for claude"    ------> (analyze repo, create plans) -------> on each issue
                                     |
-                              feature-reviewer
+                             feature-reviewer agent
                         (risk assessment, combined plan) ---> High-risk flagged
                                     |                         for human review
-                             feature-implementer
+                            feature-implementer agent
                         (branch, code, test, PR) ----------> Pull requests
                                     |                         opened
                               Release branch
@@ -62,18 +62,26 @@ ready for claude  -->  planned  -->  in progress  -->  complete
 After installing the `claude-skills` marketplace:
 
 ```
-/claude-skills:feature-creator
+/feature-creator
 ```
 
-**Plan features only** (useful for reviewing plans before implementation):
+Or specify a repository explicitly:
+
 ```
-/claude-skills:feature-planner
+/feature-creator owner/repo
 ```
 
-**Implement already-planned features** (skip planning and review):
+## Scheduling
+
+The pipeline can be wrapped in a scheduled task for recurring automation:
+
 ```
-/claude-skills:feature-implementer
+Task ID: feature-pipeline
+Cron: 0 9 * * 1-5 (weekdays at 9am)
+Prompt: "Run /feature-creator <OWNER/REPO>"
 ```
+
+Use the `/schedule` skill or `create_scheduled_task` tool to set this up.
 
 ## License
 

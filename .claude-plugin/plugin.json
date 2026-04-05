@@ -1,0 +1,6 @@
+{
+  "name": "claude-skills",
+  "description": "Personal collection of reusable Claude Code skills and plugins.",
+  "version": "0.1.0",
+  "skills": "./skills/"
+}

@@ -16,14 +16,7 @@ A Claude Code plugin marketplace. Install it once to get access to all plugins, 
 
 ## Adding a New Plugin
 
-1. Create a directory under `plugins/<name>/` with:
-   - `.claude-plugin/plugin.json` (plugin manifest)
-   - `skills/` (skill definitions)
-   - `README.md` (plugin documentation)
-2. Register the plugin in `.claude-plugin/marketplace.json`
-3. Update this table
-
-See [CLAUDE.md](CLAUDE.md) for full conventions and the plugin onboarding checklist.
+See [CLAUDE.md](CLAUDE.md) for the plugin onboarding checklist and conventions.
 
 ## License
 

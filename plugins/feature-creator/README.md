@@ -36,6 +36,8 @@ GitHub Issues                    Skills Pipeline                     Output
 ```
 ready for claude  -->  planned  -->  in progress  -->  complete
                           |               |
+                   [reviewer: risky]  [impl failed]
+                          |               |
                           +-> human review <-+
 ```
 

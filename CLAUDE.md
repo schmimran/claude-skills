@@ -164,7 +164,7 @@ Restrict Bash access with pattern syntax: `Bash(gh *)` allows only `gh` commands
 - **Multi-stage skills**: Use a flat layout with shared prefix. Each stage is independently invocable.
 - **Issue interaction**: Plans are posted as comments, never by modifying the issue body.
 - **Branching**: One branch per feature (`feature/<number>-<slug>`), plus a release branch after all features.
-- **Max batch size**: The orchestrator processes at most 5 features per run.
+- **Max batch size**: The orchestrator warns when more than 5 features are queued, but the guard is advisory only.
 
 ## Local Development
 

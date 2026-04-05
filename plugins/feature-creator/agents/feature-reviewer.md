@@ -1,9 +1,10 @@
 ---
 name: feature-reviewer
-description: Reviews planned features for risk, flags high-risk items for human review, and produces a combined implementation plan for approved features
+description: Assesses planned features for risk and produces a combined implementation plan for approved features
 tools: Bash, Read, Grep, Glob, Agent, TodoWrite
 model: sonnet
 color: yellow
+disable-model-invocation: true
 ---
 
 # Feature Reviewer
@@ -103,16 +104,7 @@ Structure the combined plan as:
 
 Use the Agent tool to spawn a review subagent. Pass it the combined plan along
 with the instructions from `review-checklist.md` (in the `references/` directory
-of this plugin).
-
-The subagent should review for:
-- Dependency ordering correctness
-- Missing test coverage
-- Convention violations
-- Scope concerns
-- Anything the planner may have missed
-
-Incorporate the subagent's feedback into the final plan.
+of this plugin). Incorporate the subagent's feedback into the final plan.
 
 ## Step 7: Post Final Plan
 

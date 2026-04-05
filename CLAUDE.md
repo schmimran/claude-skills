@@ -33,61 +33,9 @@ plugins/
 
 Each plugin lives under `plugins/<name>/` and is independently installable. Plugins use the **commands + agents** pattern: commands are user-invocable orchestrators, agents are specialized workers launched by commands.
 
-## Feature-Creator Pipeline
+## Plugin System
 
-### Label Lifecycle
-
-```
-[human]               [planner]          [implementer]        [implementer]
-ready for claude  -->  planned  -------->  in progress  ------->  complete
-                          |                     |
-                   [reviewer: risky]     [impl failed]
-                          |                     |
-                          +-->  human review  <-+
-```
-
-| Label | Set by | Meaning |
-|-------|--------|---------|
-| `feature - ready for claude` | Human | Issue is scoped and ready for automated planning |
-| `feature - planned` | feature-planner agent | Plan posted as issue comment |
-| `feature - human review` | feature-reviewer or feature-implementer agent | Flagged as high-risk or implementation failed |
-| `feature - in progress` | feature-implementer agent | Branch created, coding underway |
-| `feature - complete` | feature-implementer agent | PR created and code-reviewed |
-
-### Plan Comments
-
-Plans are posted as **comments** on the issue (the issue body is never modified). Every plan comment is prefixed with `<!-- claude-feature-planner-v1 -->` so downstream agents can locate it programmatically.
-
-### Error Handling Pattern
-
-When any agent encounters a failure for a specific issue:
-1. Post a comment on the issue explaining the error
-2. Change the label to `feature - human review`
-3. Continue processing remaining issues
-
-### Stuck State Recovery
-
-If an agent crashes or is interrupted while a feature is labeled `feature - in progress`, that issue will be skipped on the next run (since agents query for `feature - planned`, not `feature - in progress`). To recover, manually relabel the stuck issue:
-```
-gh issue edit <NUMBER> --remove-label "feature - in progress" --add-label "feature - planned"
-```
-Then delete the orphaned branch if one was created.
-
-### Batch Size
-
-The orchestrator command warns when more than 5 issues are labeled `feature - ready for claude`, but this guard is **advisory only**. The agents each fetch up to 20 issues independently. If strict batch limiting is needed, manually control which issues carry the trigger label.
-
-### Concurrency
-
-This pipeline is single-operator tooling. Do not run multiple instances against the same repository simultaneously.
-
-### Shell Safety
-
-All `gh` commands that pass untrusted content (issue titles, plan text, error messages) must use `--body-file` instead of `--body` to prevent shell injection. Never interpolate issue content directly into shell command strings.
-
-## Plugin Onboarding
-
-### Plugin structure requirements
+### Structure requirements
 
 - Each plugin is a self-contained directory under `plugins/<name>/` with its own `.claude-plugin/plugin.json` and `README.md`
 - Plugins use the **commands + agents** pattern: `commands/` for user-facing orchestrators, `agents/` for specialized workers, `references/` for supporting docs
@@ -121,8 +69,10 @@ Commands live in `commands/*.md` and are user-invocable orchestrators:
 
 | Field | Required | Description |
 |-------|----------|-------------|
-| `description` | Yes | One-line summary shown in the `/` menu |
+| `name` | Recommended | Slash command name (e.g., `feature-creator` → `/feature-creator`). Inferred from filename if omitted. |
+| `description` | Yes | One-line summary shown in the `/` menu. Keep under 200 characters. |
 | `argument-hint` | No | Shown during autocomplete (e.g., `"[repo-owner/repo-name]"`) |
+| `disable-model-invocation` | No | Set `true` for commands with destructive side effects — prevents accidental auto-invocation |
 
 ### Dynamic Variables
 
@@ -138,10 +88,11 @@ Agents live in `agents/*.md` and are specialized workers launched by commands:
 | Field | Required | Description |
 |-------|----------|-------------|
 | `name` | Yes | Agent identifier, lowercase with hyphens |
-| `description` | Yes | One-line summary of the agent's expertise |
+| `description` | Yes | One-line summary of the agent's expertise. Keep under 200 characters. |
 | `tools` | Yes | Comma-separated list of tools the agent can use |
 | `model` | No | Model to run the agent on: `sonnet`, `opus`, `haiku` |
 | `color` | No | UI color indicator: `red`, `yellow`, `green`, `blue` |
+| `disable-model-invocation` | No | Set `true` for agents that should only be launched by their orchestrator command |
 
 ### Tool Access
 
@@ -155,13 +106,15 @@ Agents declare tool access with the `tools:` field. Common tool sets:
 - Use `model: sonnet` for analysis/planning work, `model: opus` for code generation
 - Commands launch agents via the `Agent` tool; agents are not independently invocable
 - Move reference material to `references/` rather than embedding in agent files
+- Use `--body-file` for all `gh` commands that pass issue titles, plan text, or error messages — never interpolate untrusted content into shell strings
 
 ## Conventions
 
 - **Naming**: Directory names are lowercase with hyphens (e.g., `feature-creator`)
-- **Issue interaction**: Plans are posted as comments, never by modifying the issue body.
-- **Branching**: One branch per feature (`feature/<number>-<slug>`), plus a release branch after all features.
-- **Max batch size**: The orchestrator warns when more than 5 features are queued, but the guard is advisory only.
+- **Issue interaction**: Plans are posted as comments, never by modifying the issue body
+- **Branching**: One branch per feature (`feature/<number>-<slug>`), plus a release branch (`release/<YYYY-MM-DD>`) after all features
+- **Commits**: Conventional commit format, referencing the issue number (e.g., `feat: add widget (#42)`)
+- **Comment markers**: Plan comments are prefixed with `<!-- claude-feature-planner-v1 -->` and combined reviewer plans with `<!-- claude-feature-reviewer-v1 -->`. Downstream agents use these markers to locate content programmatically. Always include the correct marker or extraction will fail.
 
 ## Local Development
 
@@ -181,21 +134,21 @@ claude --plugin-dir /path/to/claude-skills/plugins/feature-creator
 ## Prerequisites
 
 - **`gh` CLI**: Must be installed and authenticated (`gh auth status`)
-- **Labels**: The target repository must have these labels created (see the feature-creator plugin README for setup commands):
-  - `feature - ready for claude`
-  - `feature - planned`
-  - `feature - human review`
-  - `feature - in progress`
-  - `feature - complete`
+- **Labels**: The target repository must have the five pipeline labels created. See the feature-creator plugin README for the setup commands.
 
 ## Build & Test Commands
 
 No build or test commands. This is a pure-markdown plugin repository.
 
-
-## Behavioral rules for AI contributors
+## Behavioral Rules for AI Contributors
 
 These apply to every Claude Code session in this repo.
 
-1. **Documentation targets.**  When updating docs per the global documentation rule, this includes: CLAUDE.md schema tables, the root README plugin catalog, and each affected plugin's README.
-2. **No silent additions.**  Do not add new files, directories, or environment variables without stating what you are adding and why.
+1. **Documentation targets.** When updating docs per the global documentation rule, this includes: CLAUDE.md schema tables, the root README plugin catalog, and each affected plugin's README.
+2. **No silent additions.** Do not add new files, directories, or environment variables without stating what you are adding and why.
+3. **Agent isolation.** Agents must not reference files outside their plugin directory. Each plugin must be independently installable.
+4. **Shell safety.** Follow the `--body-file` rule in Agent Authoring Guidelines above — it applies to every plugin, not just feature-creator.
+5. **Version sync.** When modifying an existing plugin, update `version` in both `plugin.json` and `marketplace.json` simultaneously — they must always match.
+6. **New plugin completeness.** Do not create a new plugin directory without completing all 5 steps of the Adding a New Plugin checklist above.
+7. **Issue body immutability.** The issue body is never modified. All communication (plans, risk assessments, error reports) happens via comments.
+8. **Plan comment markers.** Always include the correct marker prefix (see Conventions above). Downstream agents will fail to locate comments if the marker is missing or wrong.

@@ -78,7 +78,7 @@ The pipeline moves through four phases:
 
 **Phase 3 — Implementation**: The implementer agent works through approved features one at a time. For each: it creates a branch, writes the code, runs tests (with up to 3 retry attempts), follows the merge checklist (`/simplify` + `/code-review`), and opens a PR.
 
-**Phase 4 — Merge and Cleanup**: Feature PRs are merged in implementation order. The release branch PR is created linking all features. If the session is in plan mode, the pipeline pauses here for your confirmation. Otherwise it merges automatically, then deletes all feature branches (local and remote), pulls main, and removes any worktree.
+**Phase 4 — Merge and Cleanup**: Feature PRs are merged in implementation order. The release branch PR is created linking all features. By default, the pipeline pauses here for your confirmation before merging the release branch. Pass `--auto-merge` to skip the pause. After merge, it deletes all feature branches (local and remote), pulls main, and removes any worktree.
 
 ### Label Lifecycle
 

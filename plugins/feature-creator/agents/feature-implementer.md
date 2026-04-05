@@ -129,7 +129,7 @@ git push origin release/<YYYY-MM-DD>
 ```
 
 Do **not** create the release PR here. The orchestrator (feature-creator command)
-is responsible for creating and merging the release PR, handling the plan-mode
+is responsible for creating and merging the release PR, handling the merge
 checkpoint, and running cleanup. Report the release branch name in your output
 summary so the orchestrator can find it.
 

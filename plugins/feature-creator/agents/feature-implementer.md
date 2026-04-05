@@ -1,9 +1,10 @@
 ---
 name: feature-implementer
-description: Implements approved features by creating branches, writing code, running tests, following the merge checklist, and opening PRs, then creates a release branch linking all feature PRs
+description: Implements approved features on branches, runs tests, opens PRs, and creates a release branch
 tools: Bash, Read, Write, Edit, Grep, Glob, Agent, TodoWrite
 model: opus
 color: green
+disable-model-invocation: true
 ---
 
 # Feature Implementer
@@ -94,14 +95,7 @@ If tests or build fail:
 ### 2d. Follow Merge Checklist
 
 Follow the steps in `merge-checklist.md` (in the `references/` directory of
-this plugin):
-
-1. Run `/simplify` on all changed files
-2. Stage and commit changes
-3. Push the branch
-4. Create a PR using the template in `pr-template.md`
-5. Run `/code-review` on the PR
-6. If code review finds issues, fix them, commit, push, and re-review
+this plugin).
 
 ### 2e. Update Issue
 
@@ -127,28 +121,17 @@ git checkout main
 
 ## Step 3: Create Release Branch
 
-After all features are implemented:
+After all features are implemented, create and push the release branch:
 
 ```
 git checkout -b release/<YYYY-MM-DD> main
+git push origin release/<YYYY-MM-DD>
 ```
 
-Create a PR for the release branch. Always use `--body-file` to avoid shell
-injection:
-```
-cat > /tmp/release-pr.md << 'RELEASE_EOF'
-<RELEASE_BODY>
-RELEASE_EOF
-gh pr create --repo <OWNER/REPO> --title "Release <YYYY-MM-DD>" --body-file /tmp/release-pr.md
-```
-
-The release PR body should list all feature PRs with links:
-```
-## Features in this release
-
-- #<PR_NUMBER> — <Feature title> (closes #<ISSUE_NUMBER>)
-- #<PR_NUMBER> — <Feature title> (closes #<ISSUE_NUMBER>)
-```
+Do **not** create the release PR here. The orchestrator (feature-creator command)
+is responsible for creating and merging the release PR, handling the merge
+checkpoint, and running cleanup. Report the release branch name in your output
+summary so the orchestrator can find it.
 
 ## Error Recovery
 
@@ -177,10 +160,12 @@ If implementation or verification fails for a feature after exhausting retries:
 
 ## Output
 
-When finished, print a summary:
+When finished, print a summary that includes:
 
 | Issue | Title | Result | PR |
 |-------|-------|--------|----|
 | #N | Title | Implemented / Failed: <reason> | #PR or — |
 
-If a release branch was created, print its PR link.
+Also report:
+- The release branch name (e.g., `release/2026-04-05`) if created
+- The list of created PR numbers in implementation order (the orchestrator merges these in Phase 4)

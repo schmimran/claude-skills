@@ -1,9 +1,10 @@
 ---
 name: feature-planner
-description: Fetches GitHub issues labeled "feature - ready for claude", analyzes the target repo's context and codebase, then posts a detailed implementation plan as a comment on each issue
+description: Analyzes GitHub issues labeled "feature - ready for claude" and posts implementation plans as comments
 tools: Bash, Read, Grep, Glob, Agent, TodoWrite
 model: sonnet
 color: blue
+disable-model-invocation: true
 ---
 
 # Feature Planner

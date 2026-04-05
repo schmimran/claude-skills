@@ -1,19 +1,57 @@
 # feature-creator
 
-Automates feature development from GitHub issues through implementation. It plans, reviews for risk, implements, and opens PRs.
+Automates feature development end-to-end. Point it at a GitHub repository, label your issues, and it will analyze your codebase, write implementation plans, assess risk, write the code, open pull requests, and — if you give it the go-ahead — merge and clean up. Human input is only required when the pipeline flags something as high-risk.
+
+## Quick Start
+
+1. **Install the marketplace** (once per machine):
+   ```bash
+   /plugin marketplace add https://github.com/schmimran/claude-skills
+   ```
+
+2. **Create the required labels** on your target repository (once per repo):
+   ```bash
+   gh label create "feature - ready for claude" --color 0E8A16 --description "Scoped and ready for automated planning"
+   gh label create "feature - planned" --color 1D76DB --description "Implementation plan posted as comment"
+   gh label create "feature - human review" --color D93F0B --description "Flagged for human review (high-risk or failed)"
+   gh label create "feature - in progress" --color FBCA04 --description "Branch created, implementation underway"
+   gh label create "feature - complete" --color 0E8A16 --description "PR created and code-reviewed"
+   ```
+
+3. **Label one or more issues** with `feature - ready for claude`.
+
+4. **Run the pipeline** from a Claude Code session in or targeting your repo:
+   ```
+   /feature-creator owner/repo
+   ```
+   Or, if your current directory is already the target repo:
+   ```
+   /feature-creator
+   ```
+
+5. **Watch the output.** The pipeline prints a live summary as each phase completes. When it finishes, you'll see a table of every issue with its planning status, risk level, implementation result, and PR link. By default, the pipeline pauses before merging the release branch and asks for your confirmation. Pass `--auto-merge` to skip the pause.
+
+## Prerequisites
+
+1. **GitHub CLI** must be installed and authenticated:
+   ```bash
+   gh auth status
+   ```
+
+2. **Labels** must exist on the target repository (see step 2 in Quick Start above).
 
 ## Architecture
 
 | Component | Type | Model | Description |
 |-----------|------|-------|-------------|
-| `feature-creator` | Command | (inherits) | Full pipeline: plan, review, implement, PR |
+| `feature-creator` | Command | (inherits) | Full pipeline: plan, review, implement, merge, clean up |
 | `feature-planner` | Agent | sonnet | Fetch labeled issues, analyze repo, post implementation plans |
 | `feature-reviewer` | Agent | sonnet | Review plans for risk, flag dangerous ones, create combined plan |
 | `feature-implementer` | Agent | opus | Create branches, write code, run tests, open PRs |
 
 The command orchestrates the three agents in sequence. Agents are not independently invocable — use the command to run the full pipeline.
 
-## Pipeline Overview
+## Pipeline
 
 ```
 GitHub Issues                    Pipeline                            Output
@@ -27,9 +65,20 @@ GitHub Issues                    Pipeline                            Output
                             feature-implementer agent
                         (branch, code, test, PR) ----------> Pull requests
                                     |                         opened
-                              Release branch
-                        (links all feature PRs) ------------> Integration PR
+                              Merge & cleanup
+                        (feature PRs → release PR) ---------> Merged + branches
+                                                              deleted
 ```
+
+The pipeline moves through four phases:
+
+**Phase 1 — Planning**: The planner agent reads each labeled issue, explores the target codebase, and posts a structured implementation plan as a comment. Issues that are too vague or reference non-existent files are flagged for human review.
+
+**Phase 2 — Review**: The reviewer agent reads each plan, scores it against a risk rubric, and flags anything high-risk for human review. For approved features, it produces a combined plan with implementation order and conflict notes.
+
+**Phase 3 — Implementation**: The implementer agent works through approved features one at a time. For each: it creates a branch, writes the code, runs tests (with up to 3 retry attempts), follows the merge checklist (`/simplify` + `/code-review`), and opens a PR.
+
+**Phase 4 — Merge and Cleanup**: Feature PRs are merged in implementation order. The release branch PR is created linking all features. By default, the pipeline pauses here for your confirmation before merging the release branch. Pass `--auto-merge` to skip the pause. After merge, it deletes all feature branches (local and remote), pulls main, and removes any worktree.
 
 ### Label Lifecycle
 
@@ -41,21 +90,48 @@ ready for claude  -->  planned  -->  in progress  -->  complete
                           +-> human review <-+
 ```
 
-## Prerequisites
+| Label | Set by | Meaning |
+|-------|--------|---------|
+| `feature - ready for claude` | Human | Issue is scoped and ready for automated planning |
+| `feature - planned` | feature-planner agent | Plan posted as issue comment |
+| `feature - human review` | feature-reviewer or feature-implementer agent | Flagged as high-risk or implementation failed |
+| `feature - in progress` | feature-implementer agent | Branch created, coding underway |
+| `feature - complete` | feature-implementer agent | PR created and code-reviewed |
 
-1. **GitHub CLI** must be installed and authenticated:
-   ```bash
-   gh auth status
-   ```
+## Pausing Before Merge
 
-2. **Labels** must exist on the target repository. Run these once per repo:
-   ```bash
-   gh label create "feature - ready for claude" --color 0E8A16 --description "Scoped and ready for automated planning"
-   gh label create "feature - planned" --color 1D76DB --description "Implementation plan posted as comment"
-   gh label create "feature - human review" --color D93F0B --description "Flagged for human review (high-risk or failed)"
-   gh label create "feature - in progress" --color FBCA04 --description "Branch created, implementation underway"
-   gh label create "feature - complete" --color 0E8A16 --description "PR created and code-reviewed"
-   ```
+By default, the pipeline pauses after merging all feature PRs and creating the release branch PR. It prints the release PR link and asks for your confirmation before merging. This gives you a final review opportunity before the changes land on main.
+
+To skip the pause and run the full pipeline end-to-end without stopping, pass `--auto-merge`:
+
+```
+/feature-creator owner/repo --auto-merge
+```
+
+In autonomous mode, feature PRs are merged in implementation order, the release branch is merged, branches are deleted, and the session is cleaned up — all without prompting. Use this for scheduled runs or when you're confident in the pipeline's output.
+
+In either mode, features flagged as high-risk during Phase 2 are never automatically merged — they always require human intervention.
+
+## Batch Size and Concurrency
+
+The pipeline warns if more than 5 issues are labeled `feature - ready for claude` at once. This warning is **advisory only** — agents will process all of them (up to 20 per run). To limit a batch, manually remove the trigger label from lower-priority issues before running.
+
+**Do not run multiple instances against the same repository simultaneously.** This pipeline is single-operator tooling.
+
+## Error Recovery
+
+If the pipeline crashes or is interrupted while an issue is labeled `feature - in progress`, that issue will be skipped on the next run (agents only query for `feature - planned`). To recover:
+
+```bash
+gh issue edit <NUMBER> --remove-label "feature - in progress" --add-label "feature - planned"
+```
+
+Then delete the orphaned branch if one was created:
+
+```bash
+git branch -D feature/<NUMBER>-<slug>
+git push origin --delete feature/<NUMBER>-<slug>
+```
 
 ## Usage
 
@@ -82,6 +158,22 @@ Prompt: "Run /feature-creator <OWNER/REPO>"
 ```
 
 Use the `/schedule` skill or `create_scheduled_task` tool to set this up.
+
+## Development Notes
+
+To test changes to agents or commands locally without installing from GitHub:
+
+```bash
+# Load the plugin directly from your local checkout
+claude --plugin-dir /path/to/claude-skills/plugins/feature-creator
+
+# The command is then available as:
+/feature-creator
+```
+
+**Plan comment markers**: Plans posted by the planner begin with `<!-- claude-feature-planner-v1 -->` and combined plans from the reviewer begin with `<!-- claude-feature-reviewer-v1 -->`. These markers are how downstream agents locate the right comment programmatically. If you modify the plan format, update the marker version and update the extraction logic in the relevant agent.
+
+For plugin structure conventions, authoring reference, and the checklist for adding new plugins, see [CLAUDE.md](../../CLAUDE.md).
 
 ## License
 

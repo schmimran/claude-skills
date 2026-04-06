@@ -18,7 +18,7 @@ Plugins are self-contained: each lives in its own directory with its own agents,
 
 | Plugin | Version | Description | Docs |
 |--------|---------|-------------|------|
-| [feature-creator](plugins/feature-creator/) | 0.3.0 | Feature development pipeline — GitHub issues to implementation plans to PRs | [README](plugins/feature-creator/README.md) |
+| [feature-creator](plugins/feature-creator/) | 0.4.0 | Feature development pipeline — GitHub issues to implementation plans to PRs | [README](plugins/feature-creator/README.md) |
 
 ## What Each Plugin Does
 

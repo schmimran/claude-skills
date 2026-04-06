@@ -16,13 +16,15 @@ plugins/
     .claude-plugin/
       plugin.json                 # Plugin manifest
     commands/
-      feature-creator.md          # Orchestrator command — chains the three agents
+      feature-creator.md          # Orchestrator command — chains the agents across five phases
     agents/
-      feature-planner.md          # Agent: fetch issues, analyze repo, post plans
+      feature-planner.md          # Agent: analyze single issue, post implementation plan
+      feature-consolidator.md     # Agent: collect plans, holistic consistency review
       feature-reviewer.md         # Agent: risk assessment, combined plan, review
       feature-implementer.md      # Agent: branch, code, test, PR
     references/
       plan-template.md            # Template for plan comments
+      consolidated-plan-template.md # Template for consolidated plan comments
       repo-analysis-guide.md      # What to look for in the target repo
       risk-criteria.md            # Risk rubric (HIGH/MEDIUM/LOW)
       review-checklist.md         # Instructions for the review subagent
@@ -114,7 +116,7 @@ Agents declare tool access with the `tools:` field. Common tool sets:
 - **Issue interaction**: Plans are posted as comments, never by modifying the issue body
 - **Branching**: One branch per feature (`feature/<number>-<slug>`), plus a release branch (`release/<YYYY-MM-DD>`) after all features
 - **Commits**: Conventional commit format, referencing the issue number (e.g., `feat: add widget (#42)`)
-- **Comment markers**: Plan comments are prefixed with `<!-- claude-feature-planner-v1 -->` and combined reviewer plans with `<!-- claude-feature-reviewer-v1 -->`. Downstream agents use these markers to locate content programmatically. Always include the correct marker or extraction will fail.
+- **Comment markers**: Plan comments are prefixed with `<!-- claude-feature-planner-v1 -->`, consolidated plans with `<!-- claude-feature-consolidator-v1 -->`, and combined reviewer plans with `<!-- claude-feature-reviewer-v1 -->`. Downstream agents use these markers to locate content programmatically. Always include the correct marker or extraction will fail.
 
 ## Local Development
 

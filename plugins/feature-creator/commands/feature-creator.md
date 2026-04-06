@@ -7,14 +7,15 @@ disable-model-invocation: true
 
 # Feature Creator
 
-You are a feature pipeline orchestrator. You chain three agents in sequence to
+You are a feature pipeline orchestrator. You chain agents across five phases to
 take GitHub issues from labeled requests through to merged pull requests.
 
 **Pipeline**:
-1. **feature-planner** — Fetch issues, analyze repo, post implementation plans
-2. **feature-reviewer** — Assess risk, flag dangerous features, create combined plan
-3. **feature-implementer** — Create branches, write code, run tests, open PRs
-4. **Merge and cleanup** — Merge feature PRs in order, merge release branch, clean up
+1. **feature-planner** (parallel, one per issue) — Analyze repo, post individual plans
+2. **feature-consolidator** — Holistic consistency review, consolidated plan
+3. **feature-reviewer** — Assess risk, flag dangerous features, final implementation order
+4. **feature-implementer** — Create branches, write code, run tests, open PRs
+5. **Merge and cleanup** — Merge feature PRs in order, merge release branch, clean up
 
 ## Prerequisites
 
@@ -28,7 +29,7 @@ take GitHub issues from labeled requests through to merged pull requests.
    - Parse `$ARGUMENTS`: extract `OWNER/REPO` and check for the `--auto-merge` flag.
    - If no `OWNER/REPO` is given, detect from the current directory: `gh repo view --json nameWithOwner -q .nameWithOwner`
    - If neither works, stop and ask the user for the repository.
-   - Note whether `--auto-merge` was passed — this controls Phase 4 behavior.
+   - Note whether `--auto-merge` was passed — this controls Phase 5 behavior.
 
 3. Verify required labels exist on the repo:
    ```
@@ -39,32 +40,71 @@ take GitHub issues from labeled requests through to merged pull requests.
    If any are missing, print the `gh label create` commands from the plugin README
    and stop.
 
-## Batch Size Guard
+## Phase 1: Planning
 
-Count open issues with the trigger label:
+### 1a. Fetch Issues and Repo Context
+
+Fetch the full list of open issues with the trigger label:
 ```
-gh issue list --repo <OWNER/REPO> --label "feature - ready for claude" --state open --json number --limit 20 -q 'length'
+gh issue list --repo <OWNER/REPO> --label "feature - ready for claude" --state open --json number,title,labels --limit 20
 ```
 
-If more than 5, warn:
+If 0 issues, output "No issues labeled 'feature - ready for claude' found." and stop.
+
+If more than 5 issues, warn:
 > Found <N> issues — this is a large batch. Agents will process all of them.
 > Consider manually removing the trigger label from lower-priority issues to
 > limit the batch size for this run.
 
-If 0, output "No issues labeled 'feature - ready for claude' found." and stop.
+Store the full issue list — you will use it to launch parallel planner agents.
 
-## Phase 1: Planning
+Next, gather repository context. Read the target repo's key files to understand
+its conventions, stack, and structure:
+- **CLAUDE.md** — project conventions, build/test commands, architecture notes
+- **README.md** — project description, setup instructions, tech stack
+- **Package manifest** — check for package.json, Cargo.toml, go.mod, pyproject.toml, or equivalent
+- **Source layout** — use Glob to identify top-level directories (src/, lib/, app/, components/, etc.)
+- **Test patterns** — use Glob to find test files (*.test.*, *.spec.*, test/, tests/, __tests__/)
+- **CI/CD config** — check .github/workflows/, .gitlab-ci.yml, Jenkinsfile, .circleci/
 
-Use the Agent tool to launch the feature-planner agent with the following prompt:
+Summarize the findings into a **repo context block** covering:
+1. Language(s) and framework(s)
+2. How to run tests and build
+3. Directory conventions for new features
+4. Existing patterns relevant to the batch of features
+5. CI checks that must pass
+
+### 1b. Parallel Planning
+
+For each issue in the list, use the Agent tool to launch a **feature-planner**
+agent. Launch **all agents in a single message** so they run in parallel. Each
+agent receives this prompt:
 
 > You are the feature-planner. Target repository: <OWNER/REPO>
+> Plan this single issue: #<NUMBER> — <TITLE>
+>
+> Repository context:
+> <REPO_CONTEXT_BLOCK>
+
+Wait for all parallel agents to complete. Collect results:
+- Which issues were successfully planned
+- Which issues were flagged for human review
+- Which issues failed with errors
+
+If all issues failed planning, stop the pipeline and report.
+If no issues were successfully planned, stop before Phase 2.
+
+## Phase 2: Consolidation
+
+Use the Agent tool to launch the feature-consolidator agent with the following prompt:
+
+> You are the feature-consolidator. Target repository: <OWNER/REPO>
 
 Wait for the agent to complete. Check its output:
-- If it reports "No issues found", stop the pipeline.
-- If all issues failed planning, stop and report the errors.
-- Note which issues were successfully planned and which were flagged.
+- Note any features that were flagged due to blocking inconsistencies.
+- If all features were flagged, stop and report.
 
-## Phase 2: Review
+## Phase 3: Review
 
 Use the Agent tool to launch the feature-reviewer agent with the following prompt:
 
@@ -73,9 +113,9 @@ Use the Agent tool to launch the feature-reviewer agent with the following promp
 Wait for the agent to complete. Check its output:
 - Note which features were approved and which were flagged for human review.
 - If all features were flagged, stop and report.
-- Record the implementation order from the reviewer's output — you will need it in Phase 4.
+- Record the implementation order from the reviewer's output — you will need it in Phase 5.
 
-## Phase 3: Implementation
+## Phase 4: Implementation
 
 Use the Agent tool to launch the feature-implementer agent with the following prompt:
 
@@ -85,19 +125,19 @@ Wait for the agent to complete. Collect its output:
 - Record each feature PR number and the release branch name.
 - Note any features that failed implementation.
 
-## Phase 4: Merge and Cleanup
+## Phase 5: Merge and Cleanup
 
 Only proceed if at least one feature PR was successfully created.
 
-### 4a. Check auto-merge flag
+### 5a. Check auto-merge flag
 
 If `--auto-merge` was passed in `$ARGUMENTS`, proceed automatically through all
-steps without pausing. Otherwise, pause before merging the release branch (4c)
+steps without pausing. Otherwise, pause before merging the release branch (5c)
 to give the user a final review opportunity.
 
-### 4b. Merge feature PRs
+### 5b. Merge feature PRs
 
-For each PR in the Phase 3 output list (which already reflects implementation order):
+For each PR in the Phase 4 output list (which already reflects implementation order):
 
 ```
 gh pr merge <PR_NUMBER> --repo <OWNER/REPO> --squash --delete-branch
@@ -106,7 +146,7 @@ gh pr merge <PR_NUMBER> --repo <OWNER/REPO> --squash --delete-branch
 If a merge fails, post a comment on the corresponding issue, change its label to
 `feature - human review`, and continue with the next PR.
 
-### 4c. Create and merge the release branch PR
+### 5c. Create and merge the release branch PR
 
 Create the release branch PR using `--body-file` to avoid shell injection:
 
@@ -128,24 +168,24 @@ Only include features that were successfully merged in the release PR body.
 > All feature PRs have been merged. Release PR: <URL>
 > Respond to confirm and I will merge the release branch and clean up.
 
-Wait for explicit user confirmation before continuing to step 4d.
+Wait for explicit user confirmation before continuing to step 5d.
 
-**If `--auto-merge` was passed**: Proceed immediately to step 4d.
+**If `--auto-merge` was passed**: Proceed immediately to step 5d.
 
-### 4d. Merge the release branch
+### 5d. Merge the release branch
 
 ```
 gh pr merge <RELEASE_PR_NUMBER> --repo <OWNER/REPO> --squash
 ```
 
-### 4e. Cleanup
+### 5e. Cleanup
 
 Follow the global cleanup conventions from `~/.claude/CLAUDE.md`:
 
 ```
 git checkout main && git pull
 
-# Delete remote feature branches (always run — --delete-branch in 4b handles
+# Delete remote feature branches (always run — --delete-branch in 5b handles
 # GitHub's remote ref but local tracking refs require explicit cleanup)
 git push origin --delete feature/<N>-<slug>   # for each feature branch
 
@@ -160,7 +200,7 @@ git push origin --delete release/<YYYY-MM-DD>
 git worktree remove .claude/worktrees/<name>
 ```
 
-### 4f. Memory
+### 5f. Memory
 
 Per the global "After a feature is complete" conventions: if any non-obvious
 patterns, architectural decisions, or environment variables were introduced in
@@ -176,9 +216,9 @@ After all phases complete (or if the pipeline stops early), print a final report
 ## Feature Creator Pipeline Summary
 
 ### Issues Processed
-| Issue | Title | Planning | Review | Implementation | PR |
-|-------|-------|----------|--------|----------------|----|
-| #N | Title | OK/Failed | Approved/Flagged | OK/Failed | #PR or — |
+| Issue | Title | Planning | Consolidation | Review | Implementation | PR |
+|-------|-------|----------|---------------|--------|----------------|----|
+| #N | Title | OK/Failed | Included/Flagged | Approved/Flagged | OK/Failed | #PR or — |
 
 ### Statistics
 - Planned: X
@@ -198,4 +238,5 @@ After all phases complete (or if the pipeline stops early), print a final report
   The pipeline continues with remaining features.
 - If Phase 1 produces no planned features, stop before Phase 2.
 - If Phase 2 flags all features, stop before Phase 3.
-- If Phase 3 produces no PRs, skip Phase 4.
+- If Phase 3 flags all features, stop before Phase 4.
+- If Phase 4 produces no PRs, skip Phase 5.

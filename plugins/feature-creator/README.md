@@ -44,41 +44,48 @@ Automates feature development end-to-end. Point it at a GitHub repository, label
 
 | Component | Type | Model | Description |
 |-----------|------|-------|-------------|
-| `feature-creator` | Command | (inherits) | Full pipeline: plan, review, implement, merge, clean up |
-| `feature-planner` | Agent | sonnet | Fetch labeled issues, analyze repo, post implementation plans |
+| `feature-creator` | Command | (inherits) | Full pipeline: plan, consolidate, review, implement, merge, clean up |
+| `feature-planner` | Agent | sonnet | Analyze a single issue and post an implementation plan |
+| `feature-consolidator` | Agent | sonnet | Collect individual plans, check consistency, create consolidated plan |
 | `feature-reviewer` | Agent | sonnet | Review plans for risk, flag dangerous ones, create combined plan |
 | `feature-implementer` | Agent | opus | Create branches, write code, run tests, open PRs |
 
-The command orchestrates the three agents in sequence. Agents are not independently invocable — use the command to run the full pipeline.
+The command orchestrates the four agents. Planner agents run in parallel (one per issue); all other agents run sequentially. Agents are not independently invocable — use the command to run the full pipeline.
 
 ## Pipeline
 
 ```
 GitHub Issues                    Pipeline                            Output
  labeled
-"feature - ready       feature-planner agent                   Plan comments
- for claude"    ------> (analyze repo, create plans) -------> on each issue
+"feature - ready       feature-planner agents (parallel)        Plan comments
+ for claude"    ------> (one per issue, analyze & plan) ------> on each issue
+                                    |
+                          feature-consolidator agent
+                        (collect plans, consistency       ----> Consolidated plan
+                         review, holistic plan)                 on each issue
                                     |
                              feature-reviewer agent
-                        (risk assessment, combined plan) ---> High-risk flagged
-                                    |                         for human review
+                        (risk assessment, combined plan) -----> High-risk flagged
+                                    |                           for human review
                             feature-implementer agent
-                        (branch, code, test, PR) ----------> Pull requests
-                                    |                         opened
+                        (branch, code, test, PR) ------------> Pull requests
+                                    |                           opened
                               Merge & cleanup
-                        (feature PRs → release PR) ---------> Merged + branches
-                                                              deleted
+                        (feature PRs → release PR) ----------> Merged + branches
+                                                               deleted
 ```
 
-The pipeline moves through four phases:
+The pipeline moves through five phases:
 
-**Phase 1 — Planning**: The planner agent reads each labeled issue, explores the target codebase, and posts a structured implementation plan as a comment. Issues that are too vague or reference non-existent files are flagged for human review.
+**Phase 1 — Planning**: The orchestrator gathers repository context once, then launches one planner agent per issue **in parallel**. Each planner receives the repo context and a single issue, explores the affected code, and posts a structured implementation plan as a comment. Issues that are too vague or reference non-existent files are flagged for human review.
 
-**Phase 2 — Review**: The reviewer agent reads each plan, scores it against a risk rubric, and flags anything high-risk for human review. For approved features, it produces a combined plan with implementation order and conflict notes.
+**Phase 2 — Consolidation**: The consolidator agent collects all individual plans, analyzes them holistically for conflicts, missing dependencies, redundant work, and architectural inconsistencies. It produces a consolidated plan with a dependency graph, suggested implementation order, and cross-cutting concerns. Before posting, it performs a final review of the consolidated plan for internal consistency.
 
-**Phase 3 — Implementation**: The implementer agent works through approved features one at a time. For each: it creates a branch, writes the code, runs tests (with up to 3 retry attempts), follows the merge checklist (`/simplify` + `/code-review`), and opens a PR.
+**Phase 3 — Review**: The reviewer agent reads each plan and the consolidated plan, scores features against a risk rubric, and flags anything high-risk for human review. For approved features, it builds on the consolidator's analysis to produce a combined plan with final implementation order and conflict notes.
 
-**Phase 4 — Merge and Cleanup**: Feature PRs are merged in implementation order. The release branch PR is created linking all features. By default, the pipeline pauses here for your confirmation before merging the release branch. Pass `--auto-merge` to skip the pause. After merge, it deletes all feature branches (local and remote), pulls main, and removes any worktree.
+**Phase 4 — Implementation**: The implementer agent works through approved features one at a time. For each: it creates a branch, writes the code, runs tests (with up to 3 retry attempts), follows the merge checklist (`/simplify` + `/code-review`), and opens a PR.
+
+**Phase 5 — Merge and Cleanup**: Feature PRs are merged in implementation order. The release branch PR is created linking all features. By default, the pipeline pauses here for your confirmation before merging the release branch. Pass `--auto-merge` to skip the pause. After merge, it deletes all feature branches (local and remote), pulls main, and removes any worktree.
 
 ### Label Lifecycle
 
@@ -94,7 +101,7 @@ ready for claude  -->  planned  -->  in progress  -->  complete
 |-------|--------|---------|
 | `feature - ready for claude` | Human | Issue is scoped and ready for automated planning |
 | `feature - planned` | feature-planner agent | Plan posted as issue comment |
-| `feature - human review` | feature-reviewer or feature-implementer agent | Flagged as high-risk or implementation failed |
+| `feature - human review` | feature-consolidator, feature-reviewer, or feature-implementer agent | Flagged as high-risk, blocking inconsistency, or implementation failed |
 | `feature - in progress` | feature-implementer agent | Branch created, coding underway |
 | `feature - complete` | feature-implementer agent | PR created and code-reviewed |
 
@@ -110,7 +117,7 @@ To skip the pause and run the full pipeline end-to-end without stopping, pass `-
 
 In autonomous mode, feature PRs are merged in implementation order, the release branch is merged, branches are deleted, and the session is cleaned up — all without prompting. Use this for scheduled runs or when you're confident in the pipeline's output.
 
-In either mode, features flagged as high-risk during Phase 2 are never automatically merged — they always require human intervention.
+In either mode, features flagged as high-risk during Phase 3 (or flagged for blocking inconsistencies during Phase 2) are never automatically merged — they always require human intervention.
 
 ## Batch Size and Concurrency
 
@@ -171,7 +178,7 @@ claude --plugin-dir /path/to/claude-skills/plugins/feature-creator
 /feature-creator
 ```
 
-**Plan comment markers**: Plans posted by the planner begin with `<!-- claude-feature-planner-v1 -->` and combined plans from the reviewer begin with `<!-- claude-feature-reviewer-v1 -->`. These markers are how downstream agents locate the right comment programmatically. If you modify the plan format, update the marker version and update the extraction logic in the relevant agent.
+**Plan comment markers**: Plans posted by the planner begin with `<!-- claude-feature-planner-v1 -->`, consolidated plans from the consolidator begin with `<!-- claude-feature-consolidator-v1 -->`, and combined plans from the reviewer begin with `<!-- claude-feature-reviewer-v1 -->`. These markers are how downstream agents locate the right comment programmatically. If you modify the plan format, update the marker version and update the extraction logic in the relevant agent.
 
 For plugin structure conventions, authoring reference, and the checklist for adding new plugins, see [CLAUDE.md](../../CLAUDE.md).
 

@@ -40,9 +40,12 @@ For each issue, extract the implementation plan:
 gh issue view <NUMBER> --repo <OWNER/REPO> --json comments -q '.comments[].body'
 ```
 
-Look for the comment containing `<!-- claude-feature-planner-v1 -->` (or
-`<!-- claude-feature-reviewer-v1 -->` if the reviewer posted a combined plan).
-Prefer the reviewer's plan if both exist.
+Look for plan comments using these markers, in order of preference:
+1. `<!-- claude-feature-reviewer-v1 -->` — the reviewer's combined plan (highest priority)
+2. `<!-- claude-feature-consolidator-v1 -->` — the consolidator's holistic plan
+3. `<!-- claude-feature-planner-v1 -->` — the individual planner's plan
+
+Use the highest-priority plan available.
 
 ## Step 2: Implement Each Feature
 
@@ -168,4 +171,4 @@ When finished, print a summary that includes:
 
 Also report:
 - The release branch name (e.g., `release/2026-04-05`) if created
-- The list of created PR numbers in implementation order (the orchestrator merges these in Phase 4)
+- The list of created PR numbers in implementation order (the orchestrator merges these in Phase 5)

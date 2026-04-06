@@ -30,13 +30,20 @@ If no issues are returned, output "No issues labeled 'feature - planned' found."
 
 ## Step 2: Extract Plans
 
-For each issue, fetch its comments and find the plan:
+For each issue, fetch its comments and find the plans:
 ```
 gh issue view <NUMBER> --repo <OWNER/REPO> --json comments -q '.comments[].body'
 ```
 
-Search the comments for the one containing `<!-- claude-feature-planner-v1 -->`.
-If a plan comment is not found for an issue, skip it and note the issue in your
+Search the comments for:
+1. The **consolidated plan** containing `<!-- claude-feature-consolidator-v1 -->` (posted by the consolidator)
+2. The **individual plan** containing `<!-- claude-feature-planner-v1 -->` (posted by the planner)
+
+If the consolidated plan exists, use it as the primary source for understanding
+cross-feature dependencies, conflicts, and implementation order. Use individual
+plans for per-feature details not covered by the consolidated plan.
+
+If neither plan is found for an issue, skip it and note the issue in your
 output as "No plan found."
 
 ## Step 3: Individual Risk Assessment
@@ -80,21 +87,31 @@ For the remaining approved features:
 
 ### 5a. Determine Implementation Order
 
-Consider:
+Start from the consolidator's suggested implementation order (from the
+`<!-- claude-feature-consolidator-v1 -->` comment). Adjust based on risk
+assessment results — if a feature was flagged and removed, verify the remaining
+order still respects dependencies.
+
+If no consolidated plan exists, determine the order from scratch by considering:
 - Dependencies between features (feature A must be done before feature B)
 - File overlap (features touching the same files should be ordered to minimize conflicts)
 - Complexity (simpler features first to build momentum and catch issues early)
 
 ### 5b. Identify Potential Conflicts
 
-Check if any two approved features modify the same files. If so:
+Reference the consolidator's conflict analysis if available. Validate it and
+augment with any risk-related concerns not covered (e.g., a feature that became
+risky due to security implications may need additional ordering constraints).
+
+If no consolidated plan exists, check from scratch whether any two approved
+features modify the same files. If so:
 - Note the conflict in the combined plan
 - Recommend which feature should go first
 - Flag areas where the second feature's plan may need adjustment
 
 ### 5c. Assemble the Combined Plan
 
-Structure the combined plan as:
+Build on the consolidator's analysis where available. Structure the combined plan as:
 1. Implementation order (numbered list of features with rationale)
 2. Per-feature summary (condensed from individual plans)
 3. Conflict notes (if any)

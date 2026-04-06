@@ -171,4 +171,4 @@ When finished, print a summary that includes:
 
 Also report:
 - The release branch name (e.g., `release/2026-04-05`) if created
-- The list of created PR numbers in implementation order (the orchestrator merges these in Phase 4)
+- The list of created PR numbers in implementation order (the orchestrator merges these in Phase 5)

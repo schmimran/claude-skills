@@ -31,6 +31,22 @@ plugins/
       merge-checklist.md          # Pre-merge steps
       pr-template.md              # PR body template
     README.md                     # Plugin-specific documentation
+  security-scanner/               # Plugin: multi-tool security audit for Node.js
+    .claude-plugin/
+      plugin.json                 # Plugin manifest
+    commands/
+      security-scanner.md         # Orchestrator command — chains the three agents
+    agents/
+      security-runner.md          # Agent: install tools, run scans, emit JSON report
+      security-triager.md         # Agent: fingerprint findings, file new issues, skip duplicates
+      security-closer.md          # Agent: close resolved findings
+    references/
+      fingerprint-spec.md         # SHA-256 fingerprint algorithm and storage format
+      finding-severity-rubric.md  # Severity levels and override rules
+      issue-template.md           # Template for filed GitHub Issues
+      suppression-guide.md        # How to suppress false positives
+      tool-install-guide.md       # Tool installation and failure handling
+    README.md                     # Plugin-specific documentation
 ```
 
 Each plugin lives under `plugins/<name>/` and is independently installable. Plugins use the **commands + agents** pattern: commands are user-invocable orchestrators, agents are specialized workers launched by commands.

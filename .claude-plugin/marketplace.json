@@ -12,6 +12,15 @@
       "author": {
         "name": "schmimran"
       }
+    },
+    {
+      "name": "security-scanner",
+      "source": "./plugins/security-scanner",
+      "description": "Multi-tool security audit for Node.js web apps — files findings as GitHub Issues with deduplication and auto-close.",
+      "version": "0.1.0",
+      "author": {
+        "name": "schmimran"
+      }
     }
   ]
 }

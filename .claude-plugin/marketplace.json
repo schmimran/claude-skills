@@ -8,7 +8,7 @@
       "name": "feature-creator",
       "source": "./plugins/feature-creator",
       "description": "Feature development pipeline — GitHub issues to implementation plans to PRs.",
-      "version": "0.4.1",
+      "version": "0.5.0",
       "author": {
         "name": "schmimran"
       }

@@ -73,7 +73,10 @@ For each closed issue:
   regardless of state.
 - Extract the fingerprint from the issue body (same marker format as above).
 
-Build a `closed_fingerprint_map`: `{ fingerprint → issue_number }`.
+Build a `closed_fingerprint_map`: `{ fingerprint → { number, title } }`.
+Store both `number` and `title` from the list response — both are needed when
+writing the new-issues log in Step 5.5 and printing `Reopened #<NUMBER>: <TITLE>`
+in Step 4.5.
 
 ## Step 4: Triage Each Finding
 

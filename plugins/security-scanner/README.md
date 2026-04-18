@@ -26,6 +26,10 @@ posts expert advisory comments with root-cause analysis on each acted issue.
    gh label create "feature - ready for claude" \
      --color 0075ca \
      --description "Ready for a Claude fixing agent"
+
+   gh label create "feature - human review" \
+     --color 0075ca \
+     --description "Needs a human to review before proceeding"
    ```
 
 3. **Run a quick scan** (before feature work):
@@ -162,6 +166,28 @@ To suppress a finding permanently:
 
 The scanner will skip suppressed findings on all future runs and will never
 auto-close them.  See `references/suppression-guide.md` for details.
+
+### Autonomous suppression by the advisor
+
+The `security-advisor` agent may auto-suppress a newly filed issue when ALL
+three high-confidence false-positive signals are present:
+
+1. Source is `supabase-advisor` or `supabase-schema`.
+2. Rule ID is a known FP-prone rule for that source (`rls_disabled_in_public`,
+   `rls_enabled_no_policy`, `missing_rls`, or `policy_allows_all`).
+3. The finding references a known Supabase-internal or system table
+   (`schema_migrations`, `supabase_migrations`, `supabase_functions`,
+   `_realtime`, `_analytics`, `_supabase`, `storage.buckets`,
+   `storage.objects`).
+
+When triggered, the advisor applies `security - suppressed` and
+`feature - human review` labels, removes `feature - ready for claude`, posts
+a rationale comment, and closes the issue.  Reopened issues are never
+auto-suppressed.
+
+**To reverse an auto-suppression**: remove the `security - suppressed` label.
+The next scan re-files the issue if it is still detected.  See
+`references/suppression-guide.md` for the full signal specification.
 
 ## Advisory Comments
 

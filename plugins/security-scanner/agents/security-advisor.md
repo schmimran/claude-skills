@@ -127,6 +127,96 @@ Fill in the placeholders using the finding metadata retrieved in Step 1.  If
 file or line information is missing, note that in the advisory and base guidance
 on the rule and source alone.
 
+## Step 2.5: Evaluate for High-Confidence False Positive
+
+After posting the advisory comment for a `type: "new"` issue, evaluate whether
+the finding is a high-confidence false positive.  Suppression fires **only**
+when ALL THREE signals below are present simultaneously.  If any signal is
+missing, skip this step and move to the next issue.
+
+This step never runs for `type: "reopened"` issues — a re-detection means a
+prior close was incomplete, so human review is required regardless of the
+rule.
+
+### Signal 1 — Source
+
+The finding's `source` must be `supabase-advisor` or `supabase-schema`.  All
+other sources (semgrep, npm-audit, nodejsscan, etc.) fall outside the
+auto-suppression policy.
+
+### Signal 2 — Rule ID (split by source)
+
+Rule IDs are split by source.  Do not mix the two lists — a rule ID from one
+source is not automatically FP-prone under the other.
+
+- When `source == "supabase-advisor"`, suppress if `rule_id` is one of:
+  - `rls_disabled_in_public`
+  - `rls_enabled_no_policy`
+- When `source == "supabase-schema"`, suppress if `rule_id` is one of:
+  - `missing_rls`
+  - `policy_allows_all`
+
+### Signal 3 — Table name matches a known internal/system pattern
+
+The finding's `file` or `message` must reference a table whose name matches
+a known Supabase-internal or system table.  Match against this list
+(case-insensitive, allow optional schema prefix such as `storage.` or
+`auth.`):
+
+- `schema_migrations`
+- `supabase_migrations`
+- `supabase_functions`
+- `_realtime`
+- `_analytics`
+- `_supabase`
+- `buckets` (only the `storage.buckets` table)
+- `objects` (only the `storage.objects` table)
+
+If the table name does not appear in the finding metadata, do not attempt
+to guess — skip suppression (missing Signal 3).
+
+### Action when all three signals match
+
+Apply suppression.  Always use `--body-file` for the rationale comment:
+
+```bash
+cat > /tmp/sec-advisor-suppress-<NUMBER>.md << '----SUPPRESS_EOF_BOUNDARY----'
+### Security Advisor — Auto-Suppressed (False Positive)
+
+This finding has been auto-suppressed because all three false-positive
+signals are present:
+
+- Source: `<SOURCE>` (Supabase auditor)
+- Rule: `<RULE_ID>` (known FP-prone for this source)
+- Table: `<TABLE_NAME>` (known Supabase-internal / system table)
+
+Supabase-managed internal tables are not part of the user data model and
+RLS is either not applicable or managed by Supabase itself.  Filing this
+as an action item creates noise without security benefit.
+
+**To reverse**: remove the `security - suppressed` label.  The next scan
+will re-file this issue if it is still detected.  A human reviewer has
+also been flagged via the `feature - human review` label.
+----SUPPRESS_EOF_BOUNDARY----
+
+gh issue comment <NUMBER> --repo <OWNER/REPO> \
+  --body-file /tmp/sec-advisor-suppress-<NUMBER>.md
+
+gh issue edit <NUMBER> --repo <OWNER/REPO> \
+  --add-label "security - suppressed" \
+  --add-label "feature - human review" \
+  --remove-label "feature - ready for claude"
+
+gh issue close <NUMBER> --repo <OWNER/REPO> \
+  --reason "not planned"
+```
+
+If any of these `gh` commands fail, print:
+`Warning: auto-suppression partially failed on #<NUMBER> — <error>`
+and continue.  Do not abort the loop.  Count the issue as auto-suppressed
+if the suppression comment posted successfully, even if a subsequent label
+or close step failed — surface the partial failure in the warning.
+
 ## Step 3: Output
 
 Print a summary:
@@ -135,6 +225,9 @@ Print a summary:
 |--------|-------|
 | Advisory comments posted | X |
 | Advisory comments failed | X |
+| Issues auto-suppressed (false positive) | X |
 
 For each comment posted, print: `Advised on #<NUMBER>: <TITLE> (<TYPE>)`
 For each failure, print: `Failed #<NUMBER>: <error>`
+For each auto-suppressed issue, print:
+`Auto-suppressed #<NUMBER>: <RULE_ID> on <TABLE_NAME>`

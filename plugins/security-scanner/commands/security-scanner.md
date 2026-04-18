@@ -56,12 +56,14 @@ re-detection, close resolved ones, and post expert advisory comments.
    ```
    gh label list --repo <OWNER/REPO> --json name -q '.[].name'
    ```
-   Check for: `security`, `security - suppressed`, `feature - ready for claude`.
+   Check for: `security`, `security - suppressed`, `feature - ready for claude`,
+   `feature - human review`.
    If any are missing, print the create commands below and stop:
    ```bash
    gh label create "security" --repo <OWNER/REPO> --color "d73a4a" --description "Security finding"
    gh label create "security - suppressed" --repo <OWNER/REPO> --color "e4e669" --description "Confirmed false positive — scanner will skip"
    gh label create "feature - ready for claude" --repo <OWNER/REPO> --color "0075ca" --description "Ready for a Claude fixing agent"
+   gh label create "feature - human review" --repo <OWNER/REPO> --color "0075ca" --description "Needs a human to review before proceeding"
    ```
 
 ## Phase 1: Scan (parallel)
@@ -166,6 +168,7 @@ If the array is non-empty, launch **security-advisor**:
 
 Wait for the advisor to complete.  Collect:
 - Count of advisory comments posted
+- Count of issues auto-suppressed (false positive)
 
 ## Summary
 
@@ -185,6 +188,7 @@ Timestamp: <ISO 8601>
 - Suppressed findings skipped: X
 - Issues auto-closed (resolved): X
 - Advisory comments posted: X
+- Issues auto-suppressed (false positive): X
 
 ### Action Required
 <List any CRITICAL findings filed or reopened this run, with issue links.>

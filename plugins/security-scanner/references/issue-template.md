@@ -23,6 +23,17 @@ the security-closer agent uses it to identify resolved findings.
 
 <recommendation if available, otherwise "See rule documentation for <rule_id>">
 
+### Remediation
+
+**Location**: `<file>` line <line_start>–<line_end>
+**Action**: <specific, actionable description of what to change — not a restatement of the recommendation, but a concrete instruction a fixing agent can follow without additional context>
+
+```<language or text>
+// Pseudocode or minimal code snippet showing the required change.
+// If the finding includes a code sample, use it. Otherwise synthesize
+// from rule_id, file, line, and message.
+```
+
 ### Suppression
 
 If this is a confirmed false positive, add the label `security - suppressed`

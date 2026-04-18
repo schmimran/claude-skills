@@ -19,7 +19,7 @@ Plugins are self-contained: each lives in its own directory with its own agents,
 | Plugin | Version | Description | Docs |
 |--------|---------|-------------|------|
 | [feature-creator](plugins/feature-creator/) | 0.4.0 | Feature development pipeline — GitHub issues to implementation plans to PRs | [README](plugins/feature-creator/README.md) |
-| [security-scanner](plugins/security-scanner/) | 0.1.0 | Multi-tool security audit for Node.js web apps — files findings as GitHub Issues with deduplication and auto-close | [README](plugins/security-scanner/README.md) |
+| [security-scanner](plugins/security-scanner/) | 0.3.0 | Multi-tool security audit for Node.js web apps — files findings as GitHub Issues with deduplication, reopen on re-detection, and expert advisory comments | [README](plugins/security-scanner/README.md) |
 
 ## What Each Plugin Does
 

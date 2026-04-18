@@ -2,8 +2,9 @@
 
 Runs a multi-tool security audit of a Node.js web application and (when
 present) its Supabase project, and files findings as labeled GitHub Issues.
-Deduplicates by fingerprint, files new issues for novel findings, and
-auto-closes issues for resolved ones.
+Deduplicates by fingerprint, files new issues for novel findings, reopens
+previously closed issues on re-detection, auto-closes resolved ones, and
+posts expert advisory comments with root-cause analysis on each acted issue.
 
 ## Quick Start
 
@@ -21,6 +22,10 @@ auto-closes issues for resolved ones.
    gh label create "security - suppressed" \
      --color CCCCCC \
      --description "Confirmed false positive — scanner will skip this finding"
+
+   gh label create "feature - ready for claude" \
+     --color 0075ca \
+     --description "Ready for a Claude fixing agent"
    ```
 
 3. **Run a quick scan** (before feature work):
@@ -54,11 +59,12 @@ auto-closes issues for resolved ones.
 
 | Component | Type | Model | Description |
 |-----------|------|-------|-------------|
-| `security-scanner` | Command | (inherits) | Orchestrates the four-agent pipeline |
+| `security-scanner` | Command | (inherits) | Orchestrates the five-agent pipeline |
 | `security-runner` | Agent | sonnet | Installs tools, runs Node.js scans, emits JSON report |
 | `security-supabase-auditor` | Agent | sonnet | Queries Supabase advisor API + scans migrations/config.toml |
-| `security-triager` | Agent | sonnet | Fingerprints findings, files new issues, skips duplicates |
+| `security-triager` | Agent | sonnet | Fingerprints findings, files new issues, reopens closed issues on re-detection, skips duplicates |
 | `security-closer` | Agent | sonnet | Closes GitHub Issues for resolved findings |
+| `security-advisor` | Agent | opus | Posts expert advisory comments on newly filed and reopened issues |
 
 ## Pipeline
 
@@ -85,12 +91,27 @@ security-runner          security-supabase-auditor
     +-----------+-----------+
     v                       v
 security-triager     security-closer
-(file new | skip     (close resolved,
- duplicates |         skip suppressed)
- skip suppressed)
+(file new issues |   (close resolved,
+ reopen closed    |   skip suppressed)
+ on re-detection  |
+ skip duplicates  |
+ skip suppressed) |
     |                       |
     v                       v
-GitHub Issues filed    GitHub Issues closed
+GitHub Issues         GitHub Issues
+filed/reopened           closed
+    |
+    v
+/tmp/security-new-issues.json
+    |
+    v
+security-advisor
+(post expert advisory
+ comment on each
+ filed/reopened issue)
+    |
+    v
+Advisory comments posted
 ```
 
 ## Modes
@@ -120,9 +141,16 @@ Each finding is assigned a SHA-256 fingerprint computed from:
 - Static analysis: `source|rule_id|file|line_band` (10-line window)
 - Dependency: `npm-audit|package_name|cve_id`
 
-The triager checks fingerprints against open issues before filing.  Existing
-open issues are skipped.  See `references/fingerprint-spec.md` for the full
-specification.
+The triager checks fingerprints in this order:
+
+1. **Suppressed** (open, `security - suppressed` label) → skip always
+2. **Open** (open, `security` label, not suppressed) → skip as duplicate
+3. **Closed** (recently closed, up to 200, not suppressed) → reopen + comment
+4. **New** → file a new issue
+
+Re-detected closed issues are reopened rather than duplicated, preserving the
+history of prior fix attempts.  See `references/fingerprint-spec.md` for the
+full fingerprint specification.
 
 ## Suppression (False Positives)
 
@@ -134,6 +162,21 @@ To suppress a finding permanently:
 
 The scanner will skip suppressed findings on all future runs and will never
 auto-close them.  See `references/suppression-guide.md` for details.
+
+## Advisory Comments
+
+After the triager files or reopens issues, the **security-advisor** agent
+(running on Opus) posts an expert comment on each acted issue.
+
+- **Newly filed issues** receive a comment with: root cause analysis, a
+  specific fix approach (named functions/patterns, not generic advice), and
+  common mistakes to avoid when fixing this class of vulnerability.
+- **Reopened issues** receive a comment explaining why the prior fix likely
+  failed for this rule/source combination, what to look for differently, and
+  an adjusted fix approach.
+
+Advisory comments are labeled with `### Security Advisor Note` so they are
+easy to find in the issue timeline.
 
 ## Auto-Close
 

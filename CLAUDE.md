@@ -35,12 +35,13 @@ plugins/
     .claude-plugin/
       plugin.json                 # Plugin manifest
     commands/
-      security-scanner.md         # Orchestrator command — chains the four agents
+      security-scanner.md         # Orchestrator command — chains the five agents
     agents/
       security-runner.md          # Agent: install tools, run Node.js scans, emit JSON report
       security-supabase-auditor.md # Agent: query Supabase advisor API + scan migrations/config.toml
-      security-triager.md         # Agent: fingerprint findings, file new issues, skip duplicates
+      security-triager.md         # Agent: fingerprint findings, file new issues, reopen closed on re-detection, skip duplicates
       security-closer.md          # Agent: close resolved findings
+      security-advisor.md         # Agent: post expert advisory comments on filed/reopened issues
     references/
       fingerprint-spec.md         # SHA-256 fingerprint algorithm and storage format
       finding-severity-rubric.md  # Severity levels and override rules

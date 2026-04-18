@@ -84,7 +84,7 @@ HTTP_STATUS=$(curl -sS -o /tmp/sec-supabase-advisors.json -w '%{http_code}' \
   "https://api.supabase.com/v1/projects/${PROJECT_REF}/advisors?type=security")
 ```
 
-- `200`: proceed to Step 5 (parse advisors).
+- `200`: proceed to Step 6 (parse advisors).
 - Non-200: log the status plus first 200 chars of the body (token is not in
   the body — safe to log).  Record `supabase-advisor-api` in `skipped_tools`.
   Skip to Step 6 (static path).

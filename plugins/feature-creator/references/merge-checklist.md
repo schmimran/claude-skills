@@ -24,26 +24,44 @@ Closes #<ISSUE_NUMBER>"
 
 Use conventional commit types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`.
 
-## 3. Push
+## 3. Post-conflict diff verification
+
+If you resolved any merge or rebase conflicts on this branch, you must confirm
+that conflict resolution did not silently drop the feature's intended changes.
+
+For every file listed as `Create` or `Modify` in the plan's "Affected Files"
+table, run:
+
+```
+git diff origin/stage -- <planned-file>
+```
+
+Every planned `Create`/`Modify` file must show a non-empty diff. If any planned
+file shows no diff, conflict resolution silently dropped the feature — do not
+push. Abort and escalate: label the issue `feature - human review` with a
+comment identifying the file that lost its changes.
+
+## 4. Push
 
 ```
 git push -u origin <BRANCH_NAME>
 ```
 
-## 4. Create PR
+## 5. Create PR
 
 Create a pull request using the template in `pr-template.md` (in the
 `references/` directory of this plugin). Read that file for the exact format.
 
-Always use `--body-file` to avoid shell injection from untrusted content:
+Always use `--body-file` with a **per-issue unique path** to avoid shell
+injection and cross-feature collisions:
 ```
-cat > /tmp/pr-body.md << 'PR_EOF'
+cat > /tmp/pr-body-<N>.md << 'PR_EOF'
 <BODY>
 PR_EOF
-gh pr create --repo <OWNER/REPO> --title "<TITLE>" --body-file /tmp/pr-body.md --base main
+gh pr create --repo <OWNER/REPO> --title "<TITLE>" --body-file /tmp/pr-body-<N>.md --base stage
 ```
 
-## 5. Code Review
+## 6. Code Review
 
 Run `/code-review` (a built-in Claude Code skill) on the PR. This checks for:
 - Security vulnerabilities
@@ -51,7 +69,7 @@ Run `/code-review` (a built-in Claude Code skill) on the PR. This checks for:
 - Performance issues
 - Convention violations
 
-## 6. Address Findings
+## 7. Address Findings
 
 If code review finds issues:
 1. Fix each issue
@@ -60,7 +78,7 @@ If code review finds issues:
 4. Run `/code-review` again
 5. Repeat until clean
 
-## 7. Done
+## 8. Done
 
 The PR is ready for merge. The feature-implementer will update the issue label
 and move on to the next feature.

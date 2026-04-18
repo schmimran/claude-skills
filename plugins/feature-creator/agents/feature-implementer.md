@@ -19,10 +19,9 @@ Use the `OWNER/REPO` identifier from your prompt. The orchestrator has already v
 `gh` authentication and label setup. If running standalone, ensure `gh auth status`
 passes and the required labels exist before proceeding.
 
-Verify clean working tree and correct branch:
+Verify clean working tree:
 ```
 git status --porcelain
-git checkout main && git pull
 ```
 If there are uncommitted changes, stop and report the error.
 
@@ -45,18 +44,40 @@ Look for plan comments using these markers, in order of preference:
 2. `<!-- claude-feature-consolidator-v1 -->` — the consolidator's holistic plan
 3. `<!-- claude-feature-planner-v1 -->` — the individual planner's plan
 
-Use the highest-priority plan available.
+Use the highest-priority plan available. Save the plan text to `/tmp/plan-<N>.md`
+and extract the "Affected Files" table — you will need the list of planned files
+for the post-conflict verification gate in Step 2d.
 
 ## Step 2: Implement Each Feature
 
 Process features **sequentially**, one at a time. For each feature:
 
-### 2a. Create Branch
+### 2a. Create Branch (flat-branch from stage — hard-coded)
 
-Generate a sanitized slug from the issue title:
+**Never branch off another `feature/*` branch.** Every feature branch must be a
+flat branch rooted at `stage`. This is not a judgment call — it is a hard-coded
+first action. Stacking feature branches caused silent conflicts on prior runs.
+
+First, check out `stage` and pull:
+```
+git checkout stage && git pull origin stage
+```
+
+Then verify the current branch is exactly `stage` before creating the feature
+branch. If it is not, abort this feature immediately:
+```
+CURRENT=$(git branch --show-current)
+if [ "$CURRENT" != "stage" ]; then
+  echo "ERROR: expected stage, got $CURRENT — aborting feature #<NUMBER>"
+  # go to Error Recovery, label the issue "feature - human review"
+  exit 1
+fi
+```
+
+Only after the assertion passes, generate a sanitized slug and create the branch:
 ```
 SLUG=$(echo "<TITLE>" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | sed 's/^-//;s/-$//' | cut -c1-40)
-git checkout -b "feature/<NUMBER>-${SLUG}" main
+git checkout -b "feature/<NUMBER>-${SLUG}"
 ```
 
 Update the issue label:
@@ -95,20 +116,41 @@ If tests or build fail:
 - Attempt to fix the issue (up to 3 attempts)
 - If still failing after 3 attempts, go to **Error Recovery**
 
-### 2d. Follow Merge Checklist
+### 2d. Post-conflict diff verification gate
+
+If any `git merge`, `git rebase`, or manual conflict-resolution step touched
+files in this branch, you must verify that conflict resolution did not silently
+drop the feature's intended changes.
+
+Extract the "Affected Files" list from the plan (saved in `/tmp/plan-<N>.md`)
+and for every file whose action is `Create` or `Modify`, run:
+
+```
+git diff origin/stage -- <planned-file>
+```
+
+For every planned `Create`/`Modify` file, confirm the diff is **non-empty**. If
+any planned file shows an empty diff, conflict resolution silently dropped the
+feature's changes. Do not push. Go to **Error Recovery** with an error message
+identifying which planned file lost its changes.
+
+Deleted files should be verified with `git log origin/stage..HEAD -- <file>`
+showing a deletion commit.
+
+### 2e. Follow Merge Checklist
 
 Follow the steps in `merge-checklist.md` (in the `references/` directory of
 this plugin).
 
-### 2e. Update Issue
+### 2f. Update Issue
 
-Post a comment on the issue with the PR link. Always use `--body-file` to
-avoid shell injection:
+Post a comment on the issue with the PR link. Always use `--body-file` and a
+**per-issue unique path** to avoid shell injection and cross-feature collisions:
 ```
-cat > /tmp/impl-complete.md << 'DONE_EOF'
+cat > /tmp/impl-complete-<N>.md << 'DONE_EOF'
 Implementation complete. PR: <PR_URL>
 DONE_EOF
-gh issue comment <NUMBER> --repo <OWNER/REPO> --body-file /tmp/impl-complete.md
+gh issue comment <NUMBER> --repo <OWNER/REPO> --body-file /tmp/impl-complete-<N>.md
 ```
 
 Update the label:
@@ -116,18 +158,20 @@ Update the label:
 gh issue edit <NUMBER> --repo <OWNER/REPO> --remove-label "feature - in progress" --add-label "feature - complete"
 ```
 
-### 2f. Return to Main
+### 2g. Return to stage
 
 ```
-git checkout main
+git checkout stage
 ```
 
 ## Step 3: Create Release Branch
 
-After all features are implemented, create and push the release branch:
+After all features are implemented, create and push the release branch from
+`stage`:
 
 ```
-git checkout -b release/<YYYY-MM-DD> main
+git checkout stage && git pull origin stage
+git checkout -b release/<YYYY-MM-DD>
 git push origin release/<YYYY-MM-DD>
 ```
 
@@ -138,14 +182,17 @@ summary so the orchestrator can find it.
 
 ## Error Recovery
 
-If implementation or verification fails for a feature after exhausting retries:
+If implementation or verification fails for a feature after exhausting retries,
+or the flat-branch assertion in 2a fails, or the post-conflict diff gate in 2d
+fails:
 
-1. Post a comment on the issue with the error details (use `--body-file`):
+1. Post a comment on the issue with the error details. Use `--body-file` and a
+   **per-issue unique path**:
    ```
-   cat > /tmp/impl-error.md << 'ERR_EOF'
+   cat > /tmp/impl-error-<N>.md << 'ERR_EOF'
    Implementation failed: <ERROR_DETAILS>
    ERR_EOF
-   gh issue comment <NUMBER> --repo <OWNER/REPO> --body-file /tmp/impl-error.md
+   gh issue comment <NUMBER> --repo <OWNER/REPO> --body-file /tmp/impl-error-<N>.md
    ```
 
 2. Change the label:
@@ -155,7 +202,7 @@ If implementation or verification fails for a feature after exhausting retries:
 
 3. Clean up the local branch:
    ```
-   git checkout main
+   git checkout stage
    git branch -D feature/<NUMBER>-<SLUG>
    ```
 

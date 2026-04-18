@@ -3,6 +3,23 @@
 The security-runner agent checks for and installs these tools before scanning.
 All tools are installed as dev dependencies or via npx — no global installs.
 
+## Orchestrator prerequisites
+
+### jq (required)
+
+The orchestrator merges findings from `security-runner` and
+`security-supabase-auditor` using `jq`.  It is a hard prerequisite — the
+command fails in its prerequisites step if `jq` is not on PATH.
+
+```bash
+command -v jq
+```
+
+If missing:
+- macOS: `brew install jq`
+- Debian/Ubuntu: `sudo apt-get install jq`
+- RHEL/Fedora: `sudo dnf install jq`
+
 ## Required for quick mode
 
 ### npm audit
@@ -41,6 +58,35 @@ semgrep rule configs are fetched at runtime from the semgrep registry.  They
 require internet access.  If the scan environment is air-gapped, these configs
 must be pre-downloaded and referenced by local path.  This is out of scope for
 v0.1 — flag it if the environment has no outbound internet.
+
+## Supabase auditing (optional)
+
+The `security-supabase-auditor` agent runs alongside `security-runner` when a
+Supabase project is detected.  It has two data sources:
+
+### Advisor API (preferred)
+
+Calls `https://api.supabase.com/v1/projects/{ref}/advisors?type=security` via
+`curl`.  Requires:
+
+- `SUPABASE_ACCESS_TOKEN` environment variable.  Create a personal access
+  token at https://supabase.com/dashboard/account/tokens and export it in
+  the shell that runs the scanner.
+- A resolvable project ref.  The auditor tries in order:
+  `$SUPABASE_PROJECT_REF`, `project_id` in `supabase/config.toml`, and the
+  subdomain of `SUPABASE_URL` from any `.env*` file.
+
+No additional tools are installed — `curl` is standard on macOS and Linux.
+
+If the token or project ref is missing, or the API returns a non-200
+response, the auditor logs the issue and falls back to static-only.  The
+scan does not fail.
+
+### Static fallback
+
+Parses `supabase/migrations/*.sql` and `supabase/config.toml` locally.
+Requires no external dependencies.  See `supabase-audit-guide.md` for the
+full rule set.
 
 ## Tool Failure Handling
 

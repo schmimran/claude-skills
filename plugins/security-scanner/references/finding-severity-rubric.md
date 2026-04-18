@@ -30,6 +30,20 @@ These rules take precedence over tool-reported severity:
    file (`*.test.*`, `*.spec.*`, `__tests__/`), downgrade one severity level.
    A high becomes medium; a medium becomes low (and is not filed).
 
+## Supabase Findings
+
+Supabase findings use the same critical/high/medium/low scale.  Named-rule
+overrides (per rule_id) are the canonical source in `supabase-rule-catalog.md`
+— each catalog entry declares its severity.  Use those values.
+
+When an advisor `name` is not in the catalog, fall back by advisor `level`:
+
+| Advisor `level` | Severity |
+|---|---|
+| `ERROR` | high |
+| `WARN` | medium |
+| `INFO` | low (logged only) |
+
 ## Common False Positive Patterns
 
 These patterns frequently generate false positives.  Note them but do not

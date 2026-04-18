@@ -13,6 +13,15 @@ downstream agents use it to locate the plan programmatically.
 ### Summary
 <2-3 sentences: what the feature does, why it matters, and the high-level approach.>
 
+### Bucket-mates
+<Optional — include only when this issue shares a planning bucket with other
+issues (bucket size > 1). Omit this section entirely for singleton buckets.>
+
+- #<M> — <title> — <short note on shared file edits or within-bucket ordering>
+- #<K> — <title> — <...>
+
+<Within-bucket ordering (if relevant): "Land #<X> before #<Y> because …">
+
 ### Affected Files
 
 | Action | File | Description |

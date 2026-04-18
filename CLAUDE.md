@@ -16,15 +16,17 @@ plugins/
     .claude-plugin/
       plugin.json                 # Plugin manifest
     commands/
-      feature-creator.md          # Orchestrator command — chains the agents across five phases
+      feature-creator.md          # Orchestrator command — chains the agents across six phases (0-5)
     agents/
-      feature-planner.md          # Agent: analyze single issue, post implementation plan
-      feature-consolidator.md     # Agent: collect plans, holistic consistency review
+      feature-triager.md          # Agent (Phase 0): shared codebase exploration, bucket issues by predicted file overlap
+      feature-planner.md          # Agent: plan every issue in a bucket together, posts per-issue plan comments
+      feature-consolidator.md     # Agent: collect plans, cross-bucket conflict analysis
       feature-reviewer.md         # Agent: risk assessment, combined plan, review
       feature-implementer.md      # Agent: branch, code, test, PR
     references/
-      plan-template.md            # Template for plan comments
-      consolidated-plan-template.md # Template for consolidated plan comments
+      triage-guide.md             # Bucketing heuristics, Jaccard overlap rule, max bucket size, singleton handling
+      plan-template.md            # Template for plan comments (includes optional Bucket-mates section)
+      consolidated-plan-template.md # Bucket-centric template for consolidated plan comments
       repo-analysis-guide.md      # What to look for in the target repo
       risk-criteria.md            # Risk rubric (HIGH/MEDIUM/LOW)
       review-checklist.md         # Instructions for the review subagent

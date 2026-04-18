@@ -11,7 +11,8 @@ You are a feature pipeline orchestrator. You chain agents across five phases to
 take GitHub issues from labeled requests through to merged pull requests.
 
 **Pipeline**:
-1. **feature-planner** (parallel, one per issue) — Analyze repo, post individual plans
+0. **feature-triager** — Shared codebase exploration, group issues into planning buckets
+1. **feature-planner** (parallel, one per bucket) — Plan each bucket's issues together
 2. **feature-consolidator** — Holistic consistency review, consolidated plan
 3. **feature-reviewer** — Assess risk, flag dangerous features, final implementation order
 4. **feature-implementer** — Create branches, write code, run tests, open PRs
@@ -40,53 +41,115 @@ take GitHub issues from labeled requests through to merged pull requests.
    If any are missing, print the `gh label create` commands from the plugin README
    and stop.
 
+## Phase 0: Triage
+
+### 0a. Generate a timestamped bucket manifest path
+
+Capture a single timestamp **once** at the start of Phase 0 and reuse it for
+the entire pipeline run. This scopes the manifest path so concurrent pipeline
+runs on the same machine do not race on `/tmp/feature-buckets.json`.
+
+```
+PIPELINE_TS=$(date +%s)
+BUCKET_MANIFEST_PATH="/tmp/feature-buckets-${PIPELINE_TS}.json"
+echo "Bucket manifest path: ${BUCKET_MANIFEST_PATH}"
+```
+
+Record `BUCKET_MANIFEST_PATH` as a pipeline-scoped variable. You will pass it
+to the triager (Phase 0), the planners (Phase 1), and the consolidator
+(Phase 2). Do **not** re-derive it later — capture once, reuse.
+
+### 0b. Launch the triager
+
+Use the Agent tool to launch the **feature-triager** agent with this prompt:
+
+> You are the feature-triager. Target repository: <OWNER/REPO>
+> Bucket manifest path: <BUCKET_MANIFEST_PATH>
+>
+> Fetch all open issues labeled `feature - ready for claude`, run one shared
+> codebase exploration pass, group the issues into buckets per
+> `references/triage-guide.md`, write the manifest to the path above, and post
+> per-issue triage comments.
+
+Wait for the triager to complete.
+
+If the triager reports "No issues labeled 'feature - ready for claude' found.",
+stop the pipeline and report.
+
+If more than 5 issues were fetched, warn:
+> Found <N> issues — this is a large batch. The triager has grouped them into
+> <M> buckets. Consider removing the trigger label from lower-priority issues
+> to limit the batch size on future runs.
+
+### 0c. Validate the bucket manifest (Suggestion 1 — validation gate)
+
+Immediately after the triager completes, the orchestrator **must** read the
+manifest back and assert it is valid JSON with the required top-level keys.
+If the file is missing or malformed, halt the pipeline with a clear error —
+do **not** launch planners against a broken manifest.
+
+```
+# File must exist and be non-empty
+if [ ! -s "${BUCKET_MANIFEST_PATH}" ]; then
+  echo "ERROR: bucket manifest missing or empty at ${BUCKET_MANIFEST_PATH} — halting pipeline"
+  exit 1
+fi
+
+# Must parse as JSON and contain the expected top-level keys
+python3 - "${BUCKET_MANIFEST_PATH}" <<'PY'
+import json, sys
+path = sys.argv[1]
+try:
+    with open(path) as f:
+        data = json.load(f)
+except Exception as e:
+    print(f"ERROR: bucket manifest is not valid JSON: {e}")
+    sys.exit(1)
+missing = [k for k in ("shared_context", "buckets") if k not in data]
+if missing:
+    print(f"ERROR: bucket manifest missing required keys: {missing}")
+    sys.exit(1)
+if not isinstance(data["buckets"], list) or len(data["buckets"]) == 0:
+    print("ERROR: bucket manifest has no buckets")
+    sys.exit(1)
+print(f"OK: bucket manifest valid — {len(data['buckets'])} bucket(s)")
+PY
+```
+
+If the check fails, stop the pipeline and surface the error to the user. Do
+not attempt to recover automatically — a malformed manifest indicates a
+triager bug that must be fixed before any planner can run.
+
+Load the manifest into memory for use in Phase 1:
+
+```
+BUCKET_MANIFEST_JSON=$(cat "${BUCKET_MANIFEST_PATH}")
+```
+
 ## Phase 1: Planning
 
-### 1a. Fetch Issues and Repo Context
+### 1a. Launch one planner per bucket (parallel)
 
-Fetch the full list of open issues with the trigger label:
-```
-gh issue list --repo <OWNER/REPO> --label "feature - ready for claude" --state open --json number,title,labels --limit 20
-```
+Iterate over the `buckets` array in the validated manifest. For each bucket,
+use the Agent tool to launch a **feature-planner** agent. Launch **all agents
+in a single message** so they run in parallel.
 
-If 0 issues, output "No issues labeled 'feature - ready for claude' found." and stop.
-
-If more than 5 issues, warn:
-> Found <N> issues — this is a large batch. Agents will process all of them.
-> Consider manually removing the trigger label from lower-priority issues to
-> limit the batch size for this run.
-
-Store the full issue list — you will use it to launch parallel planner agents.
-
-Next, gather repository context. Read the target repo's key files to understand
-its conventions, stack, and structure:
-- **CLAUDE.md** — project conventions, build/test commands, architecture notes
-- **README.md** — project description, setup instructions, tech stack
-- **Package manifest** — check for package.json, Cargo.toml, go.mod, pyproject.toml, or equivalent
-- **Source layout** — use Glob to identify top-level directories (src/, lib/, app/, components/, etc.)
-- **Test patterns** — use Glob to find test files (*.test.*, *.spec.*, test/, tests/, __tests__/)
-- **CI/CD config** — check .github/workflows/, .gitlab-ci.yml, Jenkinsfile, .circleci/
-
-Summarize the findings into a **repo context block** covering:
-1. Language(s) and framework(s)
-2. How to run tests and build
-3. Directory conventions for new features
-4. Existing patterns relevant to the batch of features
-5. CI checks that must pass
-
-### 1b. Parallel Planning
-
-For each issue in the list, use the Agent tool to launch a **feature-planner**
-agent. Launch **all agents in a single message** so they run in parallel. Each
-agent receives this prompt:
+Each planner receives this prompt:
 
 > You are the feature-planner. Target repository: <OWNER/REPO>
-> Plan this single issue: #<NUMBER> — <TITLE>
+> Bucket manifest path: <BUCKET_MANIFEST_PATH>
+> Your bucket ID: <BUCKET_ID>
 >
-> Repository context:
-> <REPO_CONTEXT_BLOCK>
+> Plan every issue in this bucket together. Read the bucket manifest for your
+> `shared_context`, the issues in your bucket, the predicted globs, and the
+> rationale. Produce one plan comment per issue (written to
+> `/tmp/plan-<ISSUE_NUMBER>.md`) that is aware of its bucket-mates.
 
-Wait for all parallel agents to complete. Collect results:
+Pass the full `BUCKET_MANIFEST_PATH` so each planner reads the same file that
+the triager wrote — the timestamp suffix guarantees there is no collision
+with a concurrent pipeline run.
+
+Wait for all parallel planners to complete. Collect results:
 - Which issues were successfully planned
 - Which issues were flagged for human review
 - Which issues failed with errors
@@ -99,6 +162,7 @@ If no issues were successfully planned, stop before Phase 2.
 Use the Agent tool to launch the feature-consolidator agent with the following prompt:
 
 > You are the feature-consolidator. Target repository: <OWNER/REPO>
+> Bucket manifest path: <BUCKET_MANIFEST_PATH>
 
 Wait for the agent to complete. Check its output:
 - Note any features that were flagged due to blocking inconsistencies.

@@ -44,26 +44,37 @@ Automates feature development end-to-end. Point it at a GitHub repository, label
 
 | Component | Type | Model | Description |
 |-----------|------|-------|-------------|
-| `feature-creator` | Command | (inherits) | Full pipeline: plan, consolidate, review, implement, merge, clean up |
-| `feature-planner` | Agent | sonnet | Analyze a single issue and post an implementation plan |
-| `feature-consolidator` | Agent | sonnet | Collect individual plans, check consistency, create consolidated plan |
+| `feature-creator` | Command | (inherits) | Full pipeline: triage, plan, consolidate, review, implement, merge, clean up |
+| `feature-triager` | Agent | sonnet | Phase 0 — one shared codebase exploration pass, group issues into planning buckets by predicted file overlap |
+| `feature-planner` | Agent | sonnet | Plan every issue in a bucket together, using the triager's shared context |
+| `feature-consolidator` | Agent | sonnet | Collect individual plans, cross-bucket conflict analysis, consolidated plan |
 | `feature-reviewer` | Agent | sonnet | Review plans for risk, flag dangerous ones, create combined plan |
 | `feature-implementer` | Agent | opus | Create branches, write code, run tests, open PRs |
 
-The command orchestrates the four agents. Planner agents run in parallel (one per issue); all other agents run sequentially. Agents are not independently invocable — use the command to run the full pipeline.
+The command orchestrates the five agents. The triager runs once up front; planner agents run in parallel (one per bucket); all other agents run sequentially. Agents are not independently invocable — use the command to run the full pipeline.
+
+Key reference docs under `references/`:
+
+- `triage-guide.md` — bucketing heuristics, Jaccard overlap rule, max bucket size, singleton handling
+- `plan-template.md` — plan comment structure (includes optional Bucket-mates section)
+- `consolidated-plan-template.md` — bucket-centric consolidated plan structure
+- `risk-criteria.md`, `review-checklist.md`, `merge-checklist.md`, `pr-template.md`, `release-pr-template.md`, `repo-analysis-guide.md`
 
 ## Pipeline
 
 ```
 GitHub Issues                    Pipeline                            Output
  labeled
-"feature - ready       feature-planner agents (parallel)        Plan comments
- for claude"    ------> (one per issue, analyze & plan) ------> on each issue
-                                    |
+"feature - ready          feature-triager agent                  Bucket manifest
+ for claude"    ------>  (one shared exploration, ------> /tmp/feature-buckets-<TS>.json
+                          group issues into buckets)           + triage comment
+                                    |                            on each issue
+                          feature-planner agents (parallel)
+                        (one per bucket, plan together) ------> Plan comments
+                                    |                           on each issue
                           feature-consolidator agent
-                        (collect plans, consistency       ----> Consolidated plan
-                         review, holistic plan)                 on each issue
-                                    |
+                        (cross-bucket conflict analysis)  ----> Consolidated plan
+                                    |                           on each issue
                              feature-reviewer agent
                         (risk assessment, combined plan) -----> High-risk flagged
                                     |                           for human review
@@ -75,11 +86,13 @@ GitHub Issues                    Pipeline                            Output
                                                                deleted
 ```
 
-The pipeline moves through five phases:
+The pipeline moves through six phases (Phase 0 is the new triage stage):
 
-**Phase 1 — Planning**: The orchestrator gathers repository context once, then launches one planner agent per issue **in parallel**. Each planner receives the repo context and a single issue, explores the affected code, and posts a structured implementation plan as a comment. Issues that are too vague or reference non-existent files are flagged for human review.
+**Phase 0 — Triage**: The orchestrator captures a timestamp once and derives a run-scoped manifest path (`/tmp/feature-buckets-<TS>.json`). It launches the `feature-triager` agent, which fetches all trigger-labeled issues, runs **one shared codebase exploration pass**, predicts per-issue impacted globs, and groups issues into buckets by Jaccard overlap (≥ 1 shared glob). The manifest is written to the timestamped path and then validated by the orchestrator — if it is missing or malformed, the pipeline halts immediately. See `references/triage-guide.md` for the bucketing rules.
 
-**Phase 2 — Consolidation**: The consolidator agent collects all individual plans, analyzes them holistically for conflicts, missing dependencies, redundant work, and architectural inconsistencies. It produces a consolidated plan with a dependency graph, suggested implementation order, and cross-cutting concerns. Before posting, it performs a final review of the consolidated plan for internal consistency.
+**Phase 1 — Planning**: The orchestrator launches one planner agent **per bucket** (not per issue), in parallel. Each planner reads the shared context and plans every issue in its bucket together, noting shared file edits and proposing a within-bucket ordering. Each plan is posted to its own issue via a per-issue temp file (`/tmp/plan-<N>.md`). Issues too vague to plan are flagged for human review.
+
+**Phase 2 — Consolidation**: The consolidator agent reads the bucket manifest and collects all individual plans. Its analysis is scoped to **cross-bucket** concerns only — within-bucket file overlap was already resolved by each bucket-planner. It produces a bucket-centric consolidated plan with a dependency graph, suggested implementation order, and cross-cutting concerns. An explicit early-exit guard fires only for **true singleton runs** (exactly 1 bucket containing exactly 1 issue); it does NOT fire when one bucket contains multiple issues.
 
 **Phase 3 — Review**: The reviewer agent reads each plan and the consolidated plan, scores features against a risk rubric, and flags anything high-risk for human review. For approved features, it builds on the consolidator's analysis to produce a combined plan with final implementation order and conflict notes.
 

@@ -14,52 +14,56 @@ issues.  Your role is to add expert commentary that helps a fixing agent (or
 developer) resolve each issue correctly on the first attempt.  Be direct and
 opinionated — avoid generic advice.  Focus on root cause, not just symptoms.
 
-## Step 1: Read the Issues List
+## Step 1: Read the Issues List and Findings
 
 ```bash
 cat /tmp/security-new-issues.json
+cat /tmp/security-findings.json
 ```
 
-If the file does not exist or is an empty array `[]`, stop immediately and
-report: "No new or reopened issues to advise on."
+If `/tmp/security-new-issues.json` does not exist or is an empty array `[]`,
+stop immediately and report: "No new or reopened issues to advise on."
 
-Parse the list.  Each entry has:
+Parse the issues list.  Each entry has:
 - `number` — the GitHub issue number
 - `title` — the issue title
 - `type` — `"new"` (first detection) or `"reopened"` (re-detected after a prior
   close)
+- `fingerprint` — SHA-256 fingerprint used to match this issue to its finding
 
-## Step 2: Fetch Issue Details
+Build a map of `fingerprint → finding` from the findings report.  For each
+issue in the list, look up its fingerprint in that map to retrieve finding
+metadata without additional GitHub API calls:
+- **Severity** (`finding.severity`)
+- **Source** (`finding.source` — e.g., `semgrep-owasp`, `npm-audit`)
+- **Rule** (`finding.rule_id`)
+- **File** (`finding.file`) and line range (`finding.line_start`–`finding.line_end`)
+- **Message** (`finding.message`)
+- **Recommendation** (`finding.recommendation`)
 
-For each issue in the list, fetch the full body and metadata:
+If a fingerprint is not found in the findings report (e.g., the findings file
+was replaced between runs), fall back to the issue title for context and note
+the gap in the advisory comment.
+
+## Step 2: Post Advisory Comment
+
+For each issue, compose a tailored advisory comment and post it.  Write the
+comment body to a temp file named by issue number, then post with `--body-file`
+to avoid shell injection.  Use a unique heredoc token to prevent early
+termination if the comment body contains common strings:
 
 ```bash
-gh issue view <NUMBER> --repo <OWNER/REPO> \
-  --json number,title,body,labels
-```
-
-From the body, extract:
-- **Severity** (from `**Severity**:` line)
-- **Source** (from `**Source**:` line — e.g., `semgrep-owasp`, `npm-audit`)
-- **Rule** (from `**Rule**:` line)
-- **File** and line range (from `**File**:` line)
-- **Description** (content of `### Description` section)
-- **Recommendation** (content of `### Recommendation` section)
-- **Remediation** (content of `### Remediation` section)
-
-## Step 3: Post Advisory Comment
-
-For each issue, compose a tailored advisory comment and post it.  Use
-`--body-file` to avoid shell injection.  Name the temp file by issue number:
-
-```bash
-cat > /tmp/sec-advisor-comment-<NUMBER>.md << 'ADVISOR_EOF'
+cat > /tmp/sec-advisor-comment-<NUMBER>.md << '----ADVISOR_EOF_BOUNDARY----'
 <COMMENT_BODY>
-ADVISOR_EOF
+----ADVISOR_EOF_BOUNDARY----
 
 gh issue comment <NUMBER> --repo <OWNER/REPO> \
   --body-file /tmp/sec-advisor-comment-<NUMBER>.md
 ```
+
+If `gh issue comment` fails for a specific issue, print:
+`Warning: failed to post advisory on #<NUMBER> — <error output>`
+and continue to the next issue.  Do not abort the loop.
 
 ### Comment template for `type: "new"` issues
 
@@ -119,16 +123,18 @@ site; trace the input from its source and validate at the entry point" or
 "Run `npm ls <PACKAGE>` to find the full dependency tree before patching.">
 ```
 
-Fill in the placeholders using the extracted finding metadata.  If file or line
-information is missing, note that in your analysis and base guidance on the
-rule and source alone.
+Fill in the placeholders using the finding metadata retrieved in Step 1.  If
+file or line information is missing, note that in the advisory and base guidance
+on the rule and source alone.
 
-## Step 4: Output
+## Step 3: Output
 
 Print a summary:
 
 | Action | Count |
 |--------|-------|
 | Advisory comments posted | X |
+| Advisory comments failed | X |
 
 For each comment posted, print: `Advised on #<NUMBER>: <TITLE> (<TYPE>)`
+For each failure, print: `Failed #<NUMBER>: <error>`

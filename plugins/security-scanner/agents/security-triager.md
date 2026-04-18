@@ -57,12 +57,15 @@ Build a set of suppressed fingerprints.
 
 ## Step 3.5: Fetch Closed Security Issues
 
+This step must complete before Step 4 — the `closed_fingerprint_map` it
+produces is required for triage.
+
 ```bash
 gh issue list --repo <OWNER/REPO> \
   --label "security" \
   --state closed \
   --json number,title,body,labels \
-  --limit 200
+  --limit 1000
 ```
 
 For each closed issue:
@@ -142,12 +145,14 @@ on the repo.  Check first; do not error if it doesn't exist.
 ## Step 5.5: Write New Issues Log
 
 After processing all findings, write `/tmp/security-new-issues.json` with the
-complete list of issues acted on this run (filed or reopened):
+complete list of issues acted on this run (filed or reopened).  Include the
+`fingerprint` so the advisor can join against `/tmp/security-findings.json`
+to retrieve finding metadata without additional GitHub API calls:
 
 ```json
 [
-  {"number": 42, "title": "[SEC-HIGH] ...", "type": "new"},
-  {"number": 17, "title": "[SEC-MEDIUM] ...", "type": "reopened"}
+  {"number": 42, "title": "[SEC-HIGH] ...", "type": "new", "fingerprint": "<hex>"},
+  {"number": 17, "title": "[SEC-MEDIUM] ...", "type": "reopened", "fingerprint": "<hex>"}
 ]
 ```
 

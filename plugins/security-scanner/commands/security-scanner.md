@@ -151,18 +151,18 @@ Wait for both agents to complete.  Collect:
 
 ## Phase 3: Advisory Review (sequential, after Phase 2)
 
-Check whether the triager produced any new or reopened issues:
+The triager always writes `/tmp/security-new-issues.json` (empty array `[]` if
+nothing was acted on).  Read the file and check whether the array is non-empty.
+If the triager did not write the file, surface a triager failure rather than
+silently skipping advisory.
 
-```bash
-cat /tmp/security-new-issues.json 2>/dev/null
-```
-
-If the file exists and contains a non-empty array, launch **security-advisor**:
+If the array is non-empty, launch **security-advisor**:
 
 > You are the security-advisor.  Target repository: <OWNER/REPO>
 > New/reopened issues list: /tmp/security-new-issues.json
-> For each issue in the list, fetch the full issue body from GitHub and post
-> an expert advisory comment with root-cause analysis and fix guidance.
+> Findings report: /tmp/security-findings.json
+> For each issue in the list, join on fingerprint to retrieve finding metadata
+> from the findings report, then post an expert advisory comment.
 
 Wait for the advisor to complete.  Collect:
 - Count of advisory comments posted

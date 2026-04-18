@@ -6,26 +6,18 @@
   "plugins": [
     {
       "name": "feature-creator",
-      "source": {
-        "source": "github",
-        "repo": "schmimran/claude-skills",
-        "path": "plugins/feature-creator"
-      },
+      "source": "./plugins/feature-creator",
       "description": "Feature development pipeline — GitHub issues to implementation plans to PRs.",
-      "version": "0.4.0",
+      "version": "0.4.1",
       "author": {
         "name": "schmimran"
       }
     },
     {
       "name": "security-scanner",
-      "source": {
-        "source": "github",
-        "repo": "schmimran/claude-skills",
-        "path": "plugins/security-scanner"
-      },
+      "source": "./plugins/security-scanner",
       "description": "Multi-tool security audit for Node.js web apps — files findings as GitHub Issues with deduplication and auto-close.",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "author": {
         "name": "schmimran"
       }

@@ -148,21 +148,52 @@ If a merge fails, post a comment on the corresponding issue, change its label to
 
 ### 5c. Create and merge the release branch PR
 
-Create the release branch PR using `--body-file` to avoid shell injection:
+The release PR merges `stage` into `main` (the default branch). GitHub only
+auto-closes issues when a PR merges into the default branch, so this is the
+only opportunity in the pipeline to auto-close feature issues — every feature
+issue successfully merged in Phase 5b must appear as a `Closes #<N>` line in
+this PR body. Do **not** emit any explicit `gh issue close` calls; rely on
+GitHub's closing keywords.
+
+Construct the release PR body using the template in
+`references/release-pr-template.md` (read that file for the exact format).
+Populate it from the Phase 4 output:
+
+- The **Summary** section lists one line per successfully-merged feature PR,
+  including PR number, title, and issue number.
+- The **Closes** section has one `Closes #<ISSUE_NUMBER>` line per feature
+  issue that was successfully merged in Phase 5b.
+
+Only include features that were successfully merged. Features that failed to
+merge or were labeled `feature - human review` must NOT appear in the Closes
+section — those issues remain open for manual follow-up.
+
+**Pre-flight check (required before `gh pr create`).** Build the set of issue
+numbers for every PR merged successfully in Phase 5b. For each issue number,
+confirm the composed body contains a matching `Closes #<N>` line. If any
+merged issue is missing, fail with an error and stop — do not create the PR.
+This guarantees the release merge into `main` will auto-close every feature
+issue landed in this release.
+
+Write the body to `/tmp/release-pr-body.md` and create the PR with
+`--body-file`:
 
 ```
 cat > /tmp/release-pr-body.md << 'RELEASE_EOF'
-## Features in this release
-
-- #<PR_NUMBER> — <Feature title> (closes #<ISSUE_NUMBER>)
-...
-
-Automated by feature-creator.
+<POPULATED_TEMPLATE_BODY>
 RELEASE_EOF
-gh pr create --repo <OWNER/REPO> --base main --head release/<YYYY-MM-DD> --title "Release <YYYY-MM-DD>" --body-file /tmp/release-pr-body.md
-```
 
-Only include features that were successfully merged in the release PR body.
+# Pre-flight: confirm every merged issue number appears as a Closes line
+for N in <merged_issue_numbers>; do
+  if ! grep -q "^Closes #${N}\b" /tmp/release-pr-body.md; then
+    echo "ERROR: release PR body missing 'Closes #${N}' — aborting"
+    exit 1
+  fi
+done
+
+gh pr create --repo <OWNER/REPO> --base main --head release/<YYYY-MM-DD> \
+  --title "Release <YYYY-MM-DD>" --body-file /tmp/release-pr-body.md
+```
 
 **If `--auto-merge` was NOT passed**: Stop here. Print the release PR link and ask:
 > All feature PRs have been merged. Release PR: <URL>

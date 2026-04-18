@@ -1,8 +1,9 @@
 # security-scanner
 
-Runs a multi-tool security audit of a Node.js web application and files
-findings as labeled GitHub Issues.  Deduplicates by fingerprint, files new
-issues for novel findings, and auto-closes issues for resolved ones.
+Runs a multi-tool security audit of a Node.js web application and (when
+present) its Supabase project, and files findings as labeled GitHub Issues.
+Deduplicates by fingerprint, files new issues for novel findings, and
+auto-closes issues for resolved ones.
 
 ## Quick Start
 
@@ -40,15 +41,22 @@ issues for novel findings, and auto-closes issues for resolved ones.
 
 - **Node.js** with `npm` available in the shell
 - **GitHub CLI** installed and authenticated (`gh auth status`)
+- **jq** on PATH — used by the orchestrator to merge findings.  Install with
+  `brew install jq` (macOS) or `apt-get install jq` / `dnf install jq` (Linux).
 - **Internet access** for semgrep rule configs (fetched at runtime)
 - Required labels created on the target repository (see Quick Start above)
+- **Optional, for Supabase auditing**: `SUPABASE_ACCESS_TOKEN` exported in the
+  shell.  Without it, Supabase auditing falls back to static-only scanning of
+  `supabase/migrations` and `supabase/config.toml`.  See Supabase Auditing
+  below.
 
 ## Architecture
 
 | Component | Type | Model | Description |
 |-----------|------|-------|-------------|
-| `security-scanner` | Command | (inherits) | Orchestrates the three-agent pipeline |
-| `security-runner` | Agent | sonnet | Installs tools, runs scans, emits JSON report |
+| `security-scanner` | Command | (inherits) | Orchestrates the four-agent pipeline |
+| `security-runner` | Agent | sonnet | Installs tools, runs Node.js scans, emits JSON report |
+| `security-supabase-auditor` | Agent | sonnet | Queries Supabase advisor API + scans migrations/config.toml |
 | `security-triager` | Agent | sonnet | Fingerprints findings, files new issues, skips duplicates |
 | `security-closer` | Agent | sonnet | Closes GitHub Issues for resolved findings |
 
@@ -57,21 +65,32 @@ issues for novel findings, and auto-closes issues for resolved ones.
 ```
 Target Repo
     |
-    v
-security-runner
-(npm audit + semgrep + nodejsscan)
-    |
-    v
-/tmp/security-findings.json
-    |
-    v
-security-triager                    security-closer
-(fingerprint → compare open        (compare open issues
- issues → file new | skip           → close resolved)
- duplicates | skip suppressed)
-    |                                     |
-    v                                     v
-GitHub Issues filed              GitHub Issues closed
+    +----------------------------+
+    v                            v
+security-runner          security-supabase-auditor
+(npm audit + semgrep    (advisor API + static scan of
+ + nodejsscan)           migrations + config.toml)
+    |                            |
+    v                            v
+/tmp/security-findings   /tmp/security-findings-
+       .json                  supabase.json
+    \                          /
+     \                        /
+      v                      v
+       jq merge (orchestrator)
+                |
+                v
+     /tmp/security-findings.json
+                |
+    +-----------+-----------+
+    v                       v
+security-triager     security-closer
+(file new | skip     (close resolved,
+ duplicates |         skip suppressed)
+ skip suppressed)
+    |                       |
+    v                       v
+GitHub Issues filed    GitHub Issues closed
 ```
 
 ## Modes
@@ -90,6 +109,10 @@ GitHub Issues filed              GitHub Issues closed
 | OWASP Top 10 (injection, SSRF, broken auth) | semgrep p/owasp-top-ten |
 | Node.js-specific patterns | semgrep p/nodejs |
 | Node-specific web vulnerabilities | nodejsscan |
+| Supabase RLS misconfiguration | advisor API + migration scan |
+| `SECURITY DEFINER` hygiene, `auth.users` exposure, extensions in `public` | advisor API + migration scan |
+| Supabase auth hardening (leaked-password protection, MFA, OTP expiry, weak passwords) | advisor API + config.toml scan |
+| API-exposed schema overreach | config.toml scan |
 
 ## Deduplication
 
@@ -119,6 +142,72 @@ against the current findings.  Issues whose fingerprint no longer appears in
 the scan output are auto-closed with a comment noting the timestamp.  Suppressed
 issues are never auto-closed.
 
+## Supabase Auditing
+
+If the target repo uses Supabase, the scanner adds a dedicated auditor covering
+the data model (RLS coverage, policies, `SECURITY DEFINER` hygiene,
+`auth.users` exposure, storage buckets, extensions in `public`) and
+configuration (auth hardening, API schemas).
+
+### Detection
+
+The Supabase auditor runs automatically if any of these signals are present
+(no flag to enable, no flag to disable):
+
+1. `supabase/config.toml` exists.
+2. `@supabase/supabase-js` is in `package.json`.
+3. `SUPABASE_URL` is set in any `.env*` file.
+4. `supabase/migrations/` has at least one `.sql` file.
+
+### Two data sources
+
+The auditor prefers the **Supabase advisor API**, which is authoritative for
+live project state:
+
+```
+GET https://api.supabase.com/v1/projects/{ref}/advisors?type=security
+```
+
+To enable the API path, export:
+
+```bash
+# Create at https://supabase.com/dashboard/account/tokens
+export SUPABASE_ACCESS_TOKEN=sbp_...
+```
+
+The project ref is auto-detected in this order:
+`SUPABASE_PROJECT_REF` → `project_id` in `supabase/config.toml` →
+`SUPABASE_URL` subdomain from `.env*`.
+
+If the token or ref is missing, or the API returns a non-200 response, the
+auditor logs the issue and falls back to **static scanning** of
+`supabase/migrations/*.sql` and `supabase/config.toml`.  Seed files
+(`supabase/seed.sql`) and tests under `supabase/tests/**` are excluded — they
+routinely contain allow-all policies that are intentional for local dev.
+
+Both paths produce findings with the same schema.  Advisor findings carry
+Supabase's official remediation URL directly in the filed issue's
+Recommendation section.  For advisor rules with empty `remediation`, a local
+catalog (`references/supabase-rule-catalog.md`) provides the fallback fix
+text.
+
+### Severity highlights
+
+- `rls_disabled_in_public`, allow-all policies, `auth.users` exposed → **critical**
+- `SECURITY DEFINER` without pinned `search_path`, extensions in `public`,
+  leaked-password protection disabled → **high**
+- RLS enabled but no policies, long OTP expiry, weak password policy → **medium**
+
+See `references/finding-severity-rubric.md` for the full mapping.
+
+### What about `config.toml`?
+
+Local `supabase/config.toml` reflects **developer intent** for local
+environments.  Production auth config lives in the Supabase dashboard and
+comes through the advisor API.  Findings from config.toml are labeled as
+such in the issue body so you don't assume a config.toml fix addresses
+production.
+
 ## Scheduling
 
 Wrap in a cron job for weekly full scans:
@@ -129,12 +218,15 @@ Wrap in a cron job for weekly full scans:
   claude -p "/security-scanner owner/repo full" >> ~/security-scan.log 2>&1
 ```
 
-## Known Limitations (v0.1)
+## Known Limitations
 
-- Air-gapped environments not supported (semgrep requires internet for rule configs)
-- DAST (runtime/dynamic analysis) not included — static analysis only
+- Air-gapped environments not supported (semgrep requires internet for rule
+  configs; the Supabase advisor API also requires outbound internet)
+- DAST (runtime/dynamic analysis) not included — static + advisor-level only
 - Infrastructure and environment config not scanned
 - Third-party API trust surfaces not covered
+- Supabase Edge Functions are scanned only to the extent that semgrep covers
+  their `.ts` / `.js` sources — no Supabase-specific runtime checks
 
 ## License
 

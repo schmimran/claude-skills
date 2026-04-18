@@ -31,4 +31,9 @@ with the suppressed label — do not close it.  Add a comment explaining why it
 is a false positive.
 
 <!-- fingerprint: <hex> -->
+<!-- supabase_cache_key: <key or none> -->
 ```
+
+The `supabase_cache_key` comment is populated only for findings from the
+Supabase advisor API (`source: supabase-advisor`).  For all other findings it
+renders as `<!-- supabase_cache_key: none -->` and can be ignored.

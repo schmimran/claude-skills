@@ -31,13 +31,14 @@ plugins/
       merge-checklist.md          # Pre-merge steps
       pr-template.md              # PR body template
     README.md                     # Plugin-specific documentation
-  security-scanner/               # Plugin: multi-tool security audit for Node.js
+  security-scanner/               # Plugin: multi-tool security audit for Node.js + Supabase
     .claude-plugin/
       plugin.json                 # Plugin manifest
     commands/
-      security-scanner.md         # Orchestrator command — chains the three agents
+      security-scanner.md         # Orchestrator command — chains the four agents
     agents/
-      security-runner.md          # Agent: install tools, run scans, emit JSON report
+      security-runner.md          # Agent: install tools, run Node.js scans, emit JSON report
+      security-supabase-auditor.md # Agent: query Supabase advisor API + scan migrations/config.toml
       security-triager.md         # Agent: fingerprint findings, file new issues, skip duplicates
       security-closer.md          # Agent: close resolved findings
     references/
@@ -46,6 +47,8 @@ plugins/
       issue-template.md           # Template for filed GitHub Issues
       suppression-guide.md        # How to suppress false positives
       tool-install-guide.md       # Tool installation and failure handling
+      supabase-audit-guide.md     # Supabase detection, advisor API, static scan rules
+      supabase-rule-catalog.md    # Catalog of Supabase rules with severity + remediation
     README.md                     # Plugin-specific documentation
 ```
 

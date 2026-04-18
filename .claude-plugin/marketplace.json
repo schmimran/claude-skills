@@ -16,8 +16,8 @@
     {
       "name": "security-scanner",
       "source": "./plugins/security-scanner",
-      "description": "Multi-tool security audit for Node.js web apps — files findings as GitHub Issues with deduplication and auto-close.",
-      "version": "0.1.1",
+      "description": "Multi-tool security audit for Node.js web apps and Supabase projects — files findings as GitHub Issues with deduplication and auto-close.",
+      "version": "0.2.0",
       "author": {
         "name": "schmimran"
       }

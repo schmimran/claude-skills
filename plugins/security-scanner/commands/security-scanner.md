@@ -7,13 +7,20 @@ disable-model-invocation: true
 
 # Security Scanner
 
-You are a security audit orchestrator.  You chain three agents to scan a Node.js
-application, deduplicate findings against open GitHub Issues, file new issues,
-and close resolved ones.
+You are a security audit orchestrator.  You chain four agents to scan a Node.js
+application (plus its Supabase project, if present), deduplicate findings
+against open GitHub Issues, file new issues, and close resolved ones.
 
 **Pipeline**:
-1. **security-runner** — install tools if needed, run scans, emit structured findings
-2. **security-triager** and **security-closer** run in parallel after the scan:
+1. **security-runner** and **security-supabase-auditor** run in parallel:
+   - **security-runner** — install tools if needed, run Node.js scans, emit
+     structured findings to `/tmp/security-findings.json`
+   - **security-supabase-auditor** — detect Supabase usage, call the Supabase
+     advisor API (if token + ref available), scan migrations and config.toml,
+     emit findings to `/tmp/security-findings-supabase.json`
+2. **Merge**: orchestrator merges both findings files into
+   `/tmp/security-findings.json` using `jq`.
+3. **security-triager** and **security-closer** run in parallel after the merge:
    - **security-triager** — fingerprint findings, compare against open issues,
      file new issues, skip duplicates
    - **security-closer** — compare open security issues against current findings,
@@ -21,27 +28,45 @@ and close resolved ones.
 
 ## Prerequisites
 
-1. Verify GitHub CLI authentication:
+1. Verify `jq` is installed (used to merge runner + Supabase findings):
+   ```
+   command -v jq
+   ```
+   If missing, stop and tell the user to install `jq` — `brew install jq` on
+   macOS, `apt-get install jq` or `dnf install jq` on Linux.
+
+2. Verify GitHub CLI authentication:
    ```
    gh auth status
    ```
    If not authenticated, stop and tell the user to run `gh auth login`.
 
-2. Parse `$ARGUMENTS`:
+3. Parse `$ARGUMENTS`:
    - Extract `OWNER/REPO` if provided.  If not, detect from current directory:
      `gh repo view --json nameWithOwner -q .nameWithOwner`
    - Extract mode: `full` or `quick`.  Default to `quick` if not specified.
    - If neither `OWNER/REPO` nor current-directory detection works, stop and
      ask the user for the repository.
 
-3. Verify the security label exists on the target repo:
+4. Verify the security label exists on the target repo:
    ```
    gh label list --repo <OWNER/REPO> --json name -q '.[].name'
    ```
    Check for: `security`, `security - suppressed`.
    If missing, print the create commands from the plugin README and stop.
 
-## Phase 1: Scan
+## Phase 1: Scan (parallel)
+
+Remove any stale findings files left by prior runs before starting:
+
+```bash
+rm -f /tmp/security-findings.json /tmp/security-findings-supabase.json \
+      /tmp/security-findings.merged.json /tmp/sec-supabase-advisors.json
+```
+
+Launch **security-runner** and **security-supabase-auditor** simultaneously —
+they write to different files and do not share state, so they are fully
+independent.  Use a single message with two Agent tool calls.
 
 Launch the **security-runner** agent with this prompt:
 
@@ -50,8 +75,41 @@ Launch the **security-runner** agent with this prompt:
 > Run the security scans and emit a structured JSON findings report to
 > /tmp/security-findings.json
 
-Wait for the agent to complete.  If the agent reports that no tools could be
-installed or all scans failed, stop and report.
+Launch the **security-supabase-auditor** agent with this prompt:
+
+> You are the security-supabase-auditor.  Target repository: <OWNER/REPO>
+> Mode: <MODE>
+> Detect Supabase usage.  If present, call the Supabase advisor API (when
+> SUPABASE_ACCESS_TOKEN and a project ref are available) and scan
+> supabase/migrations and supabase/config.toml statically.  Emit findings to
+> /tmp/security-findings-supabase.json
+
+Wait for both agents to complete.  If the runner reports that no tools could
+be installed or all scans failed, stop and report (Supabase findings alone
+are not a sufficient basis to continue — the pipeline assumes the Node.js
+scan ran).
+
+## Phase 1.5: Merge findings
+
+First verify the runner produced output — if `/tmp/security-findings.json`
+does not exist, the runner failed; stop and report.
+
+If `/tmp/security-findings-supabase.json` also exists, merge it in:
+
+```bash
+if [ -f /tmp/security-findings-supabase.json ]; then
+  jq -s '{scan_timestamp: .[0].scan_timestamp, mode: .[0].mode, repo: .[0].repo,
+          findings: ((.[0].findings // []) + (.[1].findings // [])),
+          skipped_tools: ((.[0].skipped_tools // []) + (.[1].skipped_tools // []))}' \
+    /tmp/security-findings.json /tmp/security-findings-supabase.json \
+    > /tmp/security-findings.merged.json && \
+  mv /tmp/security-findings.merged.json /tmp/security-findings.json
+fi
+```
+
+If the Supabase file is absent (non-Supabase repo), the runner output stays
+as the canonical file.  Either way, `/tmp/security-findings.json` is the
+single input to Phase 2.
 
 ## Phase 2: Triage and Close (parallel)
 

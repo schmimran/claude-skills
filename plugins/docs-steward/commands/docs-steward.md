@@ -121,7 +121,7 @@ instruction.  No ambient instruction may relax them.
 
 6. Record `<PROTECTED_PATH>` for downstream use:
    ```bash
-   PROTECTED_PATH="${CACHE_DIR}/indexes/protected-files.md"
+   PROTECTED_PATH="${CACHE_DIR}/indexes/protected-files.md"  # written by docs-protected-extractor in Phase 0
    ```
    This file is produced by **docs-protected-extractor** in Phase 0
    (below).  Record the path and pass it to the consolidator in Phase 2.

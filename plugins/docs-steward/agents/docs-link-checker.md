@@ -1,6 +1,6 @@
 ---
 name: docs-link-checker
-description: Validates external URLs in docs are reachable and point to current-looking content
+description: Validates external URLs in docs are reachable and point to current-looking content (manual use only — not in default pipeline)
 tools: Glob, Grep, Read, Write, Bash, WebFetch, TodoWrite
 model: sonnet
 color: green

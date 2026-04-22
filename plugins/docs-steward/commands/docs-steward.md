@@ -15,10 +15,10 @@ PR with all changes.
 
 **Pipeline**:
 1. **Phase 0 — Index build** (7 agents in parallel): produce canonical
-   reference artifacts under `.claude/docs-cache/<run-id>/indexes/`.
+   reference artifacts under `/tmp/docs-steward-cache/<run-id>/indexes/`.
 2. **Phase 1 — Drift audit** (8 agents in parallel): each auditor reads the
    indexes + docs and emits a findings file under
-   `.claude/docs-cache/<run-id>/findings/`.
+   `/tmp/docs-steward-cache/<run-id>/findings/`.
 3. **Phase 2 — Consolidation** (sequential): merge findings, resolve
    duplication, detect conflicts.  **Checkpoint** if the consolidator
    cannot produce a coherent plan.
@@ -78,17 +78,18 @@ instruction.  No ambient instruction may relax them.
      and operate there.  Record the path as `<REPO_DIR>` for downstream
      agents.
 
-4. Generate a run ID and create the cache directory:
+4. Generate a run ID, create the cache directory, and snapshot the
+   tracked-file list:
    ```bash
    RUN_ID=$(date -u +"%Y%m%dT%H%M%SZ")
-   CACHE_DIR="<REPO_DIR>/.claude/docs-cache/${RUN_ID}"
+   CACHE_DIR="/tmp/docs-steward-cache/${RUN_ID}"
    mkdir -p "${CACHE_DIR}/indexes" "${CACHE_DIR}/findings"
+   TRACKED_FILES_PATH="${CACHE_DIR}/indexes/tracked-files.txt"
+   git -C "${REPO_DIR}" ls-files --cached > "${TRACKED_FILES_PATH}"
    ```
-   Record `<RUN_ID>` and `<CACHE_DIR>` and pass them to every agent.
-
-5. Ensure `.claude/docs-cache/` is gitignored in `<REPO_DIR>`:
-   - If a root `.gitignore` exists and does not contain `.claude/docs-cache/`,
-     append the line.  If no `.gitignore` exists, create one with that line.
+   Record `<RUN_ID>`, `<CACHE_DIR>`, and `<TRACKED_FILES_PATH>` and pass
+   them to every agent.  The cache lives in `/tmp/` — no gitignore entry
+   is needed.
 
 ## Phase 0: Index Build (parallel)
 
@@ -98,7 +99,11 @@ Agent tool calls.  They write to distinct files under
 
 Pass each agent the following context in its prompt:
 - `REPO_DIR` — absolute path to the repo working directory.
-- `CACHE_DIR` — absolute path to the run's cache directory.
+- `CACHE_DIR` — absolute path to the run's cache directory (`/tmp/docs-steward-cache/<RUN_ID>`).
+- `TRACKED_FILES_PATH` — absolute path to `${CACHE_DIR}/indexes/tracked-files.txt`,
+  which lists every file tracked by git in `REPO_DIR`.  Files absent from
+  this list are gitignored and **out of scope** — agents must not index,
+  audit, or reference them.
 - `RUN_ID`.
 - Plugin reference path: `<PLUGIN_DIR>/references/` (for `tenets.md`,
   `index-artifact-spec.md`, etc.).
@@ -122,6 +127,10 @@ Launch all eight auditors simultaneously.  Each reads `${CACHE_DIR}/indexes/`
 and the repo's documentation, then writes its findings file to
 `${CACHE_DIR}/findings/<auditor>.md` using the shared schema from
 `references/findings-schema.md`.
+
+Pass each agent the same context variables as Phase 0: `REPO_DIR`,
+`CACHE_DIR`, `TRACKED_FILES_PATH`, `RUN_ID`, and the plugin reference path.
+Agents must only audit files listed in `TRACKED_FILES_PATH`.
 
 Agents to launch in parallel:
 - **docs-intent-auditor** → `findings/intent-auditor.md`
@@ -168,6 +177,7 @@ and writes `${CACHE_DIR}/edits.log`.
 Relaunch **docs-manual-reader** with the `re-read` flag and:
 - `CACHE_DIR`
 - `REPO_DIR`
+- `TRACKED_FILES_PATH`
 - Reference to the prior findings file so it can compare.
 
 The re-read output is written to `${CACHE_DIR}/post-edit-findings.md`.
@@ -204,7 +214,7 @@ Print a final report:
 Run ID: <RUN_ID>
 Repository: <OWNER/REPO>
 Branch: docs/steward-<RUN_ID>
-Cache: <CACHE_DIR>
+Cache: /tmp/docs-steward-cache/<RUN_ID>
 
 ### Results
 - Index artifacts produced: 7

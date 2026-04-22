@@ -37,7 +37,7 @@ re-reads the result to verify coherence, and opens a single PR.
 The plugin chains six phases:
 
 1. **Phase 0 — Index build** (7 parallel agents).  Emit canonical
-   reference artifacts to `.claude/docs-cache/<run-id>/indexes/`:
+   reference artifacts to `/tmp/docs-steward-cache/<run-id>/indexes/`:
    file tree, symbol index, public-surface map, config catalogue,
    doc inventory, glossary, recent-changes summary.
 2. **Phase 1 — Drift audit** (8 parallel auditors).  Each auditor
@@ -102,9 +102,9 @@ Full text in [`references/tenets.md`](references/tenets.md).
 ## Cache layout
 
 All Phase 0/1 artifacts and intermediate state live under
-`<REPO_DIR>/.claude/docs-cache/<RUN_ID>/`.  This directory is
-gitignored by the orchestrator at the start of every run.  Old runs
-are not auto-pruned — you can inspect any prior run in place.
+`/tmp/docs-steward-cache/<RUN_ID>/`.  This directory is in `/tmp/` so no
+gitignore entry is required and no files are written to the target repo.
+Runs are inspectable until the OS clears `/tmp/` on reboot.
 
 See [`references/cache-layout.md`](references/cache-layout.md) for
 the full structure.
@@ -157,7 +157,7 @@ adjudicate, and re-run.
 - [`references/manual-reader-protocol.md`](references/manual-reader-protocol.md)
   — how the manual-reader walks the corpus.
 - [`references/cache-layout.md`](references/cache-layout.md) —
-  `.claude/docs-cache/` structure and lifecycle.
+  `/tmp/docs-steward-cache/` structure and lifecycle.
 - [`references/pr-template.md`](references/pr-template.md) — PR body
   template.
 

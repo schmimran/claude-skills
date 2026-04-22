@@ -17,7 +17,12 @@ flag term drift.
 
 ## Inputs
 
-- `REPO_DIR`, `CACHE_DIR`, `RUN_ID`, plugin reference path.
+- `REPO_DIR`, `CACHE_DIR`, `TRACKED_FILES_PATH`, `RUN_ID`, plugin reference path.
+
+`TRACKED_FILES_PATH` lists every git-tracked file in `REPO_DIR`.  Read it
+once at startup with the `Read` tool.  When collecting term occurrences via
+`Grep`, restrict your counts and source citations to files that appear in
+the tracked-files list — gitignored files are out of scope.
 
 Load `tenets.md` and `index-artifact-spec.md#glossary.md`.
 

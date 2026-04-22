@@ -17,16 +17,22 @@ artifact.
 
 ## Inputs
 
-- `REPO_DIR`, `CACHE_DIR`, `RUN_ID`, plugin reference path.
+- `REPO_DIR`, `CACHE_DIR`, `TRACKED_FILES_PATH`, `RUN_ID`, plugin reference path.
+
+`TRACKED_FILES_PATH` lists every git-tracked file in `REPO_DIR`.  Files
+absent from this list are gitignored and **out of scope** — do not extract
+symbols from them.
 
 Load `tenets.md` and `index-artifact-spec.md#symbols.json` before
 starting.
 
 ## Step 1: Detect languages in the repo
 
+Read `TRACKED_FILES_PATH` and derive the extension histogram from it — no
+additional git call is needed:
+
 ```bash
-cd "$REPO_DIR"
-git ls-files | awk -F. 'NF>1 {print $NF}' | sort | uniq -c | sort -rn | head -20
+awk -F. 'NF>1 {print $NF}' "${TRACKED_FILES_PATH}" | sort | uniq -c | sort -rn | head -20
 ```
 
 From the top extensions, decide which language extractors to run.
@@ -45,6 +51,15 @@ For unsupported languages, emit a `skipped_languages` entry in the output
 and do not fail the run — downstream auditors will note missing coverage.
 
 ## Step 2: Extract symbols
+
+Restrict extraction to files listed in `${TRACKED_FILES_PATH}`.  Use the
+`Grep` tool scoped to specific files from the tracked list, or use
+`git grep` in Bash for repo-wide pattern scans (both respect gitignore):
+
+```bash
+cd "$REPO_DIR"
+xargs git grep -n "pattern" < "${TRACKED_FILES_PATH}"
+```
 
 Prefer heuristics over parsing.  For each supported language, grep for
 definition patterns:

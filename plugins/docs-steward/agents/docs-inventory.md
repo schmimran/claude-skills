@@ -15,7 +15,12 @@ what docs exist and what each claims.
 
 ## Inputs
 
-- `REPO_DIR`, `CACHE_DIR`, `RUN_ID`, plugin reference path.
+- `REPO_DIR`, `CACHE_DIR`, `TRACKED_FILES_PATH`, `RUN_ID`, plugin reference path.
+
+`TRACKED_FILES_PATH` lists every git-tracked file in `REPO_DIR`.  Read it
+once at startup with the `Read` tool and keep the list in memory.  After
+running each `Glob` pattern below, discard any result that does not appear
+in the tracked-files list — gitignored files are out of scope.
 
 Load `tenets.md` and `index-artifact-spec.md#doc-inventory.md`.
 
@@ -31,7 +36,8 @@ Target set:
 - Files under `.github/**/*.md` that are user-facing (ignore workflows).
 - Any `*.md` file in the repo root.
 
-Exclude: `node_modules/`, `.git/`, build outputs, `.claude/docs-cache/`.
+Cross-reference all Glob results against `TRACKED_FILES_PATH` and drop any
+file not in that list before processing.
 
 Use `Glob`:
 ```

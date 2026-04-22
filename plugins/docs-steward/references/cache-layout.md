@@ -1,7 +1,7 @@
 # Cache Layout
 
 The pipeline produces structured artifacts under
-`<REPO_DIR>/.claude/docs-cache/<RUN_ID>/`.  Downstream agents read
+`/tmp/docs-steward-cache/<RUN_ID>/`.  Downstream agents read
 predecessor outputs from this location rather than receiving them via
 prompt.
 
@@ -10,8 +10,9 @@ prompt.
 ## Directory structure
 
 ```
-<REPO_DIR>/.claude/docs-cache/<RUN_ID>/
+/tmp/docs-steward-cache/<RUN_ID>/
 ├── indexes/
+│   ├── tracked-files.txt          # orchestrator — git ls-files snapshot (gitignore boundary)
 │   ├── file-tree.md               # docs-file-cartographer
 │   ├── symbols.json               # docs-symbol-indexer
 │   ├── routes.md                  # docs-route-mapper
@@ -36,15 +37,16 @@ prompt.
 └── pr-body.md                     # docs-final-reviewer
 ```
 
-## Gitignore
+## Storage location
 
-The orchestrator ensures `.claude/docs-cache/` is in the repo's
-`.gitignore` before Phase 0 starts.  Cache artifacts are never committed.
+The cache lives in `/tmp/` — no gitignore entry in the target repo is
+needed.  Cache artifacts are never committed to the repo.
 
 ## Retention
 
-Old runs are not auto-deleted in v0.1.0.  The user can inspect prior
-runs in place.  A `--clean` flag to prune is out of scope.
+Cache directories in `/tmp/` are cleared by the OS on reboot.  Prior runs
+are inspectable at `/tmp/docs-steward-cache/<RUN_ID>/` until then.  A
+`--clean` flag to prune explicitly is out of scope.
 
 ## Concurrency
 

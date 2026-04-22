@@ -14,7 +14,11 @@ misdirecting external links are findings.
 
 ## Inputs
 
-- `REPO_DIR`, `CACHE_DIR`, `RUN_ID`, plugin reference path.
+- `REPO_DIR`, `CACHE_DIR`, `TRACKED_FILES_PATH`, `RUN_ID`, plugin reference path.
+
+`TRACKED_FILES_PATH` lists every git-tracked file in `REPO_DIR`; gitignored
+paths are out of scope.  If you use `Glob`, `Grep`, or `Bash` to scan the repo
+directly, filter results against this list.
 
 Load:
 - `tenets.md`

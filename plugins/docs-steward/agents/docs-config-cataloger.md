@@ -30,7 +30,7 @@ Load `tenets.md` (especially tenet 5 on deprecation) and
 ### Environment variable declarations
 
 Scan `.env*` files (any file matching `.env`, `.env.*`, including
-`.env.example`).  Use `git ls-files` to respect gitignore:
+`.env.example`).  Filter using the pre-built tracked-files list:
 
 ```bash
 grep -E '(^|/)\.env($|\.)' "${TRACKED_FILES_PATH}"

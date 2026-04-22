@@ -15,7 +15,11 @@ to "I made my first working change and submitted a PR."
 
 ## Inputs
 
-- `REPO_DIR`, `CACHE_DIR`, `RUN_ID`, plugin reference path.
+- `REPO_DIR`, `CACHE_DIR`, `TRACKED_FILES_PATH`, `RUN_ID`, plugin reference path.
+
+`TRACKED_FILES_PATH` lists every git-tracked file in `REPO_DIR`; gitignored
+paths are out of scope.  If you use `Glob` or `Grep` to scan the repo directly,
+filter results against this list.
 
 Load:
 - `tenets.md`

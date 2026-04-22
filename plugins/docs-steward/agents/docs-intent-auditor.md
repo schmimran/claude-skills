@@ -16,7 +16,11 @@ match the canonical indexes built in Phase 0.  Mismatches are findings.
 
 ## Inputs
 
-- `REPO_DIR`, `CACHE_DIR`, `RUN_ID`, plugin reference path.
+- `REPO_DIR`, `CACHE_DIR`, `TRACKED_FILES_PATH`, `RUN_ID`, plugin reference path.
+
+`TRACKED_FILES_PATH` lists every git-tracked file in `REPO_DIR`; gitignored
+paths are out of scope.  If you use `Glob` or `Grep` to scan the repo directly,
+filter results against this list.
 
 Load these references:
 - `tenets.md`

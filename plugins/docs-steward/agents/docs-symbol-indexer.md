@@ -58,7 +58,7 @@ Restrict extraction to files listed in `${TRACKED_FILES_PATH}`.  Use the
 
 ```bash
 cd "$REPO_DIR"
-git grep -n "pattern" -- $(cat "${TRACKED_FILES_PATH}")
+xargs git grep -n "pattern" < "${TRACKED_FILES_PATH}"
 ```
 
 Prefer heuristics over parsing.  For each supported language, grep for

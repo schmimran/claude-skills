@@ -24,7 +24,7 @@ the claim.  See `references/claim-verification-protocol.md`.
 
 ## Inputs
 
-- `REPO_DIR`, `CACHE_DIR`, `TRACKED_FILES_PATH`, `RUN_ID`, `RIGOR`, plugin reference path.
+- `REPO_DIR`, `CACHE_DIR`, `TRACKED_FILES_PATH`, `RUN_ID`, `RIGOR`.
 
 > **`CACHE_DIR` is a directory, not a file.**  Never `Read ${CACHE_DIR}` —
 > only files inside it (e.g., `${CACHE_DIR}/indexes/file-tree.md`).

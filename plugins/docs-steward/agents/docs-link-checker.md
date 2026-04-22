@@ -14,7 +14,7 @@ misdirecting external links are findings.
 
 ## Inputs
 
-- `REPO_DIR`, `CACHE_DIR`, `TRACKED_FILES_PATH`, `RUN_ID`, plugin reference path.
+- `REPO_DIR`, `CACHE_DIR`, `TRACKED_FILES_PATH`, `RUN_ID`.
 
 > **`CACHE_DIR` is a directory, not a file.**  Never `Read ${CACHE_DIR}` —
 > only files inside it (e.g., `${CACHE_DIR}/indexes/doc-inventory.md`).

@@ -134,8 +134,10 @@ Pass each agent the following context in its prompt:
   this list are gitignored and **out of scope** — agents must not index,
   audit, or reference them.
 - `RUN_ID`.
-- Plugin reference path: `<PLUGIN_DIR>/references/` (for `tenets.md`,
-  `index-artifact-spec.md`, etc.).
+
+Each agent loads its own references (e.g. `tenets.md`,
+`findings-schema.md`) from the `references/` directory sibling to the
+agent's own definition — no reference path needs to be passed in.
 
 Agents to launch in parallel:
 - **docs-file-cartographer** → `indexes/file-tree.md`
@@ -168,8 +170,8 @@ and the repo's documentation, then writes its findings file to
 `references/findings-schema.md`.
 
 Pass each agent the same context variables as Phase 0: `REPO_DIR`,
-`CACHE_DIR`, `TRACKED_FILES_PATH`, `RUN_ID`, and the plugin reference path.
-Agents must only audit files listed in `TRACKED_FILES_PATH`.
+`CACHE_DIR`, `TRACKED_FILES_PATH`, `RUN_ID`.  Agents must only audit
+files listed in `TRACKED_FILES_PATH`.
 
 Additionally pass `RIGOR` (`<RIGOR>` parsed in prerequisites) to:
 - **docs-intent-auditor**

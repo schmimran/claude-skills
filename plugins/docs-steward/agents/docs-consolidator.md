@@ -16,7 +16,7 @@ can adjudicate.
 
 ## Inputs
 
-- `REPO_DIR`, `CACHE_DIR`, `RUN_ID`, `PROTECTED_PATH`, plugin reference path.
+- `REPO_DIR`, `CACHE_DIR`, `RUN_ID`, `PROTECTED_PATH`.
 
 > **`CACHE_DIR` is a directory, not a file.**  Never `Read ${CACHE_DIR}` —
 > only files inside it.  Reading the directory itself errors with `EISDIR`.

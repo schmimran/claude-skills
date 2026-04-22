@@ -15,7 +15,7 @@ commit one file at a time so the diff is reviewable.
 
 ## Inputs
 
-- `REPO_DIR`, `CACHE_DIR`, `RUN_ID`, plugin reference path.
+- `REPO_DIR`, `CACHE_DIR`, `RUN_ID`.
 
 > **`CACHE_DIR` is a directory, not a file.**  Never `Read ${CACHE_DIR}` —
 > only files inside it (e.g., `${CACHE_DIR}/consolidated-findings.md`).

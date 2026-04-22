@@ -15,7 +15,7 @@ to "I made my first working change and submitted a PR."
 
 ## Inputs
 
-- `REPO_DIR`, `CACHE_DIR`, `TRACKED_FILES_PATH`, `RUN_ID`, plugin reference path.
+- `REPO_DIR`, `CACHE_DIR`, `TRACKED_FILES_PATH`, `RUN_ID`.
 
 > **`CACHE_DIR` is a directory, not a file.**  Never `Read ${CACHE_DIR}` —
 > only files inside it (e.g., `${CACHE_DIR}/findings/onboarding-reviewer.md`).

@@ -25,8 +25,6 @@ Your prompt includes:
   listing every git-tracked file in `REPO_DIR`.  Files absent from this
   list are gitignored and out of scope.
 - `RUN_ID`.
-- Plugin reference path (for `tenets.md`, `index-artifact-spec.md`).
-
 Load `tenets.md` and `index-artifact-spec.md#file-tree.md` from the plugin's
 `references/` directory before starting.
 

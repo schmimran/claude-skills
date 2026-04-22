@@ -15,7 +15,7 @@ You are the last gate before a human reviews.
 
 ## Inputs
 
-- `REPO_DIR`, `CACHE_DIR`, `RUN_ID`, plugin reference path.
+- `REPO_DIR`, `CACHE_DIR`, `RUN_ID`.
 - Branch name.
 - Target repository (`OWNER/REPO`).
 

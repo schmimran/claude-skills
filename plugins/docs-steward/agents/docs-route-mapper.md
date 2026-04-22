@@ -16,13 +16,18 @@ auditors use this to verify that docs describe what actually exists.
 
 ## Inputs
 
-- `REPO_DIR`, `CACHE_DIR`, `RUN_ID`, plugin reference path.
+- `REPO_DIR`, `CACHE_DIR`, `TRACKED_FILES_PATH`, `RUN_ID`, plugin reference path.
+
+`TRACKED_FILES_PATH` lists every git-tracked file in `REPO_DIR`.  Gitignored
+files are out of scope — filter all Glob and Grep results against this list
+before processing.  Read it once at startup with the `Read` tool.
 
 Load `tenets.md` and `index-artifact-spec.md#routes.md` before starting.
 
 ## Step 1: Detect surface kinds present
 
-Scan the repo once to determine which surface kinds apply:
+Scan the repo once to determine which surface kinds apply.  Only consider
+files present in `${TRACKED_FILES_PATH}`:
 
 - **HTTP routes**: look for common frameworks — Express (`app.get`,
   `router.post`), Koa (`router.get`), Fastify (`fastify.route`),

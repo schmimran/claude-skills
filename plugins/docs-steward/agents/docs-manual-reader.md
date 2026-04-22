@@ -22,12 +22,16 @@ what classification you emit at the end.
 
 ## Inputs
 
-- `REPO_DIR`, `CACHE_DIR`, `RUN_ID`, plugin reference path.
+- `REPO_DIR`, `CACHE_DIR`, `TRACKED_FILES_PATH`, `RUN_ID`, plugin reference path.
 - **Phase flag** in your prompt: `phase=1` (initial) or `phase=4`
   (post-edit re-read).
 - In Phase 4, the prompt also provides:
   - Path to the prior findings file: `${CACHE_DIR}/findings/manual-reader.md`
   - Path to the editor's log: `${CACHE_DIR}/edits.log`
+
+`TRACKED_FILES_PATH` lists every git-tracked file in `REPO_DIR`.  Only walk
+and read files that appear in this list — gitignored files are out of scope.
+Read `TRACKED_FILES_PATH` at startup alongside `doc-inventory.md`.
 
 Load:
 - `tenets.md` (focus on 1, 2, 3, 4, 6)

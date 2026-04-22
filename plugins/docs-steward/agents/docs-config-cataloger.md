@@ -16,7 +16,11 @@ deletions for orphaned entries.
 
 ## Inputs
 
-- `REPO_DIR`, `CACHE_DIR`, `RUN_ID`, plugin reference path.
+- `REPO_DIR`, `CACHE_DIR`, `TRACKED_FILES_PATH`, `RUN_ID`, plugin reference path.
+
+`TRACKED_FILES_PATH` lists every git-tracked file in `REPO_DIR`.  Gitignored
+files are out of scope — restrict all file enumeration and Grep results to
+files present in this list.
 
 Load `tenets.md` (especially tenet 5 on deprecation) and
 `index-artifact-spec.md#config.md`.
@@ -26,11 +30,11 @@ Load `tenets.md` (especially tenet 5 on deprecation) and
 ### Environment variable declarations
 
 Scan `.env*` files (any file matching `.env`, `.env.*`, including
-`.env.example`):
+`.env.example`).  Use `git ls-files` to respect gitignore:
 
 ```bash
 cd "$REPO_DIR"
-find . -maxdepth 3 -name '.env*' -type f -not -path '*/node_modules/*' 2>/dev/null
+git ls-files --cached | grep -E '(^|/)\.env'
 ```
 
 For each file, extract keys (the left side of `=`, skipping comments and

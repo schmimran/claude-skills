@@ -1,8 +1,14 @@
 # Index Artifact Spec
 
 Phase 0 agents emit canonical reference artifacts under
-`${CACHE_DIR}/indexes/`.  Phase 1 auditors read these files rather than
-re-crawling the repo.  This file is the contract between the two phases.
+`${CACHE_DIR}/indexes/` (where `CACHE_DIR` is `/tmp/docs-steward-cache/<RUN_ID>`).
+Phase 1 auditors read these files rather than re-crawling the repo.
+This file is the contract between the two phases.
+
+All indexes are scoped to **git-tracked files only**.  The orchestrator
+generates `${CACHE_DIR}/indexes/tracked-files.txt` from `git ls-files --cached`
+before Phase 0 starts.  Phase 0 agents use this list as the authoritative
+in-scope file set; gitignored paths are excluded from all indexes.
 
 ## file-tree.md
 
@@ -25,8 +31,9 @@ one-line purpose:
     - ...
 ```
 
-Excludes: `.git/`, `node_modules/`, `.claude/docs-cache/`, common build
-output paths (`dist/`, `build/`, `target/`, `.next/`, `.venv/`).
+Scope: git-tracked files only (derived from `tracked-files.txt`).  Common
+non-tracked paths (`node_modules/`, `.git/`, `dist/`, `build/`, `.next/`,
+`.venv/`) are already excluded by git and therefore absent from the list.
 
 ## symbols.json
 

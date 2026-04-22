@@ -65,12 +65,13 @@ plugins/
       docs-config-cataloger.md    # Phase 0: env vars + config files + schemas (with referenced flag)
       docs-inventory.md           # Phase 0: every doc file with stated purpose + claims
       docs-history-reconciler.md  # Phase 0: last-90d git history by area with likely doc impact
+      docs-protected-extractor.md # Phase 0: extracts CLAUDE.md file-protection rules → protected-files.md
       docs-intent-auditor.md      # Phase 1: doc claims vs code reality
       docs-info-architect.md      # Phase 1: structure, section-README consistency, duplication, gaps
       docs-onboarding-reviewer.md # Phase 1: new-contributor walk through the docs
       docs-reference-validator.md # Phase 1: every intra-repo reference resolves
       docs-example-verifier.md    # Phase 1: code blocks still match the code
-      docs-link-checker.md        # Phase 1: external URLs reachable and on-topic
+      docs-link-checker.md        # NOT in default pipeline: external URL checker (manual use only)
       docs-manual-reader.md       # Phase 4: walks edited corpus as a manual from the root README
       docs-deprecation-hunter.md  # Phase 1: orphan env/config/symbol/command refs → action=delete
       docs-consolidator.md        # Phase 2: merge findings, resolve duplication, emit edit plan or checkpoint

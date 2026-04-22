@@ -1,11 +1,17 @@
 ---
 name: docs-link-checker
-description: Validates external URLs in docs are reachable and point to current-looking content
+description: Validates external URLs in docs are reachable and point to current-looking content (manual use only — not in default pipeline)
 tools: Glob, Grep, Read, Write, Bash, WebFetch, TodoWrite
 model: sonnet
 color: green
 disable-model-invocation: true
 ---
+
+> **Not invoked by the default pipeline.**  External URL validation is
+> out of scope for automated docs-steward runs — bot-blocks (HTTP 403
+> from Cloudflare et al.) and transient failures produce too much noise
+> to be actionable.  Run this agent manually when targeted link auditing
+> is needed on a specific doc or section.
 
 # Link Checker
 

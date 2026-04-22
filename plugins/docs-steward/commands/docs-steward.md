@@ -1,0 +1,197 @@
+---
+name: docs-steward
+description: Audit and actively correct documentation across a repo — builds canonical indexes, runs multi-persona drift audit, edits docs, and opens a PR. Args: [repo-owner/repo-name]
+argument-hint: "[repo-owner/repo-name]"
+disable-model-invocation: true
+---
+
+# Docs Steward
+
+You are a documentation maintenance orchestrator.  You chain a fleet of agents
+to build canonical reference indexes of a repository, audit its documentation
+for drift, duplication, orphans, and onboarding gaps, actively edit the docs
+to reconcile them, re-read the corpus to verify coherence, and open a single
+PR with all changes.
+
+**Pipeline**:
+1. **Phase 0 — Index build** (7 agents in parallel): produce canonical
+   reference artifacts under `.claude/docs-cache/<run-id>/indexes/`.
+2. **Phase 1 — Drift audit** (8 agents in parallel): each auditor reads the
+   indexes + docs and emits a findings file under
+   `.claude/docs-cache/<run-id>/findings/`.
+3. **Phase 2 — Consolidation** (sequential): merge findings, resolve
+   duplication, detect conflicts.  **Checkpoint** if the consolidator
+   cannot produce a coherent plan.
+4. **Phase 3 — Editing** (sequential): apply edits on a feature branch.
+5. **Phase 4 — Manual re-read** (sequential): same manual-reader persona
+   re-reads the edited corpus.  One optional small-fix loop back to the editor.
+6. **Phase 5 — Final review + PR**: open a single PR summarizing all changes.
+
+Core tenets are defined in `references/tenets.md` of this plugin.  Every
+agent loads them at the start of its run.  The final reviewer validates
+compliance before opening the PR.
+
+## Prerequisites
+
+1. Verify GitHub CLI authentication:
+   ```
+   gh auth status
+   ```
+   If not authenticated, stop and tell the user to run `gh auth login`.
+
+2. Parse `$ARGUMENTS`:
+   - Extract `OWNER/REPO` if provided.  If not, detect from current directory:
+     `gh repo view --json nameWithOwner -q .nameWithOwner`
+   - If neither `OWNER/REPO` nor current-directory detection works, stop and
+     ask the user for the repository.
+
+3. Resolve the absolute repo working directory:
+   - If `OWNER/REPO` matches the current working directory's repo, operate
+     in place (`pwd`).
+   - Otherwise, clone to a temp path (`/tmp/docs-steward-<run-id>/<repo>`)
+     and operate there.  Record the path as `<REPO_DIR>` for downstream
+     agents.
+
+4. Generate a run ID and create the cache directory:
+   ```bash
+   RUN_ID=$(date -u +"%Y%m%dT%H%M%SZ")
+   CACHE_DIR="<REPO_DIR>/.claude/docs-cache/${RUN_ID}"
+   mkdir -p "${CACHE_DIR}/indexes" "${CACHE_DIR}/findings"
+   ```
+   Record `<RUN_ID>` and `<CACHE_DIR>` and pass them to every agent.
+
+5. Ensure `.claude/docs-cache/` is gitignored in `<REPO_DIR>`:
+   - If a root `.gitignore` exists and does not contain `.claude/docs-cache/`,
+     append the line.  If no `.gitignore` exists, create one with that line.
+
+## Phase 0: Index Build (parallel)
+
+Launch all seven index builders simultaneously in a single message with seven
+Agent tool calls.  They write to distinct files under
+`${CACHE_DIR}/indexes/` and do not share state.
+
+Pass each agent the following context in its prompt:
+- `REPO_DIR` — absolute path to the repo working directory.
+- `CACHE_DIR` — absolute path to the run's cache directory.
+- `RUN_ID`.
+- Plugin reference path: `<PLUGIN_DIR>/references/` (for `tenets.md`,
+  `index-artifact-spec.md`, etc.).
+
+Agents to launch in parallel:
+- **docs-file-cartographer** → `indexes/file-tree.md`
+- **docs-symbol-indexer** → `indexes/symbols.json`
+- **docs-route-mapper** → `indexes/routes.md`
+- **docs-config-cataloger** → `indexes/config.md`
+- **docs-inventory** → `indexes/doc-inventory.md`
+- **docs-glossary-steward** → `indexes/glossary.md`
+- **docs-history-reconciler** → `indexes/recent-changes.md`
+
+Wait for all seven to complete.  If any agent fails to write its artifact,
+stop and report which one failed.  A partial index set is not a valid basis
+for Phase 1.
+
+## Phase 1: Drift Audit (parallel)
+
+Launch all eight auditors simultaneously.  Each reads `${CACHE_DIR}/indexes/`
+and the repo's documentation, then writes its findings file to
+`${CACHE_DIR}/findings/<auditor>.md` using the shared schema from
+`references/findings-schema.md`.
+
+Agents to launch in parallel:
+- **docs-intent-auditor** → `findings/intent-auditor.md`
+- **docs-info-architect** → `findings/info-architect.md`
+- **docs-onboarding-reviewer** → `findings/onboarding-reviewer.md`
+- **docs-reference-validator** → `findings/reference-validator.md`
+- **docs-example-verifier** → `findings/example-verifier.md`
+- **docs-link-checker** → `findings/link-checker.md`
+- **docs-manual-reader** → `findings/manual-reader.md`
+- **docs-deprecation-hunter** → `findings/deprecation-hunter.md`
+
+Wait for all eight.  Proceed even if a single auditor produces zero findings
+(its file should still be written as an empty findings list) — but stop if
+an auditor fails to write a file at all.
+
+## Phase 2: Consolidation (sequential)
+
+Launch **docs-consolidator** with:
+- `CACHE_DIR`
+- `REPO_DIR`
+
+The consolidator merges all findings into
+`${CACHE_DIR}/consolidated-findings.md`, deduplicates, resolves duplication
+conflicts (tenet 6), and emits a single ordered edit plan.
+
+**Checkpoint**: if the consolidator emits
+`${CACHE_DIR}/checkpoint-required.md`, stop the pipeline and print the file
+contents to the user, asking for adjudication.  Do not proceed to Phase 3
+without explicit user direction.
+
+## Phase 3: Editing (sequential)
+
+Launch **docs-editor** with:
+- `CACHE_DIR`
+- `REPO_DIR`
+- Target branch name: `docs/steward-${RUN_ID}`
+
+The editor creates the feature branch, applies edits grouped by target file
+in the order `delete → restructure → edit`, commits one file per commit,
+and writes `${CACHE_DIR}/edits.log`.
+
+## Phase 4: Manual Re-Read (sequential)
+
+Relaunch **docs-manual-reader** with the `re-read` flag and:
+- `CACHE_DIR`
+- `REPO_DIR`
+- Reference to the prior findings file so it can compare.
+
+The re-read output is written to `${CACHE_DIR}/post-edit-findings.md`.
+
+Classify residuals per the agent's own output:
+
+- `empty` or `nits only` → proceed to Phase 5.
+- `small_local` → relaunch **docs-editor** with flag `second-pass=true` and
+  `${CACHE_DIR}/post-edit-findings.md` as the input.  This is the **only**
+  allowed re-loop.  After the second pass, proceed to Phase 5 regardless of
+  what remains — unresolved items are surfaced in the PR body.
+- `structural` → do not re-loop; carry the residuals forward into the PR body
+  under *Residual items*.
+
+## Phase 5: Final Review + PR (sequential)
+
+Launch **docs-final-reviewer** with:
+- `CACHE_DIR`
+- `REPO_DIR`
+- Branch name
+- Target repository (`OWNER/REPO`)
+
+The final reviewer inspects the branch diff, validates tenet compliance,
+assembles the PR body using `references/pr-template.md`, pushes the branch,
+and opens the PR.  PR body marker: `<!-- claude-docs-steward-v1 -->`.
+
+## Summary
+
+Print a final report:
+
+```
+## Docs Steward Summary
+
+Run ID: <RUN_ID>
+Repository: <OWNER/REPO>
+Branch: docs/steward-<RUN_ID>
+Cache: <CACHE_DIR>
+
+### Results
+- Index artifacts produced: 7
+- Auditors run: 8
+- Findings consolidated: X
+- Files edited: X
+- Deletions applied: X
+- Second edit pass triggered: <yes|no>
+- Residual items surfaced in PR: X
+
+### PR
+<PR URL>
+
+### Tenet compliance
+<pass/note summary per tenet — from the final reviewer>
+```

@@ -53,6 +53,41 @@ plugins/
       supabase-audit-guide.md     # Supabase detection, advisor API, static scan rules
       supabase-rule-catalog.md    # Catalog of Supabase rules with severity + remediation
     README.md                     # Plugin-specific documentation
+  docs-steward/                   # Plugin: docs maintenance pipeline (indexes → audit → edit → PR)
+    .claude-plugin/
+      plugin.json                 # Plugin manifest
+    commands/
+      docs-steward.md             # Orchestrator command — chains the six phases (0-5)
+    agents/
+      docs-file-cartographer.md   # Phase 0: annotated file tree with per-file purpose
+      docs-symbol-indexer.md      # Phase 0: functions/classes/exports/types → symbols.json
+      docs-route-mapper.md        # Phase 0: HTTP routes + CLI + slash commands + public exports
+      docs-config-cataloger.md    # Phase 0: env vars + config files + schemas (with referenced flag)
+      docs-inventory.md           # Phase 0: every doc file with stated purpose + claims
+      docs-glossary-steward.md    # Phase 0: canonical glossary with variants
+      docs-history-reconciler.md  # Phase 0: last-90d git history by area with likely doc impact
+      docs-intent-auditor.md      # Phase 1: doc claims vs code reality
+      docs-info-architect.md      # Phase 1: structure, section-README consistency, duplication, gaps
+      docs-onboarding-reviewer.md # Phase 1: new-contributor walk through the docs
+      docs-reference-validator.md # Phase 1: every intra-repo reference resolves
+      docs-example-verifier.md    # Phase 1: code blocks still match the code
+      docs-link-checker.md        # Phase 1: external URLs reachable and on-topic
+      docs-manual-reader.md       # Phase 1 + Phase 4: walks corpus as a manual from the root README
+      docs-deprecation-hunter.md  # Phase 1: orphan env/config/symbol/command refs → action=delete
+      docs-consolidator.md        # Phase 2: merge findings, resolve duplication, emit edit plan or checkpoint
+      docs-editor.md              # Phase 3 (and optional Phase 4 second pass): apply edits on a feature branch
+      docs-final-reviewer.md      # Phase 5: tenet compliance, PR assembly, push, open PR
+    references/
+      tenets.md                   # The 7 core tenets — loaded by every agent
+      findings-schema.md          # Shared finding record shape (id, severity, action, location, tenet_refs)
+      index-artifact-spec.md      # Format for each Phase 0 artifact
+      readme-style-guide.md       # User-facing README voice, structure, link-out rules
+      voice-guide.md              # Voice preservation rules for the editor
+      checkpoint-criteria.md      # When the consolidator pauses for user adjudication
+      manual-reader-protocol.md   # How the manual-reader walks the corpus (Phase 1 + Phase 4)
+      cache-layout.md             # .claude/docs-cache/ layout and lifecycle
+      pr-template.md              # PR body template (sections: findings, deletions, residuals, tenets)
+    README.md                     # Plugin-specific documentation
 ```
 
 Each plugin lives under `plugins/<name>/` and is independently installable. Plugins use the **commands + agents** pattern: commands are user-invocable orchestrators, agents are specialized workers launched by commands.

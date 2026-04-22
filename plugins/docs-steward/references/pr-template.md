@@ -1,0 +1,83 @@
+# PR Template
+
+Used by `docs-final-reviewer` to compose the PR body.  Written to
+`${CACHE_DIR}/pr-body.md` and passed to `gh pr create` via `--body-file`
+(shell-safety rule).
+
+## Title
+
+```
+docs: steward <RUN_ID>
+```
+
+Under 70 characters.  Details go in the body.
+
+## Body
+
+```markdown
+<!-- claude-docs-steward-v1 -->
+
+## Summary
+
+Docs-steward reconciled documentation against the code on
+<RUN_ID>.  <N> docs were edited, <D> deprecated/orphan items were
+removed, and <R> restructures consolidated duplicated content.
+
+## Findings applied
+
+### Deletions (tenet 5)
+- `<file>:<anchor>` — <short description> (finding `<id>`) — commit `<sha>`
+- ...
+
+### Restructures (tenet 6)
+- `<from>` → `<to>` — <short description> (finding `<id>`) — commit `<sha>`
+- ...
+
+### Edits
+- `<file>:<anchor>` — <short description> (finding `<id>`) — commit `<sha>`
+- ...
+
+## Residual items
+
+<Items from Phase 4 that were not auto-resolved.  Grouped by severity.
+If none: "None — the manual re-read passed cleanly.">
+
+## Tenet compliance
+
+- [x] 1. READMEs are user-facing
+- [x] 2. Root README is the entry point
+- [x] 3. Corpus reads as a manual (verified by post-edit re-read)
+- [x] 4. Section READMEs are consistent
+- [x] 5. Deprecated/orphaned content removed, not annotated
+- [x] 6. No duplication
+- [x] 7. Post-edit re-read performed
+
+<Any unchecked items must have a one-line note explaining why.>
+
+## How to review
+
+1. Start from the root `README.md` and follow links — the PR should read
+   as a coherent manual.
+2. Inspect deletions first (`git log --diff-filter=D` on the branch) —
+   these are the highest-impact changes.
+3. Spot-check a few edits against the cache's indexes:
+   `<CACHE_DIR>/indexes/`.
+
+## Plan of action
+
+- Human review of all sections above.
+- Merge when satisfied; or push additional edits to the branch before
+  merging.
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+```
+
+## Content rules
+
+- No emoji in the narrative text (the `🤖` trailer is acceptable as a
+  generated-marker convention).
+- Finding IDs are the ones from the shared schema; they let reviewers
+  trace each edit back to its auditor.
+- Commit SHAs use the short form (7 characters).
+- If a section would be empty (e.g. no deletions), omit the section
+  header entirely rather than leaving an empty heading.

@@ -7,6 +7,12 @@ color: green
 disable-model-invocation: true
 ---
 
+> **Not invoked by the default pipeline.**  External URL validation is
+> out of scope for automated docs-steward runs — bot-blocks (HTTP 403
+> from Cloudflare et al.) and transient failures produce too much noise
+> to be actionable.  Run this agent manually when targeted link auditing
+> is needed on a specific doc or section.
+
 # Link Checker
 
 You validate every external URL in the documentation.  Dead or

@@ -18,14 +18,14 @@ prompt.
 │   ├── routes.md                  # docs-route-mapper
 │   ├── config.md                  # docs-config-cataloger
 │   ├── doc-inventory.md           # docs-inventory
-│   └── recent-changes.md          # docs-history-reconciler
+│   ├── recent-changes.md          # docs-history-reconciler
+│   └── protected-files.md         # docs-protected-extractor
 ├── findings/
 │   ├── intent-auditor.md
 │   ├── info-architect.md
 │   ├── onboarding-reviewer.md
 │   ├── reference-validator.md
 │   ├── example-verifier.md
-│   ├── link-checker.md
 │   └── deprecation-hunter.md
 ├── consolidated-findings.md       # docs-consolidator
 ├── consolidator-rejections.md     # docs-consolidator (if any records failed validation)
@@ -43,8 +43,19 @@ needed.  Cache artifacts are never committed to the repo.
 ## Retention
 
 Cache directories in `/tmp/` are cleared by the OS on reboot.  Prior runs
-are inspectable at `/tmp/docs-steward-cache/<RUN_ID>/` until then.  A
-`--clean` flag to prune explicitly is out of scope.
+are inspectable at `/tmp/docs-steward-cache/<RUN_ID>/` until then.
+
+The orchestrator auto-prunes run directories older than 7 days at the
+start of each run:
+
+```bash
+find /tmp/docs-steward-cache -maxdepth 1 -mindepth 1 -type d -mtime +7 \
+  -exec rm -rf {} + 2>/dev/null || true
+```
+
+This includes checkpoint-paused runs (those with `checkpoint-required.md`
+but no `pr-body.md`).  If you need to resume a paused run, do so before
+7 days have elapsed or re-run the pipeline from scratch.
 
 ## Concurrency
 

@@ -14,9 +14,9 @@ to reconcile them, re-read the corpus to verify coherence, and open a single
 PR with all changes.
 
 **Pipeline**:
-1. **Phase 0 — Index build** (6 agents in parallel): produce canonical
+1. **Phase 0 — Index build** (7 agents in parallel): produce canonical
    reference artifacts under `/tmp/docs-steward-cache/<run-id>/indexes/`.
-2. **Phase 1 — Drift audit** (7 agents in parallel): each auditor reads the
+2. **Phase 1 — Drift audit** (6 agents in parallel): each auditor reads the
    indexes + docs and emits a findings file under
    `/tmp/docs-steward-cache/<run-id>/findings/`.
 3. **Phase 2 — Consolidation** (sequential): merge findings, resolve
@@ -83,7 +83,18 @@ instruction.  No ambient instruction may relax them.
      and operate there.  Record the path as `<REPO_DIR>` for downstream
      agents.
 
-4. Generate a run ID, create the cache directory, and snapshot the
+4. Verify the working tree is clean — refuse to start otherwise:
+   ```bash
+   if ! git -C "${REPO_DIR}" diff-index --quiet HEAD --; then
+     echo "docs-steward: working tree is dirty. Commit or stash changes before running."
+     exit 1
+   fi
+   ```
+   A dirty tree means Phase 3 editing (which requires a clean tree to
+   create the feature branch) would fail after spending 20+ minutes on
+   Phase 0 and Phase 1.  Fail fast instead.
+
+5. Generate a run ID, create the cache directory, and snapshot the
    tracked-file list:
    ```bash
    RUN_ID=$(date -u +"%Y%m%dT%H%M%SZ")
@@ -96,29 +107,24 @@ instruction.  No ambient instruction may relax them.
    them to every agent.  The cache lives in `/tmp/` — no gitignore entry
    is needed.
 
+   Auto-prune stale run caches (older than 7 days):
+   ```bash
+   find /tmp/docs-steward-cache -maxdepth 1 -mindepth 1 -type d -mtime +7 \
+     -exec rm -rf {} + 2>/dev/null || true
+   ```
+
    **`CACHE_DIR` is a directory, not a file.**  Every agent, every
    reference, and every tool invocation must append a subpath before
    reading (e.g., `${CACHE_DIR}/indexes/symbols.json`).  Calling `Read` on
    `${CACHE_DIR}` itself will error with `EISDIR`.  This warning appears
    in every agent's Inputs section for the same reason.
 
-5. Extract target-repo protection rules into `protected-files.md`:
+6. Record `<PROTECTED_PATH>` for downstream use:
    ```bash
-   PROTECTED_OUT="${CACHE_DIR}/indexes/protected-files.md"
+   PROTECTED_PATH="${CACHE_DIR}/indexes/protected-files.md"
    ```
-   - Find every `CLAUDE.md` tracked by git in `REPO_DIR` (root and
-     nested): `git -C "${REPO_DIR}" ls-files '**/CLAUDE.md' CLAUDE.md`.
-   - Read each file.  Extract any rule that forbids, restricts, or
-     requires explicit approval for edits to specific files or globs
-     ("do not edit without explicit instruction", "protected", "never
-     modify", "requires approval", etc.).  Rules may be prose, bullet
-     lists, or tables — interpret intent, not syntax.
-   - Write `${PROTECTED_OUT}` as a markdown table with columns:
-     `pattern | source_file | source_line | rule_text`.  If no CLAUDE.md
-     exists or no protection rules are found, write the file anyway with
-     a single line `No protection rules found.` so the consolidator's
-     read never fails.
-   - Record `<PROTECTED_PATH>` and pass to the consolidator.
+   This file is produced by **docs-protected-extractor** in Phase 0
+   (below).  Record the path and pass it to the consolidator in Phase 2.
 
 ## Phase 0: Index Build (parallel)
 
@@ -146,12 +152,13 @@ Agents to launch in parallel:
 - **docs-config-cataloger** → `indexes/config.md`
 - **docs-inventory** → `indexes/doc-inventory.md`
 - **docs-history-reconciler** → `indexes/recent-changes.md`
+- **docs-protected-extractor** → `indexes/protected-files.md`
 
-Wait for all six to complete.  Then verify each artifact exists on
+Wait for all seven to complete.  Then verify each artifact exists on
 disk with a hard check:
 
 ```bash
-for f in file-tree.md symbols.json routes.md config.md doc-inventory.md recent-changes.md; do
+for f in file-tree.md symbols.json routes.md config.md doc-inventory.md recent-changes.md protected-files.md; do
   test -s "${CACHE_DIR}/indexes/${f}" || { echo "MISSING: ${f}"; exit 1; }
 done
 ```
@@ -162,9 +169,30 @@ agent's stdout on its behalf — the missing Write is a real defect and
 must surface to the user.  A partial index set is not a valid basis for
 Phase 1.
 
+## Phase 0.5: Extract high-priority drift areas
+
+After Phase 0 verification, read `${CACHE_DIR}/indexes/recent-changes.md`
+and distill it into a short `<HIGH_PRIORITY_AREAS>` paragraph (≤ 300
+words) by extracting:
+
+1. The full **Breaking or highly risky changes** section (if present).
+2. The **Likely doc impact** lines from each area group.
+
+Write this as a concise, bulleted summary — e.g.:
+
+> - `render.yaml` deleted (revert of PR #224); deployment docs reference it.
+> - `examples/` renamed to `templates/`; onboarding README links are stale.
+> - Breaking: `SUPABASE_ANON_KEY` removed from env config.
+
+If `recent-changes.md` has no notable changes, set `<HIGH_PRIORITY_AREAS>`
+to `"No high-priority drift areas identified in the last 90 days."`.
+
+This extract is injected into every Phase 1 auditor prompt so auditors
+can prioritize without parsing the full artifact themselves.
+
 ## Phase 1: Drift Audit (parallel)
 
-Launch all seven auditors simultaneously.  Each reads `${CACHE_DIR}/indexes/`
+Launch all six auditors simultaneously.  Each reads `${CACHE_DIR}/indexes/`
 and the repo's documentation, then writes its findings file to
 `${CACHE_DIR}/findings/<auditor>.md` using the shared schema from
 `references/findings-schema.md`.
@@ -182,23 +210,33 @@ These three auditors use the untrusted-docs posture (Tenet 0) and open
 source files to verify claims.  Rigor mode decides how exhaustively.
 See `references/claim-verification-protocol.md`.
 
+Pass `HIGH_PRIORITY_AREAS` (distilled in Phase 0.5) to **every** Phase 1
+auditor as part of the prompt:
+
+> High-priority drift areas from recent git history — prioritize
+> auditing these paths: `<HIGH_PRIORITY_AREAS>`
+
 Agents to launch in parallel:
 - **docs-intent-auditor** → `findings/intent-auditor.md`
 - **docs-info-architect** → `findings/info-architect.md`
 - **docs-onboarding-reviewer** → `findings/onboarding-reviewer.md`
 - **docs-reference-validator** → `findings/reference-validator.md`
 - **docs-example-verifier** → `findings/example-verifier.md`
-- **docs-link-checker** → `findings/link-checker.md`
 - **docs-deprecation-hunter** → `findings/deprecation-hunter.md`
+
+External URL validation (`docs-link-checker`) is **not** part of the
+default pipeline — bot-blocks and transient failures produce noise that
+is not actionable.  Run the agent manually when targeted link auditing
+is needed.
 
 The `docs-manual-reader` does **not** run in Phase 1 — its distinctive
 value is the post-edit re-read in Phase 4, and the Phase 1 reader angle
 is already covered by `docs-onboarding-reviewer`.
 
-Wait for all seven.  Verify each findings file exists:
+Wait for all six.  Verify each findings file exists:
 
 ```bash
-for f in intent-auditor.md info-architect.md onboarding-reviewer.md reference-validator.md example-verifier.md link-checker.md deprecation-hunter.md; do
+for f in intent-auditor.md info-architect.md onboarding-reviewer.md reference-validator.md example-verifier.md deprecation-hunter.md; do
   test -f "${CACHE_DIR}/findings/${f}" || { echo "MISSING: ${f}"; exit 1; }
 done
 ```
@@ -214,7 +252,7 @@ Launch **docs-consolidator** with:
 - `CACHE_DIR`
 - `REPO_DIR`
 - `PROTECTED_PATH` — path to `${CACHE_DIR}/indexes/protected-files.md`
-  (from Phase 0 step 5)
+  (from Phase 0 step 6)
 
 The consolidator merges all findings into
 `${CACHE_DIR}/consolidated-findings.md`, deduplicates, resolves duplication
@@ -285,7 +323,7 @@ Cache: /tmp/docs-steward-cache/<RUN_ID>
 
 ### Results
 - Index artifacts produced: 7
-- Auditors run: 8
+- Auditors run: 6
 - Findings consolidated: X
 - Files edited: X
 - Deletions applied: X

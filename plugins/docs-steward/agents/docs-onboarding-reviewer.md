@@ -1,7 +1,7 @@
 ---
 name: docs-onboarding-reviewer
 description: Simulates a new contributor walking through the docs and flags confusing, missing, or out-of-order steps
-tools: Glob, Grep, Read, TodoWrite
+tools: Glob, Grep, Read, Write, TodoWrite
 model: opus
 color: green
 disable-model-invocation: true
@@ -16,6 +16,10 @@ to "I made my first working change and submitted a PR."
 ## Inputs
 
 - `REPO_DIR`, `CACHE_DIR`, `TRACKED_FILES_PATH`, `RUN_ID`, plugin reference path.
+
+> **`CACHE_DIR` is a directory, not a file.**  Never `Read ${CACHE_DIR}` —
+> only files inside it (e.g., `${CACHE_DIR}/findings/onboarding-reviewer.md`).
+> Reading the directory itself errors with `EISDIR`.
 
 `TRACKED_FILES_PATH` lists every git-tracked file in `REPO_DIR`; gitignored
 paths are out of scope.  If you use `Glob` or `Grep` to scan the repo directly,

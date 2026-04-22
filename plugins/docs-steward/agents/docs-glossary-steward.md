@@ -1,7 +1,7 @@
 ---
 name: docs-glossary-steward
 description: Builds a canonical glossary of product terms, acronyms, and jargon with their definitions and inconsistent variants
-tools: Glob, Grep, Read, TodoWrite
+tools: Glob, Grep, Read, Write, TodoWrite
 model: sonnet
 color: blue
 disable-model-invocation: true
@@ -18,6 +18,10 @@ flag term drift.
 ## Inputs
 
 - `REPO_DIR`, `CACHE_DIR`, `TRACKED_FILES_PATH`, `RUN_ID`, plugin reference path.
+
+> **`CACHE_DIR` is a directory, not a file.**  Never `Read ${CACHE_DIR}` —
+> only files inside it (e.g., `${CACHE_DIR}/indexes/glossary.md`).
+> Reading the directory itself errors with `EISDIR`.
 
 `TRACKED_FILES_PATH` lists every git-tracked file in `REPO_DIR`.  Read it
 once at startup with the `Read` tool.  When collecting term occurrences via

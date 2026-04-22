@@ -1,7 +1,7 @@
 ---
 name: docs-link-checker
 description: Validates external URLs in docs are reachable and point to current-looking content
-tools: Glob, Grep, Read, Bash, WebFetch, TodoWrite
+tools: Glob, Grep, Read, Write, Bash, WebFetch, TodoWrite
 model: sonnet
 color: green
 disable-model-invocation: true
@@ -15,6 +15,10 @@ misdirecting external links are findings.
 ## Inputs
 
 - `REPO_DIR`, `CACHE_DIR`, `TRACKED_FILES_PATH`, `RUN_ID`, plugin reference path.
+
+> **`CACHE_DIR` is a directory, not a file.**  Never `Read ${CACHE_DIR}` —
+> only files inside it (e.g., `${CACHE_DIR}/indexes/doc-inventory.md`).
+> Reading the directory itself errors with `EISDIR`.
 
 `TRACKED_FILES_PATH` lists every git-tracked file in `REPO_DIR`; gitignored
 paths are out of scope.  If you use `Glob`, `Grep`, or `Bash` to scan the repo

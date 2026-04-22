@@ -1,7 +1,7 @@
 ---
 name: docs-config-cataloger
 description: Catalogs environment variables, config files, and schemas; flags each key as referenced or unreferenced for the deprecation-hunter
-tools: Glob, Grep, Read, Bash, TodoWrite
+tools: Glob, Grep, Read, Write, Bash, TodoWrite
 model: sonnet
 color: blue
 disable-model-invocation: true
@@ -17,6 +17,10 @@ deletions for orphaned entries.
 ## Inputs
 
 - `REPO_DIR`, `CACHE_DIR`, `TRACKED_FILES_PATH`, `RUN_ID`, plugin reference path.
+
+> **`CACHE_DIR` is a directory, not a file.**  Never `Read ${CACHE_DIR}` —
+> only files inside it, e.g., `${CACHE_DIR}/indexes/config.md`.  Reading
+> the directory itself errors with `EISDIR`.
 
 `TRACKED_FILES_PATH` lists every git-tracked file in `REPO_DIR`.  Gitignored
 files are out of scope — restrict all file enumeration and Grep results to

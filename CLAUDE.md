@@ -78,15 +78,16 @@ plugins/
       docs-editor.md              # Phase 3 (and optional Phase 4 second pass): apply edits on a feature branch
       docs-final-reviewer.md      # Phase 5: tenet compliance, PR assembly, push, open PR
     references/
-      tenets.md                   # The 7 core tenets — loaded by every agent
-      findings-schema.md          # Shared finding record shape (id, severity, action, location, tenet_refs)
+      tenets.md                   # The 8 core tenets (0-7) — loaded by every agent
+      findings-schema.md          # Shared finding record shape (id, severity, action, location, tenet_refs, verification)
+      claim-verification-protocol.md # Untrusted-docs posture + rigor modes (full/major/sampled) + unverifiable rule
       index-artifact-spec.md      # Format for each Phase 0 artifact
       readme-style-guide.md       # User-facing README voice, structure, link-out rules
       voice-guide.md              # Voice preservation rules for the editor
       checkpoint-criteria.md      # When the consolidator pauses for user adjudication
       manual-reader-protocol.md   # How the manual-reader walks the corpus (Phase 1 + Phase 4)
-      cache-layout.md             # .claude/docs-cache/ layout and lifecycle
-      pr-template.md              # PR body template (sections: findings, deletions, residuals, tenets)
+      cache-layout.md             # /tmp/docs-steward-cache/ layout and lifecycle
+      pr-template.md              # PR body template (sections: findings, deletions, requires-approval, residuals, tenets)
     README.md                     # Plugin-specific documentation
 ```
 

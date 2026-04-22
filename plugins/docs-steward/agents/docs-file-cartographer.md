@@ -1,7 +1,7 @@
 ---
 name: docs-file-cartographer
 description: Builds a canonical annotated file tree of the repository with per-file purpose inferred from content and path
-tools: Glob, Grep, Read, Bash, TodoWrite
+tools: Glob, Grep, Read, Write, Bash, TodoWrite
 model: sonnet
 color: blue
 disable-model-invocation: true
@@ -18,7 +18,9 @@ it doesn't exist.
 
 Your prompt includes:
 - `REPO_DIR` — absolute path to the repo working directory.
-- `CACHE_DIR` — absolute path to the cache directory (`/tmp/docs-steward-cache/<RUN_ID>`).
+- `CACHE_DIR` — cache directory (`/tmp/docs-steward-cache/<RUN_ID>`).
+  **Never `Read ${CACHE_DIR}` directly — only files inside it.  Reading
+  the directory itself errors with `EISDIR`.**
 - `TRACKED_FILES_PATH` — path to `${CACHE_DIR}/indexes/tracked-files.txt`,
   listing every git-tracked file in `REPO_DIR`.  Files absent from this
   list are gitignored and out of scope.

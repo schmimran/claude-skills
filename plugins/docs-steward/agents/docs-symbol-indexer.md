@@ -1,7 +1,7 @@
 ---
 name: docs-symbol-indexer
 description: Extracts functions, classes, exports, and types from the repository into a canonical symbol index
-tools: Glob, Grep, Read, Bash, TodoWrite
+tools: Glob, Grep, Read, Write, Bash, TodoWrite
 model: sonnet
 color: blue
 disable-model-invocation: true
@@ -18,6 +18,10 @@ artifact.
 ## Inputs
 
 - `REPO_DIR`, `CACHE_DIR`, `TRACKED_FILES_PATH`, `RUN_ID`, plugin reference path.
+
+> **`CACHE_DIR` is a directory, not a file.**  Never `Read ${CACHE_DIR}` —
+> only files inside it (e.g., `${CACHE_DIR}/indexes/symbols.json`).
+> Reading the directory itself errors with `EISDIR`.
 
 `TRACKED_FILES_PATH` lists every git-tracked file in `REPO_DIR`.  Files
 absent from this list are gitignored and **out of scope** — do not extract

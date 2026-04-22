@@ -1,7 +1,7 @@
 ---
 name: docs-manual-reader
 description: Reads the docs corpus as a human user starting from the root README — flags entry-point gaps, dead ends, duplication, and incoherent narrative. Runs in both Phase 1 and Phase 4.
-tools: Glob, Grep, Read, TodoWrite
+tools: Glob, Grep, Read, Write, TodoWrite
 model: opus
 color: green
 disable-model-invocation: true
@@ -23,6 +23,10 @@ what classification you emit at the end.
 ## Inputs
 
 - `REPO_DIR`, `CACHE_DIR`, `TRACKED_FILES_PATH`, `RUN_ID`, plugin reference path.
+
+> **`CACHE_DIR` is a directory, not a file.**  Never `Read ${CACHE_DIR}` —
+> only files inside it (e.g., `${CACHE_DIR}/findings/manual-reader.md`).
+> Reading the directory itself errors with `EISDIR`.
 - **Phase flag** in your prompt: `phase=1` (initial) or `phase=4`
   (post-edit re-read).
 - In Phase 4, the prompt also provides:

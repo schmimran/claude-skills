@@ -1,7 +1,7 @@
 ---
 name: docs-history-reconciler
 description: Summarizes recent git history by area and highlights changes likely to affect documentation
-tools: Bash, Read, Grep, TodoWrite
+tools: Bash, Read, Write, Grep, TodoWrite
 model: sonnet
 color: blue
 disable-model-invocation: true
@@ -16,6 +16,10 @@ prioritize which parts of the corpus are most at risk of drift.
 ## Inputs
 
 - `REPO_DIR`, `CACHE_DIR`, `RUN_ID`, plugin reference path.
+
+> **`CACHE_DIR` is a directory, not a file.**  Never `Read ${CACHE_DIR}` —
+> only files inside it (e.g., `${CACHE_DIR}/indexes/recent-changes.md`).
+> Reading the directory itself errors with `EISDIR`.
 
 Load `tenets.md` and `index-artifact-spec.md#recent-changes.md`.
 

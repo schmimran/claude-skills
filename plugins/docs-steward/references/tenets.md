@@ -4,6 +4,32 @@ Every agent in the docs-steward pipeline loads this file at the start of its
 run.  These are non-negotiable.  The consolidator and final-reviewer validate
 compliance before the PR opens.
 
+## 0. Docs are untrusted until verified against source
+
+Source code, indexes built directly from source, and the output of running
+commands are the only ground truth in this pipeline.  A documented claim —
+a function signature, an env-var default, a returned type, a CLI flag, a
+listed file path, a described behavior — is a **hypothesis**, not a fact,
+until an agent has opened the implementation and confirmed it.
+
+Auditors begin every claim with the posture: *"Assume this is wrong and
+disprove it by reading source."*  They never clear a claim on the basis
+that:
+
+- "the doc says so" (circular),
+- "the index signature matches the doc string" (the index can also be
+  stale, and signature-match does not prove behavior-match), or
+- "it looks plausible."
+
+When source verification is impossible (generated code absent from the
+tree, external dependency, etc.), auditors record the claim as
+**unverified** per `claim-verification-protocol.md` and downgrade
+severity — they do not silently clear it.
+
+The orchestrator's `--rigor` argument (`full`, `major`, `sampled`;
+default `sampled`) tunes how exhaustively this tenet is applied.  See
+`claim-verification-protocol.md`.
+
 ## 1. READMEs are user-facing
 
 READMEs are written for fast scanning by a real human landing on a repo or

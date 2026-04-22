@@ -16,13 +16,19 @@ can adjudicate.
 
 ## Inputs
 
-- `REPO_DIR`, `CACHE_DIR`, `RUN_ID`, plugin reference path.
+- `REPO_DIR`, `CACHE_DIR`, `RUN_ID`, `PROTECTED_PATH`, plugin reference path.
+
+> **`CACHE_DIR` is a directory, not a file.**  Never `Read ${CACHE_DIR}` —
+> only files inside it.  Reading the directory itself errors with `EISDIR`.
 
 Load:
 - `tenets.md`
 - `findings-schema.md`
 - `checkpoint-criteria.md`
 - All eight files in `${CACHE_DIR}/findings/`.
+- `${PROTECTED_PATH}` (`${CACHE_DIR}/indexes/protected-files.md`) — the
+  list of globs/paths the target repo's `CLAUDE.md` marks as requiring
+  explicit approval before editing.
 
 ## Step 1: Validate and collect
 
@@ -84,6 +90,29 @@ describe the same content appearing in multiple places:
 
 Chain these findings with a shared `group_id` so the editor processes
 them together.
+
+## Step 4.5: Route protected-file findings to requires-approval
+
+Read `${PROTECTED_PATH}`.  For every finding in the merged pool whose
+`location.file` matches any protected pattern (exact path or glob
+match):
+
+1. Remove it from the editable plan.  The editor will not see it.
+2. Append it to a dedicated **requires-approval** section of the
+   consolidated output with the matching protection rule cited
+   (`source_file` + `source_line` + `rule_text` from
+   `protected-files.md`).
+3. Preserve the original finding's content — severity, action,
+   suggested_edit, auditors — so the user can review the proposed
+   change and approve or reject it manually.
+
+A protected finding is *not* a rejection.  It is a change the pipeline
+declines to apply autonomously because the target repo's `CLAUDE.md`
+requires explicit human approval.  The final-reviewer surfaces every
+requires-approval item in the PR body.
+
+If `${PROTECTED_PATH}` says `No protection rules found.`, skip this
+step entirely.
 
 ## Step 5: Order the edit plan
 
@@ -163,6 +192,13 @@ findings in action-then-severity order.>
 <Any `group_id` sets that span multiple files, listed together so the
 editor can coordinate.>
 
+## Requires approval (protected files)
+
+<One section per protected file that had findings.  Each item lists
+the finding id, severity, action, suggested edit, raising auditors,
+and the cited protection rule (pattern + source + rule text).  Empty
+heading if none.>
+
 ## Rejections
 
 <Summary — count and link to consolidator-rejections.md if applicable.>
@@ -187,6 +223,7 @@ Print:
 | Total deletions | X |
 | Total restructures | X |
 | Total edits | X |
+| Routed to requires-approval | X |
 | Checkpoint triggered | yes/no |
 
 Confirm the output file path.  If a checkpoint was triggered, print the

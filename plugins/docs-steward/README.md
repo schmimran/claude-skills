@@ -20,6 +20,9 @@ re-reads the result to verify coherence, and opens a single PR.
    ```bash
    /docs-steward owner/repo
    ```
+   Optional: tune how rigorously auditors verify doc claims against
+   source with `--rigor=full|major|sampled` (default `sampled`).  See
+   [`references/claim-verification-protocol.md`](references/claim-verification-protocol.md).
 
 3. Review the PR the plugin opens.  It lists every edit, every
    deletion, and any residual items the automated re-read couldn't
@@ -58,6 +61,9 @@ The plugin chains six phases:
 Every agent loads these at the start of its run.  They are the
 ground rules the plugin enforces.
 
+0. **Docs are untrusted until verified against source** — source
+   code and indexes built from it are ground truth; a documented
+   claim is a hypothesis until proven.
 1. **READMEs are user-facing** — fast-scanning, links to backing
    docs for depth.
 2. **Root README is the entry point** — a first-time reader starts
@@ -146,6 +152,8 @@ adjudicate, and re-run.
   enforced across every agent.
 - [`references/findings-schema.md`](references/findings-schema.md) —
   shared finding record shape.
+- [`references/claim-verification-protocol.md`](references/claim-verification-protocol.md)
+  — how auditors verify doc claims against source; rigor modes.
 - [`references/index-artifact-spec.md`](references/index-artifact-spec.md)
   — Phase 0 artifact formats.
 - [`references/readme-style-guide.md`](references/readme-style-guide.md)

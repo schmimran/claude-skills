@@ -37,6 +37,20 @@ removed, and <R> restructures consolidated duplicated content.
 - `<file>:<anchor>` — <short description> (finding `<id>`) — commit `<sha>`
 - ...
 
+## Requires approval (protected files)
+
+<Omit this section entirely if the consolidator did not route any
+findings here.  Otherwise, open with:>
+
+The pipeline declined to apply the following changes because the target
+repo's `CLAUDE.md` marks these files as requiring explicit approval.
+Review each and apply or discard manually.
+
+- `<file>:<anchor>` — <action: edit/delete/restructure> (severity: <lvl>,
+  finding `<id>`).  Proposed edit: <one line>.  Protection rule:
+  `<pattern>` from `<source_file>:<source_line>` — "<rule_text>".
+- ...
+
 ## Residual items
 
 <Items from Phase 4 that were not auto-resolved.  Grouped by severity.
@@ -44,6 +58,7 @@ If none: "None — the manual re-read passed cleanly.">
 
 ## Tenet compliance
 
+- [x] 0. Docs untrusted until verified against source (RIGOR: <mode>)
 - [x] 1. READMEs are user-facing
 - [x] 2. Root README is the entry point
 - [x] 3. Corpus reads as a manual (verified by post-edit re-read)

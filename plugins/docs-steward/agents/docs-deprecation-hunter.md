@@ -1,7 +1,7 @@
 ---
 name: docs-deprecation-hunter
 description: Finds orphaned/deprecated variables, config keys, commands, and stale doc references and emits action=delete findings
-tools: Glob, Grep, Read, Bash, TodoWrite
+tools: Glob, Grep, Read, Write, Bash, TodoWrite
 model: sonnet
 color: green
 disable-model-invocation: true
@@ -16,6 +16,10 @@ annotated.  Your findings drive `action: delete` edits.
 ## Inputs
 
 - `REPO_DIR`, `CACHE_DIR`, `TRACKED_FILES_PATH`, `RUN_ID`, plugin reference path.
+
+> **`CACHE_DIR` is a directory, not a file.**  Never `Read ${CACHE_DIR}` —
+> only files inside it (e.g., `${CACHE_DIR}/indexes/symbols.json`).
+> Reading the directory itself errors with `EISDIR`.
 
 `TRACKED_FILES_PATH` lists every git-tracked file in `REPO_DIR`; gitignored
 paths are out of scope.  If you use `Glob`, `Grep`, or `Bash` to scan the repo

@@ -123,7 +123,13 @@ adjudicate, and re-run.
 
 ## What does NOT happen automatically
 
-- **The PR is never auto-merged** — a human always reviews.
+- **The PR is never auto-merged** — a human always reviews.  The
+  plugin is architecturally prohibited from merging, even if
+  explicitly instructed.  If asked to merge, it will refuse and ask
+  you to do so in a fresh session.
+- **The feature branch always originates from the remote default
+  branch** — regardless of any global or repo-level `CLAUDE.md`
+  instruction.  This is a non-overridable invariant.
 - **Code-level deletions of deprecated symbols are not performed** —
   only docs, config files, and env templates are in scope for
   deletion.  Orphan code symbols are flagged in findings for human

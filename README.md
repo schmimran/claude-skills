@@ -20,7 +20,7 @@ Plugins are self-contained: each lives in its own directory with its own agents,
 |--------|---------|-------------|------|
 | [feature-creator](plugins/feature-creator/) | 0.5.0 | Feature development pipeline — GitHub issues to implementation plans to PRs | [README](plugins/feature-creator/README.md) |
 | [security-scanner](plugins/security-scanner/) | 0.4.0 | Multi-tool security audit for Node.js web apps and Supabase projects — files findings as GitHub Issues with deduplication, reopen on re-detection, and expert advisory comments | [README](plugins/security-scanner/README.md) |
-| [docs-steward](plugins/docs-steward/) | 0.1.0 | Docs maintenance pipeline — builds canonical indexes of a repo, audits docs for drift, duplication, orphans, and onboarding gaps, then actively edits docs and opens a PR | [README](plugins/docs-steward/README.md) |
+| [docs-steward](plugins/docs-steward/) | 0.2.0 | Docs maintenance pipeline — builds canonical indexes of a repo, audits docs for drift, duplication, orphans, and onboarding gaps, then actively edits docs and opens a PR | [README](plugins/docs-steward/README.md) |
 
 ## What Each Plugin Does
 

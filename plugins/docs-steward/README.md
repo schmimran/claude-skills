@@ -39,20 +39,20 @@ re-reads the result to verify coherence, and opens a single PR.
 
 The plugin chains six phases:
 
-1. **Phase 0 — Index build** (7 parallel agents).  Emit canonical
+1. **Phase 0 — Index build** (6 parallel agents).  Emit canonical
    reference artifacts to `/tmp/docs-steward-cache/<run-id>/indexes/`:
    file tree, symbol index, public-surface map, config catalogue,
-   doc inventory, glossary, recent-changes summary.
-2. **Phase 1 — Drift audit** (8 parallel auditors).  Each auditor
+   doc inventory, recent-changes summary.
+2. **Phase 1 — Drift audit** (7 parallel auditors).  Each auditor
    reads the indexes + docs and writes a findings file.
 3. **Phase 2 — Consolidation**.  Merge findings, resolve
    duplication, detect conflicts.  Stops for user adjudication when
    it can't produce a coherent plan.
 4. **Phase 3 — Editing**.  Apply the plan on a feature branch with
    one commit per doc file.  Deletions → restructures → edits.
-5. **Phase 4 — Manual re-read**.  The same persona that did the
-   walk in Phase 1 re-reads the edited corpus.  One small-fix loop
-   is allowed.
+5. **Phase 4 — Manual re-read**.  The `docs-manual-reader` walks the
+   edited corpus as a user and cross-checks against the edit plan.
+   One small-fix loop is allowed.
 6. **Phase 5 — Final review + PR**.  Tenet compliance check, PR
    body assembled, branch pushed, single PR opened.
 
@@ -69,8 +69,8 @@ ground rules the plugin enforces.
 2. **Root README is the entry point** — a first-time reader starts
    there and gets coherent ongoing context.
 3. **The corpus must read as a manual** — verified by the
-   `docs-manual-reader` persona who walks the docs like a user,
-   once before edits and once after.
+   `docs-manual-reader` persona who walks the edited docs like a
+   user after the editor's pass.
 4. **Section READMEs are consistent** — same components, comparable
    depth.
 5. **Deprecated/orphaned content is removed, not annotated** —
@@ -91,7 +91,6 @@ Full text in [`references/tenets.md`](references/tenets.md).
 | `docs-route-mapper` | Agent | sonnet | Builds `routes.md` |
 | `docs-config-cataloger` | Agent | sonnet | Builds `config.md` |
 | `docs-inventory` | Agent | sonnet | Builds `doc-inventory.md` |
-| `docs-glossary-steward` | Agent | sonnet | Builds `glossary.md` |
 | `docs-history-reconciler` | Agent | sonnet | Builds `recent-changes.md` |
 | `docs-intent-auditor` | Agent | sonnet | Flags doc-vs-code drift |
 | `docs-info-architect` | Agent | opus | Structure + duplication + gaps |
@@ -99,7 +98,7 @@ Full text in [`references/tenets.md`](references/tenets.md).
 | `docs-reference-validator` | Agent | sonnet | Validates internal references |
 | `docs-example-verifier` | Agent | sonnet | Validates code blocks |
 | `docs-link-checker` | Agent | sonnet | Validates external URLs |
-| `docs-manual-reader` | Agent | opus | Walks corpus as a manual (Phase 1 + 4) |
+| `docs-manual-reader` | Agent | opus | Walks edited corpus as a manual (Phase 4) |
 | `docs-deprecation-hunter` | Agent | sonnet | Finds orphans to delete |
 | `docs-consolidator` | Agent | opus | Merges findings, triggers checkpoints |
 | `docs-editor` | Agent | opus | Applies edits on the branch |

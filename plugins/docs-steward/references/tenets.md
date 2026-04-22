@@ -58,10 +58,10 @@ assumed beyond the repo's stated audience.
 
 ## 3. The corpus must read as a manual
 
-At least one persona (the `docs-manual-reader`) walks the docs like a human
-user, starting at the root README, following links, and treating the whole
-body as a single linear manual.  This exercise is the ground-truth test of
-coherence.  The same persona re-reads after edits.
+The `docs-manual-reader` persona walks the edited corpus like a human user,
+starting at the root README, following links, and treating the whole body as
+a single linear manual.  This post-edit walk is the ground-truth test of
+coherence.
 
 ## 4. Section READMEs are consistent
 
@@ -97,8 +97,8 @@ canonical home (deepest-specific doc wins; README links out).
 
 ## 7. Post-edit re-read
 
-After the first edit pass, the manual-reader re-reads the entire corpus from
-the root README.  Residual issues either:
+After the first edit pass, the manual-reader reads the entire edited corpus
+from the root README.  Residual issues either:
 
 - Trigger a second (and only a second) edit pass for small/local fixes.
 - Surface in the PR body for human review if they are structural.

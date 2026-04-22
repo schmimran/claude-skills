@@ -1,8 +1,9 @@
 # Manual Reader Protocol
 
-Used by `docs-manual-reader` in Phase 1 (initial read) and Phase 4
-(post-edit re-read).  Same agent definition, same protocol — the
-difference is only the input corpus (pre-edit vs post-edit).
+Used by `docs-manual-reader` in Phase 4 (post-edit read).  The agent
+walks the edited corpus once, cross-checks against the edit plan, and
+emits a classification that controls whether a second editing pass is
+allowed.
 
 ## Reading order
 
@@ -53,19 +54,18 @@ Do not skip around.  Read in the order a user would reach them.
 
 ## Output
 
-Write to `${CACHE_DIR}/findings/manual-reader.md` (Phase 1) or
-`${CACHE_DIR}/post-edit-findings.md` (Phase 4), using the shared schema
+Write to `${CACHE_DIR}/post-edit-findings.md` using the shared schema
 from `findings-schema.md`, plus a top-level section:
 
 ```markdown
-## Overall classification (Phase 4 only)
+## Overall classification
 
 classification: <empty | nits_only | small_local | structural>
 
 reasoning: <one paragraph>
 ```
 
-Classification semantics (Phase 4):
+Classification semantics:
 
 | Value | Meaning | Orchestrator action |
 |---|---|---|
@@ -74,14 +74,13 @@ Classification semantics (Phase 4):
 | `small_local` | ≤10 findings, all `severity: minor` or below, all within existing docs | One second-pass edit allowed |
 | `structural` | Any `severity: major` or above, OR findings requiring new docs or moved sections | No second pass; surface in PR body |
 
-## Re-read specifics (Phase 4)
+## Cross-checking the edit plan
 
-In Phase 4, the agent receives a reference to its Phase 1 findings file
-(`${CACHE_DIR}/findings/manual-reader.md`) and the editor's edit log
-(`${CACHE_DIR}/edits.log`).  Use these to:
+The agent receives `${CACHE_DIR}/consolidated-findings.md` (what the
+editor was supposed to fix) and `${CACHE_DIR}/edits.log` (what the
+editor actually changed).  Use these to:
 
-- Confirm Phase 1 findings were addressed (don't re-flag items already
-  resolved).
+- Confirm each consolidated finding was addressed in the edited corpus.
 - Focus attention on docs the editor touched.
 - Check for new issues introduced by the edits (broken cross-refs, new
   duplications, split narratives).

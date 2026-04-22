@@ -109,7 +109,6 @@ From `file-tree.md` and `doc-inventory.md`:
   flag as gap.
 - Public surface from `routes.md` that is not described in any doc —
   flag as gap.
-- Key concepts in `glossary.md` marked "undefined" — flag as gap.
 
 Gap findings use `action: edit` with `suggested_edit` describing what
 needs to be written.  Severity `major` for user-visible surfaces,

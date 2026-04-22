@@ -104,22 +104,6 @@ Markdown.  One entry per doc file with:
 Covers: `README.md` (all levels), `CLAUDE.md`, `docs/**`, `/docs/**`,
 `.github/**/*.md` user-facing docs, `CHANGELOG.md`.
 
-## glossary.md
-
-Emitted by `docs-glossary-steward`.
-
-Markdown.  Alphabetized canonical definitions:
-
-```markdown
-## Marketplace
-A catalog of plugins installable together via `/plugin marketplace add`.
-**First defined in:** `README.md`
-**Alternate forms seen:** "plugin marketplace", "the marketplace"
-```
-
-Includes acronyms, product terms, internal jargon.  Each entry notes the
-canonical source and any inconsistent variants.
-
 ## recent-changes.md
 
 Emitted by `docs-history-reconciler`.

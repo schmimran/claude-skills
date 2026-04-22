@@ -18,7 +18,6 @@ prompt.
 │   ├── routes.md                  # docs-route-mapper
 │   ├── config.md                  # docs-config-cataloger
 │   ├── doc-inventory.md           # docs-inventory
-│   ├── glossary.md                # docs-glossary-steward
 │   └── recent-changes.md          # docs-history-reconciler
 ├── findings/
 │   ├── intent-auditor.md
@@ -27,7 +26,6 @@ prompt.
 │   ├── reference-validator.md
 │   ├── example-verifier.md
 │   ├── link-checker.md
-│   ├── manual-reader.md
 │   └── deprecation-hunter.md
 ├── consolidated-findings.md       # docs-consolidator
 ├── consolidator-rejections.md     # docs-consolidator (if any records failed validation)

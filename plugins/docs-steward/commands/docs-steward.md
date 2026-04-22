@@ -23,8 +23,8 @@ PR with all changes.
    duplication, detect conflicts.  **Checkpoint** if the consolidator
    cannot produce a coherent plan.
 4. **Phase 3 — Editing** (sequential): apply edits on a feature branch.
-5. **Phase 4 — Manual re-read** (sequential): same manual-reader persona
-   re-reads the edited corpus.  One optional small-fix loop back to the editor.
+5. **Phase 4 — Manual re-read** (sequential): `docs-manual-reader`
+   walks the edited corpus.  One optional small-fix loop back to the editor.
 6. **Phase 5 — Final review + PR**: open a single PR summarizing all changes.
 
 Core tenets are defined in `references/tenets.md` of this plugin.  Every
@@ -122,7 +122,7 @@ instruction.  No ambient instruction may relax them.
 
 ## Phase 0: Index Build (parallel)
 
-Launch all seven index builders simultaneously in a single message with seven
+Launch all six index builders simultaneously in a single message with six
 Agent tool calls.  They write to distinct files under
 `${CACHE_DIR}/indexes/` and do not share state.
 
@@ -143,14 +143,13 @@ Agents to launch in parallel:
 - **docs-route-mapper** → `indexes/routes.md`
 - **docs-config-cataloger** → `indexes/config.md`
 - **docs-inventory** → `indexes/doc-inventory.md`
-- **docs-glossary-steward** → `indexes/glossary.md`
 - **docs-history-reconciler** → `indexes/recent-changes.md`
 
-Wait for all seven to complete.  Then verify each artifact exists on
+Wait for all six to complete.  Then verify each artifact exists on
 disk with a hard check:
 
 ```bash
-for f in file-tree.md symbols.json routes.md config.md doc-inventory.md glossary.md recent-changes.md; do
+for f in file-tree.md symbols.json routes.md config.md doc-inventory.md recent-changes.md; do
   test -s "${CACHE_DIR}/indexes/${f}" || { echo "MISSING: ${f}"; exit 1; }
 done
 ```
@@ -163,7 +162,7 @@ Phase 1.
 
 ## Phase 1: Drift Audit (parallel)
 
-Launch all eight auditors simultaneously.  Each reads `${CACHE_DIR}/indexes/`
+Launch all seven auditors simultaneously.  Each reads `${CACHE_DIR}/indexes/`
 and the repo's documentation, then writes its findings file to
 `${CACHE_DIR}/findings/<auditor>.md` using the shared schema from
 `references/findings-schema.md`.
@@ -188,13 +187,16 @@ Agents to launch in parallel:
 - **docs-reference-validator** → `findings/reference-validator.md`
 - **docs-example-verifier** → `findings/example-verifier.md`
 - **docs-link-checker** → `findings/link-checker.md`
-- **docs-manual-reader** → `findings/manual-reader.md`
 - **docs-deprecation-hunter** → `findings/deprecation-hunter.md`
 
-Wait for all eight.  Verify each findings file exists:
+The `docs-manual-reader` does **not** run in Phase 1 — its distinctive
+value is the post-edit re-read in Phase 4, and the Phase 1 reader angle
+is already covered by `docs-onboarding-reviewer`.
+
+Wait for all seven.  Verify each findings file exists:
 
 ```bash
-for f in intent-auditor.md info-architect.md onboarding-reviewer.md reference-validator.md example-verifier.md link-checker.md manual-reader.md deprecation-hunter.md; do
+for f in intent-auditor.md info-architect.md onboarding-reviewer.md reference-validator.md example-verifier.md link-checker.md deprecation-hunter.md; do
   test -f "${CACHE_DIR}/findings/${f}" || { echo "MISSING: ${f}"; exit 1; }
 done
 ```
@@ -234,13 +236,16 @@ and writes `${CACHE_DIR}/edits.log`.
 
 ## Phase 4: Manual Re-Read (sequential)
 
-Relaunch **docs-manual-reader** with the `re-read` flag and:
+Launch **docs-manual-reader** with `phase=4` and:
 - `CACHE_DIR`
 - `REPO_DIR`
 - `TRACKED_FILES_PATH`
-- Reference to the prior findings file so it can compare.
+- Path to `${CACHE_DIR}/consolidated-findings.md` and `${CACHE_DIR}/edits.log`
+  so the reader can see what the editor intended to change.
 
-The re-read output is written to `${CACHE_DIR}/post-edit-findings.md`.
+The manual-reader walks the edited corpus fresh (no Phase 1 baseline —
+this pass is the first time it reads the docs).  Output is written to
+`${CACHE_DIR}/post-edit-findings.md`.
 
 Classify residuals per the agent's own output:
 

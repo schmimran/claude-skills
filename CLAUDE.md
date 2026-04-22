@@ -64,7 +64,6 @@ plugins/
       docs-route-mapper.md        # Phase 0: HTTP routes + CLI + slash commands + public exports
       docs-config-cataloger.md    # Phase 0: env vars + config files + schemas (with referenced flag)
       docs-inventory.md           # Phase 0: every doc file with stated purpose + claims
-      docs-glossary-steward.md    # Phase 0: canonical glossary with variants
       docs-history-reconciler.md  # Phase 0: last-90d git history by area with likely doc impact
       docs-intent-auditor.md      # Phase 1: doc claims vs code reality
       docs-info-architect.md      # Phase 1: structure, section-README consistency, duplication, gaps
@@ -72,7 +71,7 @@ plugins/
       docs-reference-validator.md # Phase 1: every intra-repo reference resolves
       docs-example-verifier.md    # Phase 1: code blocks still match the code
       docs-link-checker.md        # Phase 1: external URLs reachable and on-topic
-      docs-manual-reader.md       # Phase 1 + Phase 4: walks corpus as a manual from the root README
+      docs-manual-reader.md       # Phase 4: walks edited corpus as a manual from the root README
       docs-deprecation-hunter.md  # Phase 1: orphan env/config/symbol/command refs → action=delete
       docs-consolidator.md        # Phase 2: merge findings, resolve duplication, emit edit plan or checkpoint
       docs-editor.md              # Phase 3 (and optional Phase 4 second pass): apply edits on a feature branch
@@ -85,7 +84,7 @@ plugins/
       readme-style-guide.md       # User-facing README voice, structure, link-out rules
       voice-guide.md              # Voice preservation rules for the editor
       checkpoint-criteria.md      # When the consolidator pauses for user adjudication
-      manual-reader-protocol.md   # How the manual-reader walks the corpus (Phase 1 + Phase 4)
+      manual-reader-protocol.md   # How the manual-reader walks the edited corpus (Phase 4)
       cache-layout.md             # /tmp/docs-steward-cache/ layout and lifecycle
       pr-template.md              # PR body template (sections: findings, deletions, requires-approval, residuals, tenets)
     README.md                     # Plugin-specific documentation

@@ -14,9 +14,9 @@ to reconcile them, re-read the corpus to verify coherence, and open a single
 PR with all changes.
 
 **Pipeline**:
-1. **Phase 0 — Index build** (7 agents in parallel): produce canonical
+1. **Phase 0 — Index build** (6 agents in parallel): produce canonical
    reference artifacts under `/tmp/docs-steward-cache/<run-id>/indexes/`.
-2. **Phase 1 — Drift audit** (8 agents in parallel): each auditor reads the
+2. **Phase 1 — Drift audit** (7 agents in parallel): each auditor reads the
    indexes + docs and emits a findings file under
    `/tmp/docs-steward-cache/<run-id>/findings/`.
 3. **Phase 2 — Consolidation** (sequential): merge findings, resolve

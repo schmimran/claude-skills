@@ -26,7 +26,7 @@
       "name": "docs-steward",
       "source": "./plugins/docs-steward",
       "description": "Docs maintenance pipeline — builds canonical indexes of a repo, audits docs for drift, duplication, orphans, and onboarding gaps, then actively edits docs and opens a PR.",
-      "version": "0.4.0",
+      "version": "0.4.1",
       "author": {
         "name": "schmimran"
       }

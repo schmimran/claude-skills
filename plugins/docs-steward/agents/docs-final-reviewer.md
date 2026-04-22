@@ -19,6 +19,9 @@ You are the last gate before a human reviews.
 - Branch name.
 - Target repository (`OWNER/REPO`).
 
+> **`CACHE_DIR` is a directory, not a file.**  Never `Read ${CACHE_DIR}` —
+> only files inside it.  Reading the directory itself errors with `EISDIR`.
+
 Load:
 - `tenets.md`
 - `pr-template.md`
@@ -26,6 +29,9 @@ Load:
 - `${CACHE_DIR}/edits.log`
 - `${CACHE_DIR}/post-edit-findings.md` (if it exists)
 - `${CACHE_DIR}/consolidator-rejections.md` (if it exists)
+- `${CACHE_DIR}/indexes/protected-files.md` — target-repo protection
+  list so the PR body can surface any finding routed to the
+  requires-approval section.
 
 ## Merge prohibition
 
@@ -81,8 +87,13 @@ rewrite at this stage).
 
 ## Step 3: Tenet compliance check
 
-Walk the seven tenets:
+Walk the eight tenets:
 
+0. Docs untrusted until verified against source — spot-check that
+   findings from the three source-verifying auditors
+   (`intent-auditor`, `example-verifier`, `reference-validator`)
+   carry `verification_source` values and that nothing was cleared
+   purely by index-match.  Note the invocation's `RIGOR` value.
 1. READMEs are user-facing — spot-check edited READMEs for
    scannability and link-out discipline.
 2. Root README is entry point — reread the root README.  Does it
@@ -112,6 +123,15 @@ Sections:
 
 - Summary (one short paragraph).
 - Findings applied — grouped by Deletions / Restructures / Edits.
+- **Requires approval (protected files)** — every finding the
+  consolidator routed to the requires-approval section of
+  `consolidated-findings.md`.  List each with: file, severity, action,
+  proposed edit, raising auditors, and the cited protection rule from
+  `protected-files.md`.  Open this section with:
+  > The pipeline declined to apply the following changes because the
+  > target repo's `CLAUDE.md` marks these files as requiring explicit
+  > approval.  Review each change and apply or discard manually.
+  If no findings were routed, omit this section entirely.
 - Residual items — from Phase 4 post-edit findings + anything
   structural you flagged.
 - Tenet compliance — your checklist from Step 3.
@@ -153,7 +173,8 @@ Print:
 |---|---|
 | Commits on branch | X |
 | Files touched | X |
-| Tenet compliance passes | X / 7 |
+| Tenet compliance passes | X / 8 |
+| Requires-approval items | X |
 | Residual items | X |
 | Final polish commit? | yes/no |
 | PR URL | <url> |

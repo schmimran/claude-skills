@@ -1,7 +1,7 @@
 ---
 name: docs-inventory
 description: Catalogs every documentation file in the repo with its stated purpose, top-level headings, and a summary of the claims it makes
-tools: Glob, Grep, Read, TodoWrite
+tools: Glob, Grep, Read, Write, TodoWrite
 model: sonnet
 color: blue
 disable-model-invocation: true
@@ -16,6 +16,10 @@ what docs exist and what each claims.
 ## Inputs
 
 - `REPO_DIR`, `CACHE_DIR`, `TRACKED_FILES_PATH`, `RUN_ID`, plugin reference path.
+
+> **`CACHE_DIR` is a directory, not a file.**  Never `Read ${CACHE_DIR}` —
+> only files inside it (e.g., `${CACHE_DIR}/indexes/doc-inventory.md`).
+> Reading the directory itself errors with `EISDIR`.
 
 `TRACKED_FILES_PATH` lists every git-tracked file in `REPO_DIR`.  Read it
 once at startup with the `Read` tool and keep the list in memory.  After

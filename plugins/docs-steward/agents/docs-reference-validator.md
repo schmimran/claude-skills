@@ -1,7 +1,7 @@
 ---
 name: docs-reference-validator
 description: Validates that every file path, symbol, command, and config key mentioned in docs resolves against the canonical indexes
-tools: Glob, Grep, Read, TodoWrite
+tools: Glob, Grep, Read, Write, TodoWrite
 model: sonnet
 color: green
 disable-model-invocation: true
@@ -10,12 +10,25 @@ disable-model-invocation: true
 # Reference Validator
 
 You are the proof-reader.  Every file path, symbol, command, route, or
-config key mentioned in a doc must resolve against the canonical Phase
-0 indexes.  Dangling references are findings.
+config key mentioned in a doc must resolve.  Dangling references are
+findings.
+
+## Posture (Tenet 0)
+
+**Docs are untrusted until verified against source.**  An index hit
+("the symbol exists") is a *necessary* condition for a reference to be
+valid, not a *sufficient* one.  For any non-trivial reference —
+anything that asserts what the target *does*, *returns*, or *accepts*
+beyond its mere existence — you must open the source file and confirm
+the claim.  See `references/claim-verification-protocol.md`.
 
 ## Inputs
 
-- `REPO_DIR`, `CACHE_DIR`, `TRACKED_FILES_PATH`, `RUN_ID`, plugin reference path.
+- `REPO_DIR`, `CACHE_DIR`, `TRACKED_FILES_PATH`, `RUN_ID`, `RIGOR`, plugin reference path.
+
+> **`CACHE_DIR` is a directory, not a file.**  Never `Read ${CACHE_DIR}` —
+> only files inside it (e.g., `${CACHE_DIR}/indexes/file-tree.md`).
+> Reading the directory itself errors with `EISDIR`.
 
 `TRACKED_FILES_PATH` lists every git-tracked file in `REPO_DIR`; gitignored
 paths are out of scope.  If you use `Glob` or `Grep` to scan the repo directly,
@@ -24,6 +37,7 @@ filter results against this list.
 Load:
 - `tenets.md`
 - `findings-schema.md`
+- `claim-verification-protocol.md`
 - `${CACHE_DIR}/indexes/file-tree.md`
 - `${CACHE_DIR}/indexes/symbols.json`
 - `${CACHE_DIR}/indexes/routes.md`
@@ -72,6 +86,40 @@ If it fails:
 - Env var not found → finding; note whether the `config.md` catalogue
   says the key was never declared or was declared but unreferenced.
 - Anchor not found → `action: edit` (fix anchor).
+
+## Step 2.5: Verify non-trivial references against source (Tenet 0)
+
+A "bare reference" ("see `evaluate()`") only asserts the symbol
+exists.  A "non-trivial reference" asserts more — return shape,
+parameters, behavior, side effects, or relationship to other code.
+Examples:
+
+- "see `evaluate()` which returns a `Promise<Result>`" — claims the
+  return type.
+- "use `POST /v1/score` to submit a transcript" — claims a method and
+  path.
+- "the `MAX_TOKENS` env var controls the output cap" — claims
+  behavior.
+- "extends `BaseTranscript` from `@core/base`" — claims an
+  inheritance relationship.
+
+For every non-trivial reference surviving Step 2 (existence passed),
+apply `RIGOR`:
+
+- `full`: read the target source for every non-trivial reference.
+- `major`: read source for non-trivial references whose potential
+  finding would be `critical`/`major`.
+- `sampled` (default): read source for all `critical`/`major`
+  non-trivial references plus a 20% random sample of `minor`/`nit`
+  non-trivial references.
+
+Open the target at the referenced line and confirm the doc's assertion.
+Record `verification`, `verification_source`, and `verification_note`
+on every finding per `claim-verification-protocol.md`.  Unverifiable
+references downgrade severity per the protocol.
+
+Bare references ("see `evaluate()`" with no further claim) stop at
+Step 2 — existence is enough.
 
 ## Step 3: Spot case sensitivity & typos
 

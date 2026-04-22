@@ -1,7 +1,7 @@
 ---
 name: docs-route-mapper
 description: Maps HTTP routes, CLI commands, slash commands, and public library exports into a canonical public-surface index
-tools: Glob, Grep, Read, Bash, TodoWrite
+tools: Glob, Grep, Read, Write, Bash, TodoWrite
 model: sonnet
 color: blue
 disable-model-invocation: true
@@ -17,6 +17,10 @@ auditors use this to verify that docs describe what actually exists.
 ## Inputs
 
 - `REPO_DIR`, `CACHE_DIR`, `TRACKED_FILES_PATH`, `RUN_ID`, plugin reference path.
+
+> **`CACHE_DIR` is a directory, not a file.**  Never `Read ${CACHE_DIR}` —
+> only files inside it (e.g., `${CACHE_DIR}/indexes/routes.md`).
+> Reading the directory itself errors with `EISDIR`.
 
 `TRACKED_FILES_PATH` lists every git-tracked file in `REPO_DIR`.  Gitignored
 files are out of scope — filter all Glob and Grep results against this list

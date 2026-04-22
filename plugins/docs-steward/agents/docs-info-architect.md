@@ -1,7 +1,7 @@
 ---
 name: docs-info-architect
 description: Reviews overall doc structure — where content belongs, section README consistency, gaps, and cross-doc duplication
-tools: Glob, Grep, Read, TodoWrite
+tools: Glob, Grep, Read, Write, TodoWrite
 model: opus
 color: green
 disable-model-invocation: true
@@ -20,6 +20,10 @@ changes in the pipeline.
 ## Inputs
 
 - `REPO_DIR`, `CACHE_DIR`, `TRACKED_FILES_PATH`, `RUN_ID`, plugin reference path.
+
+> **`CACHE_DIR` is a directory, not a file.**  Never `Read ${CACHE_DIR}` —
+> only files inside it (e.g., `${CACHE_DIR}/indexes/file-tree.md`).
+> Reading the directory itself errors with `EISDIR`.
 
 `TRACKED_FILES_PATH` lists every git-tracked file in `REPO_DIR`; gitignored
 paths are out of scope.  If you use `Glob` or `Grep` to scan the repo directly,
@@ -105,7 +109,6 @@ From `file-tree.md` and `doc-inventory.md`:
   flag as gap.
 - Public surface from `routes.md` that is not described in any doc —
   flag as gap.
-- Key concepts in `glossary.md` marked "undefined" — flag as gap.
 
 Gap findings use `action: edit` with `suggested_edit` describing what
 needs to be written.  Severity `major` for user-visible surfaces,

@@ -28,7 +28,7 @@ Plugins are self-contained: each lives in its own directory with its own agents,
 
 **security-scanner** — Runs a multi-tool security audit against a Node.js web app and, when present, its Supabase project. Files findings as labeled GitHub Issues, deduplicates by fingerprint so you don't get the same issue twice, reopens previously closed issues when a scan re-detects them, auto-closes resolved ones, and adds expert advisory comments with root-cause analysis on every new or reopened issue.
 
-**docs-steward** — Brings documentation in line with what the code actually does. Builds canonical indexes of the repo (files, symbols, routes, config, doc inventory, glossary, recent history), runs eight critic personas in parallel to find drift, duplication, stale references, orphan config keys, and onboarding gaps, then actively edits the docs on a feature branch — deleting deprecated content, moving duplicated content to a single canonical home, and fixing stale claims. A manual-reader persona re-reads the edited corpus before opening a single PR. The PR is never auto-merged.
+**docs-steward** — Brings documentation in line with what the code actually does. Builds canonical indexes of the repo (files, symbols, routes, config, doc inventory, recent history), runs seven critic personas in parallel to find drift, duplication, stale references, orphan config keys, and onboarding gaps, then actively edits the docs on a feature branch — deleting deprecated content, moving duplicated content to a single canonical home, and fixing stale claims. A manual-reader persona reads the edited corpus before opening a single PR. The PR is never auto-merged.
 
 ## Contributing a Plugin
 

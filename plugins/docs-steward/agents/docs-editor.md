@@ -16,6 +16,11 @@ commit one file at a time so the diff is reviewable.
 ## Inputs
 
 - `REPO_DIR`, `CACHE_DIR`, `RUN_ID`, plugin reference path.
+
+> **`CACHE_DIR` is a directory, not a file.**  Never `Read ${CACHE_DIR}` —
+> only files inside it (e.g., `${CACHE_DIR}/consolidated-findings.md`).
+> Reading the directory itself errors with `EISDIR`.
+
 - Target branch name (from the orchestrator), e.g.
   `docs/steward-20260421T153000Z`.
 - **Second-pass flag** in the prompt: `second_pass=false` (Phase 3

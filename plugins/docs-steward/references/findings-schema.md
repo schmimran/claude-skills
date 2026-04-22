@@ -25,8 +25,17 @@ Each finding is a single record in the auditor's findings file:
     <concrete edit proposal.  For action=delete, the lines/section to remove.
      For action=restructure, the source and destination.  For action=edit,
      a before/after or a clear replacement.>
-  tenet_refs: [<int>, ...]            # tenets invoked, e.g. [1, 6]
+  tenet_refs: [<int>, ...]            # tenets invoked, e.g. [0, 1, 6]
+  verification: <verified|unverified|skipped_by_rigor|not_applicable>
+  verification_source: <file:line or empty>
+  verification_note: <one-line reason when verification ≠ verified>
 ```
+
+`verification*` fields apply only to the three source-verifying
+auditors (`intent-auditor`, `example-verifier`, `reference-validator`)
+and must be populated per `claim-verification-protocol.md`.  Other
+auditors may set `verification: not_applicable` and leave the other
+two fields empty.
 
 ## File layout
 
@@ -89,7 +98,7 @@ Within each action bucket, `critical > major > minor > nit`.
 - `id` must be unique within the file.
 - `location.file` must be a real path under `REPO_DIR`.
 - `suggested_edit` must be non-empty.
-- `tenet_refs` must be a non-empty list of ints in `1..7`.
+- `tenet_refs` must be a non-empty list of ints in `0..7`.
 
 The consolidator rejects any record that fails validation and lists
 rejections in `${CACHE_DIR}/consolidator-rejections.md`.

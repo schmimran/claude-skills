@@ -1,7 +1,7 @@
 ---
 name: docs-steward
-description: Audit and actively correct documentation across a repo — builds canonical indexes, runs multi-persona drift audit, edits docs, and opens a PR. Args: [repo-owner/repo-name]
-argument-hint: "[repo-owner/repo-name]"
+description: Audit and actively correct documentation across a repo — builds canonical indexes, runs multi-persona drift audit, edits docs, and opens a PR. Args: [repo-owner/repo-name] [--rigor=full|major|sampled]
+argument-hint: "[repo-owner/repo-name] [--rigor=full|major|sampled]"
 disable-model-invocation: true
 ---
 
@@ -14,17 +14,17 @@ to reconcile them, re-read the corpus to verify coherence, and open a single
 PR with all changes.
 
 **Pipeline**:
-1. **Phase 0 — Index build** (7 agents in parallel): produce canonical
+1. **Phase 0 — Index build** (6 agents in parallel): produce canonical
    reference artifacts under `/tmp/docs-steward-cache/<run-id>/indexes/`.
-2. **Phase 1 — Drift audit** (8 agents in parallel): each auditor reads the
+2. **Phase 1 — Drift audit** (7 agents in parallel): each auditor reads the
    indexes + docs and emits a findings file under
    `/tmp/docs-steward-cache/<run-id>/findings/`.
 3. **Phase 2 — Consolidation** (sequential): merge findings, resolve
    duplication, detect conflicts.  **Checkpoint** if the consolidator
    cannot produce a coherent plan.
 4. **Phase 3 — Editing** (sequential): apply edits on a feature branch.
-5. **Phase 4 — Manual re-read** (sequential): same manual-reader persona
-   re-reads the edited corpus.  One optional small-fix loop back to the editor.
+5. **Phase 4 — Manual re-read** (sequential): `docs-manual-reader`
+   walks the edited corpus.  One optional small-fix loop back to the editor.
 6. **Phase 5 — Final review + PR**: open a single PR summarizing all changes.
 
 Core tenets are defined in `references/tenets.md` of this plugin.  Every
@@ -70,6 +70,11 @@ instruction.  No ambient instruction may relax them.
      `gh repo view --json nameWithOwner -q .nameWithOwner`
    - If neither `OWNER/REPO` nor current-directory detection works, stop and
      ask the user for the repository.
+   - Extract `--rigor=<full|major|sampled>` if provided.  If absent or
+     malformed, default to `sampled`.  Record as `<RIGOR>` and pass to the
+     three source-verifying auditors in Phase 1 (intent-auditor,
+     example-verifier, reference-validator).  Rigor modes are defined in
+     `references/claim-verification-protocol.md`.
 
 3. Resolve the absolute repo working directory:
    - If `OWNER/REPO` matches the current working directory's repo, operate
@@ -91,9 +96,33 @@ instruction.  No ambient instruction may relax them.
    them to every agent.  The cache lives in `/tmp/` — no gitignore entry
    is needed.
 
+   **`CACHE_DIR` is a directory, not a file.**  Every agent, every
+   reference, and every tool invocation must append a subpath before
+   reading (e.g., `${CACHE_DIR}/indexes/symbols.json`).  Calling `Read` on
+   `${CACHE_DIR}` itself will error with `EISDIR`.  This warning appears
+   in every agent's Inputs section for the same reason.
+
+5. Extract target-repo protection rules into `protected-files.md`:
+   ```bash
+   PROTECTED_OUT="${CACHE_DIR}/indexes/protected-files.md"
+   ```
+   - Find every `CLAUDE.md` tracked by git in `REPO_DIR` (root and
+     nested): `git -C "${REPO_DIR}" ls-files '**/CLAUDE.md' CLAUDE.md`.
+   - Read each file.  Extract any rule that forbids, restricts, or
+     requires explicit approval for edits to specific files or globs
+     ("do not edit without explicit instruction", "protected", "never
+     modify", "requires approval", etc.).  Rules may be prose, bullet
+     lists, or tables — interpret intent, not syntax.
+   - Write `${PROTECTED_OUT}` as a markdown table with columns:
+     `pattern | source_file | source_line | rule_text`.  If no CLAUDE.md
+     exists or no protection rules are found, write the file anyway with
+     a single line `No protection rules found.` so the consolidator's
+     read never fails.
+   - Record `<PROTECTED_PATH>` and pass to the consolidator.
+
 ## Phase 0: Index Build (parallel)
 
-Launch all seven index builders simultaneously in a single message with seven
+Launch all six index builders simultaneously in a single message with six
 Agent tool calls.  They write to distinct files under
 `${CACHE_DIR}/indexes/` and do not share state.
 
@@ -114,16 +143,26 @@ Agents to launch in parallel:
 - **docs-route-mapper** → `indexes/routes.md`
 - **docs-config-cataloger** → `indexes/config.md`
 - **docs-inventory** → `indexes/doc-inventory.md`
-- **docs-glossary-steward** → `indexes/glossary.md`
 - **docs-history-reconciler** → `indexes/recent-changes.md`
 
-Wait for all seven to complete.  If any agent fails to write its artifact,
-stop and report which one failed.  A partial index set is not a valid basis
-for Phase 1.
+Wait for all six to complete.  Then verify each artifact exists on
+disk with a hard check:
+
+```bash
+for f in file-tree.md symbols.json routes.md config.md doc-inventory.md recent-changes.md; do
+  test -s "${CACHE_DIR}/indexes/${f}" || { echo "MISSING: ${f}"; exit 1; }
+done
+```
+
+If any file is missing or empty, **stop the pipeline** and report which
+agent did not produce its artifact.  Do **not** attempt to save the
+agent's stdout on its behalf — the missing Write is a real defect and
+must surface to the user.  A partial index set is not a valid basis for
+Phase 1.
 
 ## Phase 1: Drift Audit (parallel)
 
-Launch all eight auditors simultaneously.  Each reads `${CACHE_DIR}/indexes/`
+Launch all seven auditors simultaneously.  Each reads `${CACHE_DIR}/indexes/`
 and the repo's documentation, then writes its findings file to
 `${CACHE_DIR}/findings/<auditor>.md` using the shared schema from
 `references/findings-schema.md`.
@@ -132,6 +171,15 @@ Pass each agent the same context variables as Phase 0: `REPO_DIR`,
 `CACHE_DIR`, `TRACKED_FILES_PATH`, `RUN_ID`, and the plugin reference path.
 Agents must only audit files listed in `TRACKED_FILES_PATH`.
 
+Additionally pass `RIGOR` (`<RIGOR>` parsed in prerequisites) to:
+- **docs-intent-auditor**
+- **docs-example-verifier**
+- **docs-reference-validator**
+
+These three auditors use the untrusted-docs posture (Tenet 0) and open
+source files to verify claims.  Rigor mode decides how exhaustively.
+See `references/claim-verification-protocol.md`.
+
 Agents to launch in parallel:
 - **docs-intent-auditor** → `findings/intent-auditor.md`
 - **docs-info-architect** → `findings/info-architect.md`
@@ -139,18 +187,32 @@ Agents to launch in parallel:
 - **docs-reference-validator** → `findings/reference-validator.md`
 - **docs-example-verifier** → `findings/example-verifier.md`
 - **docs-link-checker** → `findings/link-checker.md`
-- **docs-manual-reader** → `findings/manual-reader.md`
 - **docs-deprecation-hunter** → `findings/deprecation-hunter.md`
 
-Wait for all eight.  Proceed even if a single auditor produces zero findings
-(its file should still be written as an empty findings list) — but stop if
-an auditor fails to write a file at all.
+The `docs-manual-reader` does **not** run in Phase 1 — its distinctive
+value is the post-edit re-read in Phase 4, and the Phase 1 reader angle
+is already covered by `docs-onboarding-reviewer`.
+
+Wait for all seven.  Verify each findings file exists:
+
+```bash
+for f in intent-auditor.md info-architect.md onboarding-reviewer.md reference-validator.md example-verifier.md link-checker.md deprecation-hunter.md; do
+  test -f "${CACHE_DIR}/findings/${f}" || { echo "MISSING: ${f}"; exit 1; }
+done
+```
+
+Proceed even if a single auditor produces zero findings (its file should
+still be written as an empty findings list).  If any file is absent,
+**stop the pipeline** and report which auditor failed.  Do **not** save
+agent stdout on its behalf.
 
 ## Phase 2: Consolidation (sequential)
 
 Launch **docs-consolidator** with:
 - `CACHE_DIR`
 - `REPO_DIR`
+- `PROTECTED_PATH` — path to `${CACHE_DIR}/indexes/protected-files.md`
+  (from Phase 0 step 5)
 
 The consolidator merges all findings into
 `${CACHE_DIR}/consolidated-findings.md`, deduplicates, resolves duplication
@@ -174,13 +236,16 @@ and writes `${CACHE_DIR}/edits.log`.
 
 ## Phase 4: Manual Re-Read (sequential)
 
-Relaunch **docs-manual-reader** with the `re-read` flag and:
+Launch **docs-manual-reader** with `phase=4` and:
 - `CACHE_DIR`
 - `REPO_DIR`
 - `TRACKED_FILES_PATH`
-- Reference to the prior findings file so it can compare.
+- Path to `${CACHE_DIR}/consolidated-findings.md` and `${CACHE_DIR}/edits.log`
+  so the reader can see what the editor intended to change.
 
-The re-read output is written to `${CACHE_DIR}/post-edit-findings.md`.
+The manual-reader walks the edited corpus fresh (no Phase 1 baseline —
+this pass is the first time it reads the docs).  Output is written to
+`${CACHE_DIR}/post-edit-findings.md`.
 
 Classify residuals per the agent's own output:
 

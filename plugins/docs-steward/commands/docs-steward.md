@@ -151,7 +151,6 @@ an auditor fails to write a file at all.
 Launch **docs-consolidator** with:
 - `CACHE_DIR`
 - `REPO_DIR`
-- `TRACKED_FILES_PATH`
 
 The consolidator merges all findings into
 `${CACHE_DIR}/consolidated-findings.md`, deduplicates, resolves duplication
@@ -167,7 +166,6 @@ without explicit user direction.
 Launch **docs-editor** with:
 - `CACHE_DIR`
 - `REPO_DIR`
-- `TRACKED_FILES_PATH`
 - Target branch name: `docs/steward-${RUN_ID}`
 
 The editor creates the feature branch, applies edits grouped by target file
@@ -199,7 +197,6 @@ Classify residuals per the agent's own output:
 Launch **docs-final-reviewer** with:
 - `CACHE_DIR`
 - `REPO_DIR`
-- `TRACKED_FILES_PATH`
 - Branch name
 - Target repository (`OWNER/REPO`)
 

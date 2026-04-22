@@ -33,8 +33,7 @@ Scan `.env*` files (any file matching `.env`, `.env.*`, including
 `.env.example`).  Use `git ls-files` to respect gitignore:
 
 ```bash
-cd "$REPO_DIR"
-git ls-files --cached | grep -E '(^|/)\.env'
+grep -E '(^|/)\.env($|\.)' "${TRACKED_FILES_PATH}"
 ```
 
 For each file, extract keys (the left side of `=`, skipping comments and

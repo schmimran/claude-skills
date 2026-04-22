@@ -28,9 +28,11 @@ starting.
 
 ## Step 1: Detect languages in the repo
 
+Read `TRACKED_FILES_PATH` and derive the extension histogram from it — no
+additional git call is needed:
+
 ```bash
-cd "$REPO_DIR"
-git ls-files --cached | awk -F. 'NF>1 {print $NF}' | sort | uniq -c | sort -rn | head -20
+awk -F. 'NF>1 {print $NF}' "${TRACKED_FILES_PATH}" | sort | uniq -c | sort -rn | head -20
 ```
 
 From the top extensions, decide which language extractors to run.
@@ -50,13 +52,13 @@ and do not fail the run — downstream auditors will note missing coverage.
 
 ## Step 2: Extract symbols
 
-Restrict extraction to files listed in `${TRACKED_FILES_PATH}`.  Use
-`git grep` (which respects `.gitignore`) rather than bare `grep` wherever
-possible:
+Restrict extraction to files listed in `${TRACKED_FILES_PATH}`.  Use the
+`Grep` tool scoped to specific files from the tracked list, or use
+`git grep` in Bash for repo-wide pattern scans (both respect gitignore):
 
 ```bash
 cd "$REPO_DIR"
-git grep -n "pattern"
+git grep -n "pattern" -- $(cat "${TRACKED_FILES_PATH}")
 ```
 
 Prefer heuristics over parsing.  For each supported language, grep for

@@ -28,13 +28,9 @@ rm -f /tmp/sec-supabase-advisors.json
 
 ## Step 2: Detect Supabase usage
 
-Check, in order — any one match is sufficient:
-
-1. `supabase/config.toml` exists.
-2. `@supabase/supabase-js` appears in `package.json` (`dependencies` or
-   `devDependencies`).
-3. `SUPABASE_URL` is set in any `.env*` file at the repo root.
-4. `supabase/migrations/` exists and has at least one `.sql` file.
+Apply the detection signals and matcher rules in
+[`../references/supabase-audit-guide.md#detection`](../references/supabase-audit-guide.md#detection).
+Any one match is sufficient.
 
 If none match, write an empty findings file and stop:
 

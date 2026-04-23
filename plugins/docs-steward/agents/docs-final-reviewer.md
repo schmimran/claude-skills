@@ -77,8 +77,8 @@ For each file:
 - Voice: does the result match the surrounding context?
 - Intra-doc coherence: do the edits read naturally?  Are transitions
   smooth?
-- Cross-doc coherence: do links still resolve (spot-check, don't
-  re-run the link-checker)?
+- Cross-doc coherence: do links still resolve (spot-check a few
+  intra-repo links)?
 
 If you find voice/coherence breakage that's small enough to fix
 yourself, make a single final polish commit.  If it's structural, add

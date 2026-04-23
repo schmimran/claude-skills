@@ -25,7 +25,7 @@ Load:
 - `tenets.md`
 - `findings-schema.md`
 - `checkpoint-criteria.md`
-- All eight files in `${CACHE_DIR}/findings/`.
+- All six findings files in `${CACHE_DIR}/findings/`.
 - `${PROTECTED_PATH}` (`${CACHE_DIR}/indexes/protected-files.md`) — the
   list of globs/paths the target repo's `CLAUDE.md` marks as requiring
   explicit approval before editing.
@@ -205,7 +205,7 @@ heading if none.>
 
 ## Tenet-compliance plan
 
-For each of the seven tenets, one sentence on how this plan
+For each of the eight tenets (0–7), one sentence on how this plan
 addresses it.
 ```
 

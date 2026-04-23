@@ -8,27 +8,24 @@ posts expert advisory comments with root-cause analysis on each acted issue.
 
 ## Quick Start
 
-1. **Install the marketplace** (once per machine):
-   ```bash
-   /plugin marketplace add https://github.com/schmimran/claude-skills
-   ```
+1. **Install the marketplace** if you have not already: see [Installation in the root README](../../README.md#installation).
 
 2. **Create the required labels** on your target repository:
    ```bash
    gh label create "security" \
-     --color D93F0B \
+     --color d73a4a \
      --description "Security vulnerability finding"
 
    gh label create "security - suppressed" \
-     --color CCCCCC \
+     --color e4e669 \
      --description "Confirmed false positive — scanner will skip this finding"
 
    gh label create "feature - ready for claude" \
-     --color 0075ca \
+     --color 0E8A16 \
      --description "Ready for a Claude fixing agent"
 
    gh label create "feature - human review" \
-     --color 0075ca \
+     --color D93F0B \
      --description "Needs a human to review before proceeding"
    ```
 
@@ -48,7 +45,7 @@ posts expert advisory comments with root-cause analysis on each acted issue.
 
 ## Prerequisites
 
-- **Node.js** with `npm` available in the shell
+- **Node.js 18+** with `npm 7+` available in the shell (for `npm audit` and `npx`)
 - **GitHub CLI** installed and authenticated (`gh auth status`)
 - **jq** on PATH — used by the orchestrator to merge findings.  Install with
   `brew install jq` (macOS) or `apt-get install jq` / `dnf install jq` (Linux).
@@ -158,36 +155,14 @@ full fingerprint specification.
 
 ## Suppression (False Positives)
 
-To suppress a finding permanently:
-1. Open its GitHub Issue.
-2. Add the label `security - suppressed`.
-3. Add a comment explaining why it is a false positive.
-4. Leave the issue open.
-
-The scanner will skip suppressed findings on all future runs and will never
-auto-close them.  See `references/suppression-guide.md` for details.
-
-### Autonomous suppression by the advisor
-
-The `security-advisor` agent may auto-suppress a newly filed issue when ALL
-three high-confidence false-positive signals are present:
-
-1. Source is `supabase-advisor` or `supabase-schema`.
-2. Rule ID is a known FP-prone rule for that source (`rls_disabled_in_public`,
-   `rls_enabled_no_policy`, `missing_rls`, or `policy_allows_all`).
-3. The finding references a known Supabase-internal or system table
-   (`schema_migrations`, `supabase_migrations`, `supabase_functions`,
-   `_realtime`, `_analytics`, `_supabase`, `storage.buckets`,
-   `storage.objects`).
-
-When triggered, the advisor applies `security - suppressed` and
-`feature - human review` labels, removes `feature - ready for claude`, posts
-a rationale comment, and closes the issue.  Reopened issues are never
-auto-suppressed.
-
-**To reverse an auto-suppression**: remove the `security - suppressed` label.
-The next scan re-files the issue if it is still detected.  See
-`references/suppression-guide.md` for the full signal specification.
+To suppress a finding permanently, add the `security - suppressed` label to
+its GitHub Issue and leave it open; the scanner then skips it on every
+future run and never auto-closes it. The `security-advisor` agent may also
+auto-suppress a newly filed issue when it matches a known high-confidence
+false-positive pattern (Supabase-internal tables, FP-prone rule IDs); to
+reverse an auto-suppression, remove the `security - suppressed` label. See
+[`references/suppression-guide.md`](references/suppression-guide.md) for
+the full manual procedure and the auto-suppression signal specification.
 
 ## Advisory Comments
 
@@ -220,13 +195,10 @@ configuration (auth hardening, API schemas).
 
 ### Detection
 
-The Supabase auditor runs automatically if any of these signals are present
-(no flag to enable, no flag to disable):
-
-1. `supabase/config.toml` exists.
-2. `@supabase/supabase-js` is in `package.json`.
-3. `SUPABASE_URL` is set in any `.env*` file.
-4. `supabase/migrations/` has at least one `.sql` file.
+The Supabase auditor runs automatically when the repo shows any of four
+detection signals (`supabase/config.toml`, `@supabase/supabase-js`,
+`SUPABASE_URL`, `supabase/migrations/*.sql`). Full list and matcher
+rules in [`references/supabase-audit-guide.md`](references/supabase-audit-guide.md#detection).
 
 ### Two data sources
 

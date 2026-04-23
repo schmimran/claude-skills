@@ -32,6 +32,7 @@ plugins/
       review-checklist.md         # Instructions for the review subagent
       merge-checklist.md          # Pre-merge steps
       pr-template.md              # PR body template
+      release-pr-template.md      # Release PR body template for the release branch PR assembled in Phase 5c
     README.md                     # Plugin-specific documentation
   security-scanner/               # Plugin: multi-tool security audit for Node.js + Supabase
     .claude-plugin/
@@ -194,7 +195,7 @@ claude --plugin-dir /path/to/claude-skills/plugins/feature-creator
 ## Prerequisites
 
 - **`gh` CLI**: Must be installed and authenticated (`gh auth status`)
-- **Labels**: The target repository must have the five pipeline labels created. See the feature-creator plugin README for the setup commands.
+- **Labels**: Each plugin that files or reads GitHub Issues requires its own label set on the target repository. See the Quick Start section of each plugin's README for the `gh label create` commands: feature-creator defines five `feature - *` pipeline labels, and security-scanner defines two `security` labels plus two shared `feature -` labels. Where label names are shared across plugins (notably `feature - ready for claude` and `feature - human review`), the colors and descriptions in feature-creator's README are canonical — use those when creating labels.
 
 ## Build & Test Commands
 

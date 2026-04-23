@@ -128,7 +128,7 @@ instruction.  No ambient instruction may relax them.
 
 ## Phase 0: Index Build (parallel)
 
-Launch all six index builders simultaneously in a single message with six
+Launch all seven index builders simultaneously in a single message with seven
 Agent tool calls.  They write to distinct files under
 `${CACHE_DIR}/indexes/` and do not share state.
 

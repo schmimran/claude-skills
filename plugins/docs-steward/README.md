@@ -7,10 +7,7 @@ re-reads the result to verify coherence, and opens a single PR.
 
 ## Quick Start
 
-1. **Install the marketplace** (once per machine):
-   ```bash
-   /plugin marketplace add https://github.com/schmimran/claude-skills
-   ```
+1. **Install the marketplace** if you have not already: see [Installation in the root README](../../README.md#installation).
 
 2. **Run against the current repo**:
    ```bash
@@ -33,17 +30,16 @@ re-reads the result to verify coherence, and opens a single PR.
 - **GitHub CLI** installed and authenticated (`gh auth status`).
 - **Git** with a clean working tree in the target repo (the editor
   refuses to proceed with uncommitted changes).
-- **Internet access** (the link-checker hits external URLs).
 
 ## What it does
 
 The plugin chains six phases:
 
-1. **Phase 0 — Index build** (6 parallel agents).  Emit canonical
+1. **Phase 0 — Index build** (7 parallel agents).  Emit canonical
    reference artifacts to `/tmp/docs-steward-cache/<run-id>/indexes/`:
    file tree, symbol index, public-surface map, config catalogue,
-   doc inventory, recent-changes summary.
-2. **Phase 1 — Drift audit** (7 parallel auditors).  Each auditor
+   doc inventory, recent-changes summary, protected-files index.
+2. **Phase 1 — Drift audit** (6 parallel auditors; a seventh, `docs-link-checker`, is manual-only and not run by default).  Each auditor
    reads the indexes + docs and writes a findings file.
 3. **Phase 2 — Consolidation**.  Merge findings, resolve
    duplication, detect conflicts.  Stops for user adjudication when
@@ -92,12 +88,13 @@ Full text in [`references/tenets.md`](references/tenets.md).
 | `docs-config-cataloger` | Agent | sonnet | Builds `config.md` |
 | `docs-inventory` | Agent | sonnet | Builds `doc-inventory.md` |
 | `docs-history-reconciler` | Agent | sonnet | Builds `recent-changes.md` |
+| `docs-protected-extractor` | Agent | sonnet | Extracts CLAUDE.md file-protection rules → `protected-files.md` |
 | `docs-intent-auditor` | Agent | sonnet | Flags doc-vs-code drift |
 | `docs-info-architect` | Agent | opus | Structure + duplication + gaps |
 | `docs-onboarding-reviewer` | Agent | opus | Simulates new-contributor walk |
 | `docs-reference-validator` | Agent | sonnet | Validates internal references |
 | `docs-example-verifier` | Agent | sonnet | Validates code blocks |
-| `docs-link-checker` | Agent | sonnet | Validates external URLs |
+| `docs-link-checker` | Agent | sonnet | Validates external URLs (manual use only — not in default pipeline) |
 | `docs-manual-reader` | Agent | opus | Walks edited corpus as a manual (Phase 4) |
 | `docs-deprecation-hunter` | Agent | sonnet | Finds orphans to delete |
 | `docs-consolidator` | Agent | opus | Merges findings, triggers checkpoints |
@@ -147,8 +144,8 @@ adjudicate, and re-run.
 
 ## References
 
-- [`references/tenets.md`](references/tenets.md) — the seven rules
-  enforced across every agent.
+- [`references/tenets.md`](references/tenets.md) — the eight core
+  tenets (0–7) enforced across every agent.
 - [`references/findings-schema.md`](references/findings-schema.md) —
   shared finding record shape.
 - [`references/claim-verification-protocol.md`](references/claim-verification-protocol.md)

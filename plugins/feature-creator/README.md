@@ -4,10 +4,7 @@ Automates feature development end-to-end. Point it at a GitHub repository, label
 
 ## Quick Start
 
-1. **Install the marketplace** (once per machine):
-   ```bash
-   /plugin marketplace add https://github.com/schmimran/claude-skills
-   ```
+1. **Install the marketplace** if you have not already: see [Installation in the root README](../../README.md#installation).
 
 2. **Create the required labels** on your target repository (once per repo):
    ```bash
@@ -42,8 +39,8 @@ Automates feature development end-to-end. Point it at a GitHub repository, label
 
 ## Architecture
 
-| Component | Type | Model | Description |
-|-----------|------|-------|-------------|
+| Component | Type | Model | Role |
+|-----------|------|-------|------|
 | `feature-creator` | Command | (inherits) | Full pipeline: triage, plan, consolidate, review, implement, merge, clean up |
 | `feature-triager` | Agent | sonnet | Phase 0 — one shared codebase exploration pass, group issues into planning buckets by predicted file overlap |
 | `feature-planner` | Agent | sonnet | Plan every issue in a bucket together, using the triager's shared context |
@@ -53,12 +50,7 @@ Automates feature development end-to-end. Point it at a GitHub repository, label
 
 The command orchestrates the five agents. The triager runs once up front; planner agents run in parallel (one per bucket); all other agents run sequentially. Agents are not independently invocable — use the command to run the full pipeline.
 
-Key reference docs under `references/`:
-
-- `triage-guide.md` — bucketing heuristics, Jaccard overlap rule, max bucket size, singleton handling
-- `plan-template.md` — plan comment structure (includes optional Bucket-mates section)
-- `consolidated-plan-template.md` — bucket-centric consolidated plan structure
-- `risk-criteria.md`, `review-checklist.md`, `merge-checklist.md`, `pr-template.md`, `release-pr-template.md`, `repo-analysis-guide.md`
+Supporting reference docs live under `references/` — see [CLAUDE.md](../../CLAUDE.md#directory-structure) for the full list and purpose of each.
 
 ## Pipeline
 
@@ -86,7 +78,7 @@ GitHub Issues                    Pipeline                            Output
                                                                deleted
 ```
 
-The pipeline moves through six phases (Phase 0 is the new triage stage):
+The pipeline moves through six phases, 0 through 5.
 
 **Phase 0 — Triage**: The orchestrator captures a timestamp once and derives a run-scoped manifest path (`/tmp/feature-buckets-<TS>.json`). It launches the `feature-triager` agent, which fetches all trigger-labeled issues, runs **one shared codebase exploration pass**, predicts per-issue impacted globs, and groups issues into buckets by Jaccard overlap (≥ 1 shared glob). The manifest is written to the timestamped path and then validated by the orchestrator — if it is missing or malformed, the pipeline halts immediately. See `references/triage-guide.md` for the bucketing rules.
 

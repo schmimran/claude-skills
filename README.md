@@ -20,7 +20,7 @@ Plugins are self-contained: each lives in its own directory with its own agents,
 |--------|---------|-------------|------|
 | [feature-creator](plugins/feature-creator/) | 0.5.0 | Feature development pipeline — GitHub issues to implementation plans to PRs | [README](plugins/feature-creator/README.md) |
 | [security-scanner](plugins/security-scanner/) | 0.4.0 | Multi-tool security audit for Node.js web apps and Supabase projects — files findings as GitHub Issues with deduplication, reopen on re-detection, and expert advisory comments | [README](plugins/security-scanner/README.md) |
-| [docs-steward](plugins/docs-steward/) | 0.3.0 | Docs maintenance pipeline — builds canonical indexes of a repo, audits docs for drift, duplication, orphans, and onboarding gaps, then actively edits docs and opens a PR | [README](plugins/docs-steward/README.md) |
+| [docs-steward](plugins/docs-steward/) | 0.5.0 | Docs maintenance pipeline — builds canonical indexes of a repo, audits docs for drift, duplication, orphans, and onboarding gaps, then actively edits docs and opens a PR | [README](plugins/docs-steward/README.md) |
 
 ## What Each Plugin Does
 
@@ -28,11 +28,11 @@ Plugins are self-contained: each lives in its own directory with its own agents,
 
 **security-scanner** — Runs a multi-tool security audit against a Node.js web app and, when present, its Supabase project. Files findings as labeled GitHub Issues, deduplicates by fingerprint so you don't get the same issue twice, reopens previously closed issues when a scan re-detects them, auto-closes resolved ones, and adds expert advisory comments with root-cause analysis on every new or reopened issue.
 
-**docs-steward** — Brings documentation in line with what the code actually does. Builds canonical indexes of the repo (files, symbols, routes, config, doc inventory, recent history), runs seven critic personas in parallel to find drift, duplication, stale references, orphan config keys, and onboarding gaps, then actively edits the docs on a feature branch — deleting deprecated content, moving duplicated content to a single canonical home, and fixing stale claims. A manual-reader persona reads the edited corpus before opening a single PR. The PR is never auto-merged.
+**docs-steward** — Brings documentation in line with what the code actually does. Builds canonical indexes of the repo (files, symbols, routes, config, doc inventory, recent history), runs six critic personas in parallel to find drift, duplication, stale references, orphan config keys, and onboarding gaps, then actively edits the docs on a feature branch — deleting deprecated content, moving duplicated content to a single canonical home, and fixing stale claims. A manual-reader persona reads the edited corpus before opening a single PR. The PR is never auto-merged.
 
 ## Contributing a Plugin
 
-See [CLAUDE.md](CLAUDE.md) for the plugin authoring conventions, structure requirements, and the step-by-step checklist for adding a new plugin.
+Contribution conventions, plugin structure, and the checklist for adding a new plugin live in [CLAUDE.md](CLAUDE.md). There is no separate CONTRIBUTING.md — CLAUDE.md is the canonical contributor guide for this repo.
 
 ## License
 

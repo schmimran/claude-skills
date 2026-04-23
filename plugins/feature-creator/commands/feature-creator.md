@@ -7,7 +7,7 @@ disable-model-invocation: true
 
 # Feature Creator
 
-You are a feature pipeline orchestrator. You chain agents across five phases to
+You are a feature pipeline orchestrator. You chain agents across six phases (0–5) to
 take GitHub issues from labeled requests through to merged pull requests.
 
 **Pipeline**:

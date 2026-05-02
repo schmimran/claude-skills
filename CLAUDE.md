@@ -12,26 +12,29 @@ A Claude Code plugin **marketplace** containing reusable plugins. Install the ma
 .claude-plugin/
   marketplace.json                # Marketplace catalog — lists all plugins
 plugins/
-  feature-creator/                # Plugin: feature development pipeline
+  feature-creator/                # Plugin: feature & bug-fix development pipeline (parallel state machines)
     .claude-plugin/
       plugin.json                 # Plugin manifest
     commands/
-      feature-creator.md          # Orchestrator command — chains the agents across six phases (0-5)
+      feature-creator.md          # Orchestrator command — chains the agents across six phases (0-5); processes both feature and bug labels
     agents/
-      feature-triager.md          # Agent (Phase 0): shared codebase exploration, bucket issues by predicted file overlap
-      feature-planner.md          # Agent: plan every issue in a bucket together, posts per-issue plan comments
-      feature-consolidator.md     # Agent: collect plans, cross-bucket conflict analysis
-      feature-reviewer.md         # Agent: risk assessment, combined plan, review
-      feature-implementer.md      # Agent: branch, code, test, PR
+      feature-triager.md          # Agent (Phase 0): shared codebase exploration; buckets features and bugs separately by predicted file overlap
+      feature-planner.md          # Agent: plan every issue in a bucket together using type-appropriate template
+      feature-consolidator.md     # Agent: collect plans, cross-bucket conflict analysis (per type)
+      feature-reviewer.md         # Agent: type-tuned risk assessment, combined plan, review
+      feature-implementer.md      # Agent: type-aware branch (feature/<N>- or fix/<N>-), code, test, PR (feat: or fix:)
     references/
-      triage-guide.md             # Bucketing heuristics, Jaccard overlap rule, max bucket size, singleton handling
-      plan-template.md            # Template for plan comments (includes optional Bucket-mates section)
+      triage-guide.md             # Bucketing heuristics + type-separation rule (features and bugs never share a bucket)
+      plan-template.md            # Feature plan template (Bucket-mates optional)
+      bug-plan-template.md        # Bug-fix plan template (requires Reproduction Steps, Root Cause, regression test)
       consolidated-plan-template.md # Bucket-centric template for consolidated plan comments
       repo-analysis-guide.md      # What to look for in the target repo
-      risk-criteria.md            # Risk rubric (HIGH/MEDIUM/LOW)
-      review-checklist.md         # Instructions for the review subagent
-      merge-checklist.md          # Pre-merge steps
-      pr-template.md              # PR body template
+      risk-criteria.md            # Feature risk rubric (HIGH/MEDIUM/LOW)
+      bug-risk-criteria.md        # Bug-tuned risk rubric — different factors than features (some flip)
+      review-checklist.md         # Review subagent checklist for feature plans
+      bug-review-checklist.md     # Review subagent checklist for bug-fix plans (regression test required)
+      merge-checklist.md          # Pre-merge steps with type-aware commit type (feat: vs fix:)
+      pr-template.md              # PR body template (Root Cause section for bug fixes)
       release-pr-template.md      # Release PR body template for the release branch PR assembled in Phase 5c
     README.md                     # Plugin-specific documentation
   security-scanner/               # Plugin: multi-tool security audit for Node.js + Supabase
@@ -89,6 +92,26 @@ plugins/
       manual-reader-protocol.md   # How the manual-reader walks the edited corpus (Phase 4)
       cache-layout.md             # /tmp/docs-steward-cache/ layout and lifecycle
       pr-template.md              # PR body template (sections: findings, deletions, requires-approval, residuals, tenets)
+    README.md                     # Plugin-specific documentation
+  bug-sweeper/                    # Plugin: daily bug-discovery sweep, files issues for feature-creator to remediate
+    .claude-plugin/
+      plugin.json                 # Plugin manifest
+    commands/
+      bug-sweeper.md              # Orchestrator command — chains the six phases (0-6); supports --headless mode for routines
+    agents/
+      bug-sweeper-runner.md       # Phase 1: gh issue list + npm build + npm audit (parallel Bash)
+      bug-sweeper-reviewer.md     # Phase 2: targeted code review of one directory (read-only — no Write/Edit)
+      bug-sweeper-tracer.md       # Phase 2: end-to-end trace of one high-risk flow (read-only)
+      bug-sweeper-reconciler.md   # Phase 3: classify open `bug` issues vs current code (still-open / fixed / docs-only)
+      bug-sweeper-analyst.md      # Phase 4 + 5: false-positive filter, severity assignment, plan + self-review
+      bug-sweeper-filer.md        # Phase 6: file each confirmed bug as a GitHub Issue with severity label
+    references/
+      bug-sweep-protocol.md       # End-to-end pipeline contract + global CLAUDE.md overrides for sweeps
+      discovery-surface-guide.md  # How to locate API dir, web dir, hot-path entry on arbitrary Node.js repos
+      false-positive-rubric.md    # Discard rules (D1–D9) the analyst applies to candidate findings
+      severity-rubric.md          # HIGH/MEDIUM/LOW criteria for confirmed bugs
+      bug-issue-template.md       # GitHub Issue body format with `<!-- claude-bug-sweeper-v1 -->` marker
+      headless-mode.md            # What changes when `--headless` is passed (no plan mode, no AskUserQuestion)
     README.md                     # Plugin-specific documentation
 ```
 
@@ -173,9 +196,17 @@ Agents declare tool access with the `tools:` field. Common tool sets:
 
 - **Naming**: Directory names are lowercase with hyphens (e.g., `feature-creator`)
 - **Issue interaction**: Plans are posted as comments, never by modifying the issue body
-- **Branching**: One branch per feature (`feature/<number>-<slug>`), plus a release branch (`release/<YYYY-MM-DD>`) after all features
-- **Commits**: Conventional commit format, referencing the issue number (e.g., `feat: add widget (#42)`)
-- **Comment markers**: Plan comments are prefixed with `<!-- claude-feature-planner-v1 -->`, consolidated plans with `<!-- claude-feature-consolidator-v1 -->`, and combined reviewer plans with `<!-- claude-feature-reviewer-v1 -->`. Downstream agents use these markers to locate content programmatically. Always include the correct marker or extraction will fail.
+- **Branching**: One branch per change rooted at `stage` — `feature/<number>-<slug>` for features, `fix/<number>-<slug>` for bug fixes — plus a single release branch (`release/<YYYY-MM-DD>`) after all branches are implemented
+- **Commits**: Conventional commit format, referencing the issue number. `feat: add widget (#42)` for features, `fix: prevent crash on logout (#21)` for bugs.
+- **Comment markers**: Used by downstream agents to locate content. Always include the correct marker — extraction will fail otherwise.
+
+| Stage | Feature marker | Bug marker |
+|-------|----------------|------------|
+| Triager | `<!-- claude-feature-triager-v1 -->` | (shared — same triager handles both) |
+| Planner | `<!-- claude-feature-planner-v1 -->` | `<!-- claude-bug-planner-v1 -->` |
+| Consolidator | `<!-- claude-feature-consolidator-v1 -->` | `<!-- claude-bug-consolidator-v1 -->` |
+| Reviewer | `<!-- claude-feature-reviewer-v1 -->` | `<!-- claude-bug-reviewer-v1 -->` |
+| Bug-sweeper issue body | n/a | `<!-- claude-bug-sweeper-v1 -->` |
 
 ## Local Development
 
@@ -194,8 +225,16 @@ claude --plugin-dir /path/to/claude-skills/plugins/feature-creator
 
 ## Prerequisites
 
-- **`gh` CLI**: Must be installed and authenticated (`gh auth status`)
-- **Labels**: Each plugin that files or reads GitHub Issues requires its own label set on the target repository. See the Quick Start section of each plugin's README for the `gh label create` commands: feature-creator defines five `feature - *` pipeline labels, and security-scanner defines two `security` labels plus two shared `feature -` labels. Where label names are shared across plugins (notably `feature - ready for claude` and `feature - human review`), the colors and descriptions in feature-creator's README are canonical — use those when creating labels.
+- **`gh` CLI**: Must be installed and authenticated (`gh auth status`).
+- **Labels**: Each plugin that files or reads GitHub Issues requires its own label set on the target repository. See the Quick Start section of each plugin's README for the `gh label create` commands.
+
+| Plugin | Labels it defines |
+|--------|-------------------|
+| feature-creator | Feature state machine: `feature - ready for claude`, `feature - planned`, `feature - human review`, `feature - in progress`, `feature - complete`. Bug state machine (shared with bug-sweeper): `bug`, `bug - ready for claude`, `bug - triaged`, `bug - planned`, `bug - human review`, `bug - in progress`, `bug - complete`, `bug - high`, `bug - medium`, `bug - low`. |
+| bug-sweeper | Files issues with `bug`, `bug - ready for claude`, and one of the severity labels (`bug - high|medium|low`) — all defined in feature-creator's set; bug-sweeper does not introduce its own labels |
+| security-scanner | `security`, `security - suppressed`, plus shared `feature - ready for claude` and `feature - human review` |
+
+Where label names are shared across plugins (notably `feature - ready for claude`, `feature - human review`, and the entire `bug - *` set), the colors and descriptions in feature-creator's README are canonical — use those when creating labels.
 
 ## Build & Test Commands
 

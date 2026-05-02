@@ -1,22 +1,50 @@
 ---
 name: feature-creator
-description: End-to-end feature pipeline — plans, reviews, and implements GitHub issues labeled "feature - ready for claude"
+description: End-to-end pipeline — plans, reviews, and implements GitHub issues labeled `feature - ready for claude` or `bug - ready for claude`
 argument-hint: "[repo-owner/repo-name] [--auto-merge]"
 disable-model-invocation: true
 ---
 
 # Feature Creator
 
-You are a feature pipeline orchestrator. You chain agents across six phases (0–5) to
-take GitHub issues from labeled requests through to merged pull requests.
+You are a feature/bug pipeline orchestrator. You chain agents across six phases
+(0–5) to take GitHub issues from labeled requests through to merged pull
+requests. Two parallel state machines run side by side: one for features
+(`feature - *` labels) and one for bug fixes (`bug - *` labels). The triager
+buckets them separately; downstream agents apply the correct template, risk
+rubric, branch prefix, and commit type per type.
 
 **Pipeline**:
-0. **feature-triager** — Shared codebase exploration, group issues into planning buckets
+0. **feature-triager** — Shared codebase exploration, group issues into planning buckets (features and bugs in separate buckets)
 1. **feature-planner** (parallel, one per bucket) — Plan each bucket's issues together
 2. **feature-consolidator** — Holistic consistency review, consolidated plan
-3. **feature-reviewer** — Assess risk, flag dangerous features, final implementation order
+3. **feature-reviewer** — Assess risk, flag dangerous features/bugs, final implementation order
 4. **feature-implementer** — Create branches, write code, run tests, open PRs
-5. **Merge and cleanup** — Merge feature PRs in order, merge release branch, clean up
+5. **Merge and cleanup** — Merge PRs in order, merge release branch, clean up
+
+## Issue types and labels
+
+| Type | Trigger label | Source |
+|------|---------------|--------|
+| Feature | `feature - ready for claude` | Filed by humans |
+| Bug | `bug - ready for claude` | Filed by `bug-sweeper` (or humans) |
+
+State machines:
+
+```
+feature: ready for claude → planned → in progress → complete
+                              ↓ (high risk)
+                          human review
+
+bug:     ready for claude → triaged → planned → in progress → complete
+                                         ↓ (high risk)
+                                     human review
+```
+
+The bug flow has one extra hop (`triaged`) because bug-sweeper writes the
+issue with `bug - ready for claude` and no plan; the triager moves it to
+`bug - triaged` after the bucket pass; the planner moves it to `bug - planned`
+after the plan is posted.
 
 ## Prerequisites
 
@@ -36,10 +64,17 @@ take GitHub issues from labeled requests through to merged pull requests.
    ```
    gh label list --repo <OWNER/REPO> --json name -q '.[].name'
    ```
-   Check for: `feature - ready for claude`, `feature - planned`,
-   `feature - human review`, `feature - in progress`, `feature - complete`.
-   If any are missing, print the `gh label create` commands from the plugin README
-   and stop.
+   Check for the **feature** state machine:
+   - `feature - ready for claude`, `feature - planned`,
+     `feature - human review`, `feature - in progress`, `feature - complete`
+
+   And the **bug** state machine:
+   - `bug`, `bug - ready for claude`, `bug - triaged`, `bug - planned`,
+     `bug - human review`, `bug - in progress`, `bug - complete`,
+     `bug - high`, `bug - medium`, `bug - low`
+
+   If any are missing, print the `gh label create` commands from the plugin
+   README and stop.
 
 ## Phase 0: Triage
 
@@ -66,20 +101,21 @@ Use the Agent tool to launch the **feature-triager** agent with this prompt:
 > You are the feature-triager. Target repository: <OWNER/REPO>
 > Bucket manifest path: <BUCKET_MANIFEST_PATH>
 >
-> Fetch all open issues labeled `feature - ready for claude`, run one shared
-> codebase exploration pass, group the issues into buckets per
-> `references/triage-guide.md`, write the manifest to the path above, and post
+> Fetch all open issues labeled `feature - ready for claude` **or**
+> `bug - ready for claude`, run one shared codebase exploration pass, group
+> the issues into buckets per `references/triage-guide.md` (features and bugs
+> in separate buckets), write the manifest to the path above, and post
 > per-issue triage comments.
 
 Wait for the triager to complete.
 
-If the triager reports "No issues labeled 'feature - ready for claude' found.",
-stop the pipeline and report.
+If the triager reports "No issues labeled `feature - ready for claude` or
+`bug - ready for claude` found.", stop the pipeline and report.
 
-If more than 5 issues were fetched, warn:
+If more than 5 issues were fetched (across both label sets), warn:
 > Found <N> issues — this is a large batch. The triager has grouped them into
-> <M> buckets. Consider removing the trigger label from lower-priority issues
-> to limit the batch size on future runs.
+> <M> buckets (features: <X>, bugs: <Y>). Consider removing trigger labels
+> from lower-priority issues to limit the batch size on future runs.
 
 ### 0c. Validate the bucket manifest (Suggestion 1 — validation gate)
 
@@ -112,7 +148,16 @@ if missing:
 if not isinstance(data["buckets"], list) or len(data["buckets"]) == 0:
     print("ERROR: bucket manifest has no buckets")
     sys.exit(1)
-print(f"OK: bucket manifest valid — {len(data['buckets'])} bucket(s)")
+for i, b in enumerate(data["buckets"]):
+    if "type" not in b:
+        print(f"ERROR: bucket[{i}] missing required 'type' field")
+        sys.exit(1)
+    if b["type"] not in ("feature", "bug"):
+        print(f"ERROR: bucket[{i}] type must be 'feature' or 'bug', got {b['type']!r}")
+        sys.exit(1)
+n_feat = sum(1 for b in data["buckets"] if b["type"] == "feature")
+n_bug  = sum(1 for b in data["buckets"] if b["type"] == "bug")
+print(f"OK: bucket manifest valid — {len(data['buckets'])} bucket(s) (features: {n_feat}, bugs: {n_bug})")
 PY
 ```
 
@@ -275,17 +320,21 @@ gh pr merge <RELEASE_PR_NUMBER> --repo <OWNER/REPO> --squash
 
 ### 5e. Cleanup
 
-Follow the global cleanup conventions from `~/.claude/CLAUDE.md`:
+Follow the global cleanup conventions from `~/.claude/CLAUDE.md`. Branch
+prefix is `feature/` for feature issues and `fix/` for bug issues — clean up
+both:
 
 ```
 git checkout main && git pull
 
-# Delete remote feature branches (always run — --delete-branch in 5b handles
+# Delete remote branches (always run — --delete-branch in 5b handles
 # GitHub's remote ref but local tracking refs require explicit cleanup)
 git push origin --delete feature/<N>-<slug>   # for each feature branch
+git push origin --delete fix/<N>-<slug>       # for each bug-fix branch
 
-# Delete local feature branches
+# Delete local branches
 git branch -D feature/<N>-<slug>              # for each feature branch
+git branch -D fix/<N>-<slug>                  # for each bug-fix branch
 
 # Delete release branch (local and remote)
 git branch -D release/<YYYY-MM-DD>
@@ -311,18 +360,20 @@ After all phases complete (or if the pipeline stops early), print a final report
 ## Feature Creator Pipeline Summary
 
 ### Issues Processed
-| Issue | Title | Planning | Consolidation | Review | Implementation | PR |
-|-------|-------|----------|---------------|--------|----------------|----|
-| #N | Title | OK/Failed | Included/Flagged | Approved/Flagged | OK/Failed | #PR or — |
+| Issue | Type | Title | Planning | Consolidation | Review | Implementation | PR |
+|-------|------|-------|----------|---------------|--------|----------------|----|
+| #N | feature/bug | Title | OK/Failed | Included/Flagged | Approved/Flagged | OK/Failed | #PR or — |
 
 ### Statistics
-- Planned: X
-- Flagged for human review: X
-- Implemented: X
-- Merged: X
+| | Features | Bugs |
+|-|----------|------|
+| Planned | X | X |
+| Flagged for human review | X | X |
+| Implemented | X | X |
+| Merged | X | X |
 
 ### Release
-<Release PR link and merge status, or "Not created (no features implemented)">
+<Release PR link and merge status, or "Not created (nothing implemented)">
 ```
 
 ## Error Handling

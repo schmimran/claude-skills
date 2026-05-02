@@ -1,6 +1,6 @@
 ---
 name: feature-consolidator
-description: Collects individual feature plans and creates a holistic consolidated implementation plan
+description: Collects individual feature and bug plans and creates a holistic consolidated implementation plan per type
 tools: Bash, Read, Grep, Glob, TodoWrite
 model: sonnet
 color: blue
@@ -23,12 +23,29 @@ Use the `OWNER/REPO` identifier from your prompt. Your prompt also includes the
 
 ## Step 1: Fetch Planned Issues
 
-Run:
+Fetch both label sets and merge with type tags. **Issue both `gh issue list`
+calls in a single message containing two Bash tool calls** so they run in
+parallel; the python merge runs after both complete:
+
 ```
-gh issue list --repo <OWNER/REPO> --label "feature - planned" --state open --json number,title,labels --limit 20
+gh issue list --repo <OWNER/REPO> --label "feature - planned" --state open --json number,title,labels --limit 20 > /tmp/consolidator-features.json
+gh issue list --repo <OWNER/REPO> --label "bug - planned" --state open --json number,title,labels --limit 20 > /tmp/consolidator-bugs.json
+
+python3 - <<'PY' > /tmp/consolidator-issues.json
+import json
+features = json.load(open("/tmp/consolidator-features.json"))
+bugs = json.load(open("/tmp/consolidator-bugs.json"))
+for f in features: f["type"] = "feature"
+for b in bugs: b["type"] = "bug"
+print(json.dumps(features + bugs))
+PY
 ```
 
-If no issues are returned, output "No issues labeled 'feature - planned' found." and stop.
+If 0 total issues are returned, output:
+
+> No issues labeled `feature - planned` or `bug - planned` found.
+
+and stop.
 
 ## Step 1a: Read the Bucket Manifest
 
@@ -47,41 +64,62 @@ PY
 Keep the bucket count and per-bucket issue count in memory — they drive the
 early-exit check in Step 1b and the cross-bucket conflict analysis in Step 3.
 
-## Step 1b: Early-Exit Guard (singleton run only)
+## Step 1b: Early-Exit Guard (singleton run only — applied per type)
 
-**Guard condition — strict.** The early-exit fires if and only if **both** of
-the following are true:
+**Guard condition — strict.** The early-exit fires **per type** when both of
+the following are true for that type:
 
-1. `buckets.length == 1` — there is exactly one bucket, AND
-2. `buckets[0].issues.length == 1` — that bucket contains exactly one issue.
+1. There is exactly one bucket of that type, AND
+2. That bucket contains exactly one issue.
 
-This is a **true singleton run**: one bucket, one issue. No cross-bucket
-conflict analysis is meaningful, and no within-bucket reconciliation is
-needed (the single planner already produced the only plan).
+The guard is evaluated independently for features and bugs. It is possible
+that features hit the early-exit while bugs do not (or vice versa) — in that
+case, only the side that does not hit the guard gets a consolidated plan.
 
-**IMPORTANT — the early-exit MUST NOT fire when:**
-- There is 1 bucket but it contains 2+ issues (the bucket-planner reasoned
-  about them together, but a consolidator pass is still valuable for
-  surfacing cross-feature concerns in the consolidated comment).
-- There are 2+ buckets (by definition cross-bucket conflict analysis is the
+**IMPORTANT — the early-exit for a type MUST NOT fire when:**
+- There is 1 bucket of that type but it contains 2+ issues (the bucket-planner
+  reasoned about them together, but a consolidator pass is still valuable
+  for the consolidated comment).
+- There are 2+ buckets of that type (cross-bucket conflict analysis is the
   consolidator's core job).
 
 Pseudocode:
 
 ```
-if len(buckets) == 1 and len(buckets[0]["issues"]) == 1:
-    # true singleton — no reconciliation work to do
-    print("Singleton run detected — skipping consolidation pass")
-    # Output a minimal summary table and stop
+feature_buckets = [b for b in buckets if b["type"] == "feature"]
+bug_buckets     = [b for b in buckets if b["type"] == "bug"]
+
+# A type "qualifies" for early-exit if either:
+#   (a) it has no buckets at all in this run (nothing to consolidate), or
+#   (b) it has exactly 1 bucket containing exactly 1 issue (true singleton).
+features_qualify = (
+    not feature_buckets
+    or (len(feature_buckets) == 1 and len(feature_buckets[0]["issues"]) == 1)
+)
+bugs_qualify = (
+    not bug_buckets
+    or (len(bug_buckets) == 1 and len(bug_buckets[0]["issues"]) == 1)
+)
+
+if features_qualify and bugs_qualify:
+    print("Every present type is a singleton (or absent) — skipping consolidation pass entirely")
+    # Output a minimal summary table and stop.
     exit 0
-else:
-    # multi-issue or multi-bucket — proceed to Step 2
-    pass
 ```
 
-For singleton runs, print the output summary table (see Output section) with
-"Included" for the single issue, then stop. Do **not** post a consolidated
-plan comment — the individual plan stands on its own.
+The "absent type" treatment matters: a feature-only singleton run has 0 bug
+buckets, so the bug side trivially qualifies and the run early-exits as
+expected. Same for a bug-only singleton. The early-exit fires whenever every
+present type is a singleton.
+
+If one type is a multi-issue/multi-bucket case while the other is a
+singleton (or absent), skip the consolidation step for the qualifying
+type — do not post a consolidator comment for its issue — but proceed to
+Step 2 for the type that needs cross-bucket reconciliation. Track which
+types are still in play.
+
+Do **not** mix features and bugs into a single consolidated plan — they
+remain in separate consolidated comments with separate markers.
 
 ## Step 2: Extract Individual Plans
 
@@ -90,7 +128,13 @@ For each issue, fetch its comments and find the plan:
 gh issue view <NUMBER> --repo <OWNER/REPO> --json comments -q '.comments[].body'
 ```
 
-Search the comments for the one containing `<!-- claude-feature-planner-v1 -->`.
+Search the comments for the type-appropriate marker:
+
+| Issue type | Plan marker |
+|------------|-------------|
+| Feature | `<!-- claude-feature-planner-v1 -->` |
+| Bug | `<!-- claude-bug-planner-v1 -->` |
+
 If a plan comment is not found for an issue, note it as "Missing plan" and
 continue with the remaining issues.
 
@@ -98,22 +142,36 @@ continue with the remaining issues.
 
 Review all extracted plans together, grouped by their bucket from the manifest.
 Within-bucket conflicts were already resolved by the bucket-planner — focus
-your analysis on **cross-bucket** concerns:
+your analysis on **cross-bucket** concerns. Run this analysis **per type
+independently**: feature buckets are analyzed against feature buckets; bug
+buckets against bug buckets. Do not analyze feature-vs-bug conflicts —
+they are in separate state machines and may even land in separate PRs.
 
-- **Cross-bucket conflicting changes**: Two features in different buckets
-  modifying the same file in incompatible ways (e.g., both restructuring the
-  same component).
-- **Cross-bucket redundant work**: Features in different buckets introducing
-  overlapping or duplicate functionality.
-- **Cross-bucket missing dependencies**: Feature in bucket A depending on
-  something introduced by a feature in bucket B that neither plan names.
-- **Architectural inconsistency**: Features across buckets using different
+For each type, look for:
+
+- **Cross-bucket conflicting changes**: Two issues in different buckets
+  modifying the same file in incompatible ways.
+- **Cross-bucket redundant work**: Issues in different buckets introducing
+  overlapping or duplicate functionality (or duplicate fixes).
+- **Cross-bucket missing dependencies**: Issue in bucket A depending on
+  something introduced by an issue in bucket B that neither plan names.
+- **Architectural inconsistency**: Issues across buckets using different
   patterns for the same type of problem.
-- **Combined scope reasonableness**: Whether the total set of changes across
-  all buckets is achievable in a single pipeline run. Flag if the combined
-  scope exceeds ~30 files or touches deeply interconnected systems.
+- **Combined scope reasonableness**: Whether the total set of changes is
+  achievable in a single pipeline run. For features, flag if the combined
+  scope exceeds ~30 files. For bugs, flag if the combined scope exceeds
+  ~15 files (bug fixes that grow this large often signal a misdiagnosed
+  root cause that should be re-triaged).
 
 Do not re-analyze within-bucket file overlap — that work is already done.
+
+If features and bugs **happen to touch the same file** across types, note
+this in both consolidated plans as a cross-type advisory (so the
+implementer is aware), but do not block on it — the implementer processes
+PRs sequentially and will see the cross-type overlap when it lands a PR
+that depends on changes from another PR. Bug-fix PRs typically rebase
+cleanly on top of feature PRs (or vice versa) because bug fixes are
+narrowly scoped.
 
 ## Step 4: Determine Preliminary Implementation Order
 
@@ -159,13 +217,23 @@ agent can execute confidently without encountering surprises.
 
 ## Step 7: Post Consolidated Plan
 
-Post the consolidated plan as a comment on **each** planned issue, so the
-reviewer and implementer can find it from any issue. Use a **per-issue temp
-file** to avoid races:
+Post the consolidated plan as a comment on **each** planned issue (within
+its own type), so the reviewer and implementer can find it from any issue.
+Use a **per-issue temp file** to avoid races. The marker depends on type:
+
+| Bucket type | Consolidated plan marker |
+|-------------|--------------------------|
+| `feature` | `<!-- claude-feature-consolidator-v1 -->` |
+| `bug` | `<!-- claude-bug-consolidator-v1 -->` |
+
+Produce **two separate consolidated plans** when both types are present in
+the run — one for the feature buckets, posted on each feature issue, and
+one for the bug buckets, posted on each bug issue. Do not post a feature
+consolidator comment on a bug issue or vice versa.
 
 ```
 cat > /tmp/consolidated-plan-<ISSUE_NUMBER>.md << 'CONSOLIDATED_EOF'
-<!-- claude-feature-consolidator-v1 -->
+<TYPE_MARKER>
 <CONSOLIDATED_PLAN>
 CONSOLIDATED_EOF
 gh issue comment <ISSUE_NUMBER> --repo <OWNER/REPO> --body-file /tmp/consolidated-plan-<ISSUE_NUMBER>.md
@@ -174,8 +242,8 @@ gh issue comment <ISSUE_NUMBER> --repo <OWNER/REPO> --body-file /tmp/consolidate
 Never write to a shared `/tmp/consolidated-plan.md` — always include the
 issue number suffix.
 
-Every comment MUST begin with `<!-- claude-feature-consolidator-v1 -->` on
-the first line.
+Every comment MUST begin with the type-appropriate marker on the first
+line.
 
 ## Error Handling
 
@@ -192,14 +260,24 @@ a dependency on a feature whose plan is missing):
    gh issue comment <NUMBER> --repo <OWNER/REPO> --body-file /tmp/consolidation-error-<N>.md
    ```
 
-2. Change the label on the conflicting issue(s):
+2. Change the label on the conflicting issue(s) per type:
+
+   **Feature:**
    ```
-   gh issue edit <NUMBER> --repo <OWNER/REPO> --remove-label "feature - planned" --add-label "feature - human review"
+   gh issue edit <NUMBER> --repo <OWNER/REPO> \
+     --remove-label "feature - planned" --add-label "feature - human review"
    ```
 
-3. Continue consolidating the remaining non-conflicting features. If fewer than
-   2 features remain after flagging, still produce a consolidated plan for the
-   remaining feature(s) — unless the early-exit guard in Step 1b applies.
+   **Bug:**
+   ```
+   gh issue edit <NUMBER> --repo <OWNER/REPO> \
+     --remove-label "bug - planned" --add-label "bug - human review"
+   ```
+
+3. Continue consolidating the remaining non-conflicting issues within each
+   type. If fewer than 2 issues remain in a type after flagging, still
+   produce a consolidated plan for the remaining issue(s) of that type —
+   unless the early-exit guard in Step 1b applies for that type.
 
 ## Output
 

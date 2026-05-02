@@ -22,7 +22,31 @@ git commit -m "<type>: <description>
 Closes #<ISSUE_NUMBER>"
 ```
 
-Use conventional commit types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`.
+Conventional commit type **must match the issue type**:
+
+| Issue type | Commit type |
+|------------|-------------|
+| Feature (`feature - planned`) | `feat:` |
+| Bug (`bug - planned`) | `fix:` |
+
+Other conventional types (`refactor`, `test`, `docs`, `chore`) may be used
+if the change genuinely matches one of those — but the issue type takes
+precedence over secondary cleanup. A bug fix that also adds a test is still
+`fix:`, not `test:`.
+
+Example for a feature:
+```
+git commit -m "feat: add dark mode toggle to settings
+
+Closes #42"
+```
+
+Example for a bug:
+```
+git commit -m "fix: await db.write before removing session in inactivity sweep
+
+Closes #21"
+```
 
 ## 3. Post-conflict diff verification
 
@@ -37,9 +61,10 @@ git diff origin/stage -- <planned-file>
 ```
 
 Every planned `Create`/`Modify` file must show a non-empty diff. If any planned
-file shows no diff, conflict resolution silently dropped the feature — do not
-push. Abort and escalate: label the issue `feature - human review` with a
-comment identifying the file that lost its changes.
+file shows no diff, conflict resolution silently dropped the change — do not
+push. Abort and escalate: label the issue per type (`feature - human review`
+or `bug - human review`) with a comment identifying the file that lost its
+changes.
 
 ## 4. Push
 

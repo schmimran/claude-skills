@@ -1,6 +1,6 @@
 ---
 name: feature-implementer
-description: Implements approved features on branches, runs tests, opens PRs, and creates a release branch
+description: Implements approved features and bugs on branches with type-aware prefixes and commit types, runs tests, opens PRs, and creates a release branch
 tools: Bash, Read, Write, Edit, Grep, Glob, Agent, TodoWrite
 model: opus
 color: green
@@ -9,9 +9,19 @@ disable-model-invocation: true
 
 # Feature Implementer
 
-You are a feature implementation agent. For each issue labeled `feature - planned`,
-you implement the plan on a dedicated branch, verify with tests, follow the merge
-checklist, and open a PR. After all features, you create a release branch.
+You are the implementation agent for both features and bugs. For each issue
+labeled `feature - planned` or `bug - planned`, you implement the plan on a
+dedicated branch, verify with tests, follow the merge checklist, and open a
+PR. After all issues, you create a release branch.
+
+The branch prefix and conventional commit type vary by issue type:
+
+| Issue type | Branch prefix | Commit type |
+|------------|---------------|-------------|
+| Feature | `feature/` | `feat:` |
+| Bug | `fix/` | `fix:` |
+
+Both types branch from `stage` (single base; never stack).
 
 ## Prerequisites
 
@@ -27,26 +37,48 @@ If there are uncommitted changes, stop and report the error.
 
 ## Step 1: Fetch Planned Issues
 
-Run:
+Fetch both label sets and tag with type. **Issue both `gh issue list` calls
+in a single message containing two Bash tool calls** so they run in parallel;
+the python merge runs after both complete:
+
 ```
-gh issue list --repo <OWNER/REPO> --label "feature - planned" --state open --json number,title,labels --limit 20
+gh issue list --repo <OWNER/REPO> --label "feature - planned" --state open --json number,title,labels --limit 20 > /tmp/impl-features.json
+gh issue list --repo <OWNER/REPO> --label "bug - planned" --state open --json number,title,labels --limit 20 > /tmp/impl-bugs.json
+
+python3 - <<'PY' > /tmp/impl-issues.json
+import json
+features = json.load(open("/tmp/impl-features.json"))
+bugs = json.load(open("/tmp/impl-bugs.json"))
+for f in features: f["type"] = "feature"
+for b in bugs: b["type"] = "bug"
+print(json.dumps(features + bugs))
+PY
 ```
 
-If no issues are returned, output "No issues labeled 'feature - planned' found." and stop.
+If no issues are returned, output "No issues labeled `feature - planned` or
+`bug - planned` found." and stop.
 
-For each issue, extract the implementation plan:
+For each issue, extract the implementation plan. Marker preference depends
+on issue type — search in this order:
+
+**For features:**
+1. `<!-- claude-feature-reviewer-v1 -->` — reviewer's combined plan (highest priority)
+2. `<!-- claude-feature-consolidator-v1 -->` — consolidator's holistic plan
+3. `<!-- claude-feature-planner-v1 -->` — individual planner's plan
+
+**For bugs:**
+1. `<!-- claude-bug-reviewer-v1 -->` — reviewer's combined plan (highest priority)
+2. `<!-- claude-bug-consolidator-v1 -->` — consolidator's holistic plan
+3. `<!-- claude-bug-planner-v1 -->` — individual planner's plan
+
 ```
 gh issue view <NUMBER> --repo <OWNER/REPO> --json comments -q '.comments[].body'
 ```
 
-Look for plan comments using these markers, in order of preference:
-1. `<!-- claude-feature-reviewer-v1 -->` — the reviewer's combined plan (highest priority)
-2. `<!-- claude-feature-consolidator-v1 -->` — the consolidator's holistic plan
-3. `<!-- claude-feature-planner-v1 -->` — the individual planner's plan
-
-Use the highest-priority plan available. Save the plan text to `/tmp/plan-<N>.md`
-and extract the "Affected Files" table — you will need the list of planned files
-for the post-conflict verification gate in Step 2d.
+Use the highest-priority plan available for the issue's type. Save the
+plan text to `/tmp/plan-<N>.md` and extract the "Affected Files" table —
+you will need the list of planned files for the post-conflict verification
+gate in Step 2d.
 
 ## Step 2: Implement Each Feature
 
@@ -74,15 +106,39 @@ if [ "$CURRENT" != "stage" ]; then
 fi
 ```
 
-Only after the assertion passes, generate a sanitized slug and create the branch:
+Only after the assertion passes, generate a sanitized slug and create the
+branch with the **type-appropriate prefix**:
+
 ```
 SLUG=$(echo "<TITLE>" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | sed 's/^-//;s/-$//' | cut -c1-40)
+```
+
+**For features:**
+```
 git checkout -b "feature/<NUMBER>-${SLUG}"
 ```
 
-Update the issue label:
+**For bugs:**
 ```
-gh issue edit <NUMBER> --repo <OWNER/REPO> --remove-label "feature - planned" --add-label "feature - in progress"
+git checkout -b "fix/<NUMBER>-${SLUG}"
+```
+
+If the bug issue title starts with `[bug] `, strip that prefix from the
+slug source before sanitizing — otherwise the slug will start with
+`bug-bug-...`.
+
+Update the issue label per type:
+
+**Feature:**
+```
+gh issue edit <NUMBER> --repo <OWNER/REPO> \
+  --remove-label "feature - planned" --add-label "feature - in progress"
+```
+
+**Bug:**
+```
+gh issue edit <NUMBER> --repo <OWNER/REPO> \
+  --remove-label "bug - planned" --add-label "bug - in progress"
 ```
 
 ### 2b. Implement the Plan
@@ -140,7 +196,8 @@ showing a deletion commit.
 ### 2e. Follow Merge Checklist
 
 Follow the steps in `merge-checklist.md` (in the `references/` directory of
-this plugin).
+this plugin). Pass the issue type to the checklist — it determines the
+conventional commit type (`feat:` for features, `fix:` for bugs).
 
 ### 2f. Update Issue
 
@@ -153,9 +210,18 @@ DONE_EOF
 gh issue comment <NUMBER> --repo <OWNER/REPO> --body-file /tmp/impl-complete-<N>.md
 ```
 
-Update the label:
+Update the label per type:
+
+**Feature:**
 ```
-gh issue edit <NUMBER> --repo <OWNER/REPO> --remove-label "feature - in progress" --add-label "feature - complete"
+gh issue edit <NUMBER> --repo <OWNER/REPO> \
+  --remove-label "feature - in progress" --add-label "feature - complete"
+```
+
+**Bug:**
+```
+gh issue edit <NUMBER> --repo <OWNER/REPO> \
+  --remove-label "bug - in progress" --add-label "bug - complete"
 ```
 
 ### 2g. Return to stage
@@ -195,27 +261,39 @@ fails:
    gh issue comment <NUMBER> --repo <OWNER/REPO> --body-file /tmp/impl-error-<N>.md
    ```
 
-2. Change the label:
+2. Change the label per type:
+
+   **Feature:**
    ```
-   gh issue edit <NUMBER> --repo <OWNER/REPO> --remove-label "feature - in progress" --add-label "feature - human review"
+   gh issue edit <NUMBER> --repo <OWNER/REPO> \
+     --remove-label "feature - in progress" --add-label "feature - human review"
    ```
 
-3. Clean up the local branch:
+   **Bug:**
+   ```
+   gh issue edit <NUMBER> --repo <OWNER/REPO> \
+     --remove-label "bug - in progress" --add-label "bug - human review"
+   ```
+
+3. Clean up the local branch (use the prefix that was created in 2a):
    ```
    git checkout stage
-   git branch -D feature/<NUMBER>-<SLUG>
+   git branch -D feature/<NUMBER>-<SLUG>   # or fix/<NUMBER>-<SLUG> for bugs
    ```
 
-4. Continue with the next feature.
+4. Continue with the next issue.
 
 ## Output
 
 When finished, print a summary that includes:
 
-| Issue | Title | Result | PR |
-|-------|-------|--------|----|
-| #N | Title | Implemented / Failed: <reason> | #PR or — |
+| Issue | Type | Title | Result | PR |
+|-------|------|-------|--------|----|
+| #N | feature/bug | Title | Implemented / Failed: <reason> | #PR or — |
 
 Also report:
 - The release branch name (e.g., `release/2026-04-05`) if created
-- The list of created PR numbers in implementation order (the orchestrator merges these in Phase 5)
+- The list of created PR numbers in implementation order (the orchestrator
+  merges these in Phase 5). Both feature PRs and bug-fix PRs flow into the
+  same release branch — the release PR description must list each PR with
+  its type so the human reviewer can scan-distinguish.

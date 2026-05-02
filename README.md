@@ -18,17 +18,20 @@ Plugins are self-contained: each lives in its own directory with its own agents,
 
 | Plugin | Version | Description | Docs |
 |--------|---------|-------------|------|
-| [feature-creator](plugins/feature-creator/) | 0.5.0 | Feature development pipeline — GitHub issues to implementation plans to PRs | [README](plugins/feature-creator/README.md) |
+| [feature-creator](plugins/feature-creator/) | 0.6.0 | Feature and bug-fix pipeline — GitHub issues to implementation plans to PRs (handles `feature - ready for claude` and `bug - ready for claude`) | [README](plugins/feature-creator/README.md) |
 | [security-scanner](plugins/security-scanner/) | 0.4.0 | Multi-tool security audit for Node.js web apps and Supabase projects — files findings as GitHub Issues with deduplication, reopen on re-detection, and expert advisory comments | [README](plugins/security-scanner/README.md) |
 | [docs-steward](plugins/docs-steward/) | 0.5.0 | Docs maintenance pipeline — builds canonical indexes of a repo, audits docs for drift, duplication, orphans, and onboarding gaps, then actively edits docs and opens a PR | [README](plugins/docs-steward/README.md) |
+| [bug-sweeper](plugins/bug-sweeper/) | 0.1.0 | Daily bug-discovery sweep for Node.js apps — runs build/audit + multi-agent code review, filters false positives, and files confirmed bugs as GitHub Issues for feature-creator to remediate | [README](plugins/bug-sweeper/README.md) |
 
 ## What Each Plugin Does
 
-**feature-creator** — Give it a GitHub repository and some labeled issues, and it handles the full development cycle automatically. It reads your codebase, writes a detailed implementation plan for each issue, checks whether each change is risky (and flags anything dangerous for human review), writes the code, runs your tests, opens pull requests, and — if you want — merges and cleans up. The only time it stops to ask is when it flags something as high-risk, or when you've asked it to pause before the final merge.
+**feature-creator** — Give it a GitHub repository and some labeled issues (features or bugs), and it handles the full development cycle automatically. It reads your codebase, writes a detailed implementation plan for each issue (using a feature template or a bug-fix template depending on the label), checks whether each change is risky (with type-tuned rubrics — bug fixes have a different risk profile than new features), writes the code, runs your tests, opens pull requests with the right conventional-commit type (`feat:` or `fix:`), and — if you want — merges and cleans up. The only time it stops to ask is when it flags something as high-risk, or when you've asked it to pause before the final merge.
 
 **security-scanner** — Runs a multi-tool security audit against a Node.js web app and, when present, its Supabase project. Files findings as labeled GitHub Issues, deduplicates by fingerprint so you don't get the same issue twice, reopens previously closed issues when a scan re-detects them, auto-closes resolved ones, and adds expert advisory comments with root-cause analysis on every new or reopened issue.
 
 **docs-steward** — Brings documentation in line with what the code actually does. Builds canonical indexes of the repo (files, symbols, routes, config, doc inventory, recent history), runs six critic personas in parallel to find drift, duplication, stale references, orphan config keys, and onboarding gaps, then actively edits the docs on a feature branch — deleting deprecated content, moving duplicated content to a single canonical home, and fixing stale claims. A manual-reader persona reads the edited corpus before opening a single PR. The PR is never auto-merged.
+
+**bug-sweeper** — Daily bug-discovery sweep designed to run unattended (typically from a `/schedule` routine in permissions-bypass mode). Runs `npm run build` and `npm audit`, launches parallel code-review agents on the API and web surfaces, traces a high-risk flow end-to-end, reconciles findings against open `bug` issues, applies a false-positive rubric, and files each confirmed bug as a GitHub Issue labeled `bug - ready for claude` with a severity label. It does **not** propose fixes or modify code — remediation is handled by feature-creator, which picks up the filed issues automatically.
 
 ## Contributing a Plugin
 

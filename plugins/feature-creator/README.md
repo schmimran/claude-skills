@@ -1,12 +1,14 @@
 # feature-creator
 
-Automates feature development end-to-end. Point it at a GitHub repository, label your issues, and it will analyze your codebase, write implementation plans, assess risk, write the code, open pull requests, and — if you give it the go-ahead — merge and clean up. Human input is only required when the pipeline flags something as high-risk.
+Automates feature development and bug remediation end-to-end. Point it at a GitHub repository, label your issues (`feature - ready for claude` for features, `bug - ready for claude` for bug fixes — typically filed by [bug-sweeper](../bug-sweeper/)), and it will analyze your codebase, write implementation plans (with type-tuned templates), assess risk (with type-tuned rubrics), write the code, open pull requests, and — if you give it the go-ahead — merge and clean up. Human input is only required when the pipeline flags something as high-risk.
 
 ## Quick Start
 
 1. **Install the marketplace** if you have not already: see [Installation in the root README](../../README.md#installation).
 
-2. **Create the required labels** on your target repository (once per repo):
+2. **Create the required labels** on your target repository (once per repo).
+
+   **Feature state machine:**
    ```bash
    gh label create "feature - ready for claude" --color 0E8A16 --description "Scoped and ready for automated planning"
    gh label create "feature - planned" --color 1D76DB --description "Implementation plan posted as comment"
@@ -15,7 +17,21 @@ Automates feature development end-to-end. Point it at a GitHub repository, label
    gh label create "feature - complete" --color 0E8A16 --description "PR created and code-reviewed"
    ```
 
-3. **Label one or more issues** with `feature - ready for claude`.
+   **Bug state machine** (also used by [bug-sweeper](../bug-sweeper/)):
+   ```bash
+   gh label create "bug" --color d73a4a --description "Defect in the codebase"
+   gh label create "bug - ready for claude" --color 0E8A16 --description "Bug ready for automated planning (typically filed by bug-sweeper)"
+   gh label create "bug - triaged" --color 1D76DB --description "Triaged into a bucket; planner will pick it up"
+   gh label create "bug - planned" --color 1D76DB --description "Implementation plan posted as comment"
+   gh label create "bug - human review" --color D93F0B --description "Flagged for human review (high-risk or failed)"
+   gh label create "bug - in progress" --color FBCA04 --description "Branch created, implementation underway"
+   gh label create "bug - complete" --color 0E8A16 --description "PR created and code-reviewed"
+   gh label create "bug - high" --color B60205 --description "High-severity bug — data loss, security, hot-path crash, partial commit"
+   gh label create "bug - medium" --color D93F0B --description "Medium-severity bug — non-critical regression, leak, UI consistency"
+   gh label create "bug - low" --color FBCA04 --description "Low-severity bug — cosmetic, doc drift, defensive-coding gap"
+   ```
+
+3. **Label one or more issues** with either `feature - ready for claude` (features) or `bug - ready for claude` (bugs).
 
 4. **Run the pipeline** from a Claude Code session in or targeting your repo:
    ```
@@ -46,9 +62,20 @@ Automates feature development end-to-end. Point it at a GitHub repository, label
 | `feature-planner` | Agent | sonnet | Plan every issue in a bucket together, using the triager's shared context |
 | `feature-consolidator` | Agent | sonnet | Collect individual plans, cross-bucket conflict analysis, consolidated plan |
 | `feature-reviewer` | Agent | sonnet | Review plans for risk, flag dangerous ones, create combined plan |
-| `feature-implementer` | Agent | opus | Create branches, write code, run tests, open PRs |
+| `feature-implementer` | Agent | opus | Create branches (`feature/<N>-<slug>` or `fix/<N>-<slug>`), write code, run tests, open PRs (`feat:` or `fix:`) |
 
 The command orchestrates the five agents. The triager runs once up front; planner agents run in parallel (one per bucket); all other agents run sequentially. Agents are not independently invocable — use the command to run the full pipeline.
+
+The triager separates feature buckets from bug buckets, and downstream
+agents apply type-specific behavior:
+
+| Concern | Feature path | Bug path |
+|---------|--------------|----------|
+| Plan template | [`references/plan-template.md`](references/plan-template.md) | [`references/bug-plan-template.md`](references/bug-plan-template.md) |
+| Risk rubric | [`references/risk-criteria.md`](references/risk-criteria.md) | [`references/bug-risk-criteria.md`](references/bug-risk-criteria.md) |
+| Review checklist | [`references/review-checklist.md`](references/review-checklist.md) | [`references/bug-review-checklist.md`](references/bug-review-checklist.md) |
+| Branch prefix | `feature/<N>-<slug>` | `fix/<N>-<slug>` |
+| Commit type | `feat:` | `fix:` |
 
 Supporting reference docs live under `references/` — see [CLAUDE.md](../../CLAUDE.md#directory-structure) for the full list and purpose of each.
 
@@ -92,8 +119,13 @@ The pipeline moves through six phases, 0 through 5.
 
 **Phase 5 — Merge and Cleanup**: Feature PRs are merged in implementation order. The release branch PR is created linking all features. By default, the pipeline pauses here for your confirmation before merging the release branch. Pass `--auto-merge` to skip the pause. After merge, it deletes all feature branches (local and remote), pulls main, and removes any worktree.
 
-### Label Lifecycle
+### Label Lifecycles
 
+Two parallel state machines run side-by-side. The triager assigns each issue
+a `type` (`feature` or `bug`) based on its trigger label and bucketing /
+state transitions diverge from there.
+
+**Features:**
 ```
 ready for claude  -->  planned  -->  in progress  -->  complete
                           |               |
@@ -102,13 +134,29 @@ ready for claude  -->  planned  -->  in progress  -->  complete
                           +-> human review <-+
 ```
 
+**Bugs** (one extra hop because `bug-sweeper` is the upstream filer):
+```
+ready for claude  -->  triaged  -->  planned  -->  in progress  -->  complete
+                                        |               |
+                                 [reviewer: risky]  [impl failed]
+                                        |               |
+                                        +-> human review <-+
+```
+
 | Label | Set by | Meaning |
 |-------|--------|---------|
-| `feature - ready for claude` | Human | Issue is scoped and ready for automated planning |
+| `feature - ready for claude` | Human | Feature is scoped and ready for automated planning |
 | `feature - planned` | feature-planner agent | Plan posted as issue comment |
-| `feature - human review` | feature-consolidator, feature-reviewer, or feature-implementer agent | Flagged as high-risk, blocking inconsistency, or implementation failed |
+| `feature - human review` | consolidator, reviewer, or implementer | Flagged as high-risk, blocking, or implementation failed |
 | `feature - in progress` | feature-implementer agent | Branch created, coding underway |
 | `feature - complete` | feature-implementer agent | PR created and code-reviewed |
+| `bug - ready for claude` | bug-sweeper or human | Bug filed and ready for automated planning |
+| `bug - triaged` | feature-triager agent | Bucketed; planner will pick it up |
+| `bug - planned` | feature-planner agent (using `bug-plan-template.md`) | Plan posted as issue comment |
+| `bug - human review` | consolidator, reviewer, or implementer | Flagged via `bug-risk-criteria.md`, blocking, or impl failed |
+| `bug - in progress` | feature-implementer agent | Branch (`fix/<N>-<slug>`) created, coding underway |
+| `bug - complete` | feature-implementer agent | PR (`fix:` commit) created and code-reviewed |
+| `bug - high` / `bug - medium` / `bug - low` | bug-sweeper (or human) | Severity, applied at file time and preserved through the pipeline |
 
 ## Pausing Before Merge
 
@@ -183,7 +231,17 @@ claude --plugin-dir /path/to/claude-skills/plugins/feature-creator
 /feature-creator
 ```
 
-**Plan comment markers**: Plans posted by the planner begin with `<!-- claude-feature-planner-v1 -->`, consolidated plans from the consolidator begin with `<!-- claude-feature-consolidator-v1 -->`, and combined plans from the reviewer begin with `<!-- claude-feature-reviewer-v1 -->`. These markers are how downstream agents locate the right comment programmatically. If you modify the plan format, update the marker version and update the extraction logic in the relevant agent.
+**Plan comment markers** are type-specific so downstream agents can locate the right comment programmatically:
+
+| Stage | Feature marker | Bug marker |
+|-------|----------------|------------|
+| Triager | `<!-- claude-feature-triager-v1 -->` | `<!-- claude-feature-triager-v1 -->` (shared, since the triager handles both) |
+| Planner | `<!-- claude-feature-planner-v1 -->` | `<!-- claude-bug-planner-v1 -->` |
+| Consolidator | `<!-- claude-feature-consolidator-v1 -->` | `<!-- claude-bug-consolidator-v1 -->` |
+| Reviewer | `<!-- claude-feature-reviewer-v1 -->` | `<!-- claude-bug-reviewer-v1 -->` |
+| Bug-sweeper issue body (upstream) | n/a | `<!-- claude-bug-sweeper-v1 -->` |
+
+If you modify the plan format, update the marker version and the extraction logic in the relevant agent.
 
 For plugin structure conventions, authoring reference, and the checklist for adding new plugins, see [CLAUDE.md](../../CLAUDE.md).
 

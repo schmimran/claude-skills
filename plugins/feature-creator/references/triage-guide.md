@@ -1,7 +1,9 @@
 # Triage Guide
 
 Heuristics and rules for grouping issues into planning buckets. Used by the
-`feature-triager` agent in Phase 0 of the feature-creator pipeline.
+`feature-triager` agent in Phase 0 of the feature-creator pipeline. Applies
+to **both** features (`feature - ready for claude`) and bugs
+(`bug - ready for claude`).
 
 ## Goal
 
@@ -9,6 +11,43 @@ Group issues that are likely to touch the same files into a single bucket so
 that one planner agent can reason about them together. This cuts redundant
 codebase exploration and catches within-bucket file conflicts at plan time
 instead of at implementation time.
+
+## Type-Separation Rule (Absolute)
+
+**Features and bugs are bucketed independently.** A feature and a bug never
+share a bucket, even if their predicted globs overlap. The downstream
+planner, consolidator, reviewer, and implementer apply different templates,
+risk rubrics, plan markers, branch prefixes, and commit types per type —
+mixing types inside a bucket would make those agents misclassify the
+bucket.
+
+The triager:
+1. Fetches `feature - ready for claude` issues and `bug - ready for claude`
+   issues separately
+2. Tags each issue with its `type` (`"feature"` or `"bug"`)
+3. Runs the bucketing rules below **per type**
+4. Emits a single manifest containing buckets of both types, each with a
+   `type` field
+
+If a feature and a bug both touch `apps/api/src/sweep.ts`, they end up in
+two separate buckets even if those buckets are otherwise singletons. This
+is intentional.
+
+## Bug Issue Body Recognition
+
+Bug issues filed by upstream discovery agents (e.g. `bug-sweeper`) begin
+with the marker `<!-- claude-bug-sweeper-v1 -->` and contain explicit
+`**File:**` and `**Lines:**` fields in their body. When such a body is
+present, the triager **must** prefer those explicit citations over
+keyword heuristics when computing predicted globs.
+
+Bugs filed by humans may not include explicit file:line citations. Fall
+back to keyword heuristics in that case.
+
+(This rule does not link to upstream-plugin documentation: the marker
+string and field names above are the only details the triager needs at
+runtime, so feature-creator stays installable without any specific
+upstream filer present.)
 
 ## Predicting Impacted Globs
 
@@ -43,19 +82,37 @@ signals, in order of confidence:
 | `feature-creator`, `planner`, `consolidator`, `reviewer`, `implementer`, `triager` | `plugins/feature-creator/**` |
 | `security-scanner`, `security-runner`, `security-triager`, `security-closer`, `security-advisor`, `supabase` | `plugins/security-scanner/**` |
 | `marketplace`, `plugin.json`, `plugin manifest` | `.claude-plugin/**`, `plugins/*/.claude-plugin/**` |
+| `bug-sweeper`, `bug-sweeper-runner`, `bug-sweeper-reviewer`, `bug-sweeper-tracer`, `bug-sweeper-reconciler`, `bug-sweeper-analyst`, `bug-sweeper-filer` | `plugins/bug-sweeper/**` |
+
+Bug-specific keywords (apply when an issue's `type` is `bug` and the body
+does not contain explicit file paths):
+
+| Keyword(s) in issue | Glob |
+|---------------------|------|
+| `crash`, `regression`, `broken`, `fails`, `error`, `exception` | use the file path in the body's `**File:**` line if present, otherwise apply the table above |
+| `await`, `async`, `promise`, `race condition` | `apps/api/src/**`, `**/handlers/**`, `**/sweep*` |
+| `xss`, `injection`, `csrf`, `sanitize` | `apps/web/**`, `**/views/**`, `**/templates/**` |
+| `leak`, `memory`, `cleanup`, `timeout`, `interval` | `**/sweep*`, `**/cleanup*`, `**/cron*` |
+| `cve`, `vulnerability`, `npm audit` | `package.json`, `package-lock.json` |
 
 Extend the table when recurring signals emerge. If nothing matches, the issue
 falls to a singleton bucket (see below).
 
-## Grouping Rule (Jaccard ≥ 1)
+## Grouping Rule (Jaccard ≥ 1, within type)
 
-Two issues share a bucket if their predicted-glob sets share **at least one
-glob** — equivalently, `|A ∩ B| ≥ 1`. Glob comparison is a literal-string match
-on normalized glob text; do not attempt to expand wildcards for comparison.
+Two issues share a bucket if and only if **both** of these hold:
 
-Bucketing is transitive: if A shares a glob with B, and B shares a different
-glob with C, all three go in the same bucket. Start with each issue in its
-own set and union any two sets that share a glob; repeat until stable.
+1. They are the same `type` (both features or both bugs).
+2. Their predicted-glob sets share **at least one glob** — equivalently,
+   `|A ∩ B| ≥ 1`. Glob comparison is a literal-string match on normalized
+   glob text; do not attempt to expand wildcards for comparison.
+
+Bucketing is transitive **within a type**: if feature A shares a glob with
+feature B, and feature B shares a different glob with feature C, all three
+go in the same bucket. Start with each issue in its own set and union any
+two sets that satisfy both rules above; repeat until stable.
+
+Cross-type unioning is never performed.
 
 ## Maximum Bucket Size
 
@@ -108,16 +165,27 @@ The triager emits this JSON structure (to the path passed by the orchestrator):
   "buckets": [
     {
       "id": "b1",
+      "type": "feature",
       "issues": [
         { "number": 14, "title": "..." }
       ],
       "predicted_globs": ["plugins/feature-creator/**"],
       "rationale": "feature-creator orchestrator"
+    },
+    {
+      "id": "b2",
+      "type": "bug",
+      "issues": [
+        { "number": 21, "title": "[bug] missing await in inactivity sweep" }
+      ],
+      "predicted_globs": ["apps/api/src/**", "**/sweep*"],
+      "rationale": "inactivity sweep async ordering"
     }
   ]
 }
 ```
 
-Top-level required keys: `shared_context` (string) and `buckets` (array). The
-orchestrator validates these immediately after the triager completes. A
-malformed manifest halts the pipeline.
+Top-level required keys: `shared_context` (string) and `buckets` (array).
+Each bucket entry must include the `type` field (`"feature"` or `"bug"`).
+The orchestrator validates these immediately after the triager completes.
+A malformed manifest halts the pipeline.

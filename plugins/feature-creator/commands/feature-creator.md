@@ -220,8 +220,8 @@ Use the Agent tool to launch the feature-reviewer agent with the following promp
 > You are the feature-reviewer. Target repository: <OWNER/REPO>
 
 Wait for the agent to complete. Check its output:
-- Note which features were approved and which were flagged for human review.
-- If all features were flagged, stop and report.
+- Note which issues (features and bugs) were approved and which were flagged for human review.
+- If all issues were flagged, stop and report.
 - Record the implementation order from the reviewer's output — you will need it in Phase 5.
 
 ## Phase 4: Implementation
@@ -231,12 +231,15 @@ Use the Agent tool to launch the feature-implementer agent with the following pr
 > You are the feature-implementer. Target repository: <OWNER/REPO>
 
 Wait for the agent to complete. Collect its output:
-- Record each feature PR number and the release branch name.
-- Note any features that failed implementation.
+- Record each PR number alongside its issue type (feature or bug) and the
+  source issue number — both feature and bug-fix PRs count. The implementer's
+  output table includes a `Type` column; use it.
+- Record the release branch name.
+- Note any issues that failed implementation.
 
 ## Phase 5: Merge and Cleanup
 
-Only proceed if at least one feature PR was successfully created.
+Only proceed if at least one PR (feature or bug-fix) was successfully created.
 
 ### 5a. Check auto-merge flag
 
@@ -244,45 +247,52 @@ If `--auto-merge` was passed in `$ARGUMENTS`, proceed automatically through all
 steps without pausing. Otherwise, pause before merging the release branch (5c)
 to give the user a final review opportunity.
 
-### 5b. Merge feature PRs
+### 5b. Merge PRs
 
-For each PR in the Phase 4 output list (which already reflects implementation order):
+For each PR in the Phase 4 output list (which already reflects implementation
+order — both feature and bug-fix PRs):
 
 ```
 gh pr merge <PR_NUMBER> --repo <OWNER/REPO> --squash --delete-branch
 ```
 
-If a merge fails, post a comment on the corresponding issue, change its label to
-`feature - human review`, and continue with the next PR.
+If a merge fails, post a comment on the corresponding issue, change its label
+to the **type-appropriate** human-review label, and continue with the next PR:
+
+- Feature issue → `feature - human review`
+- Bug issue → `bug - human review`
 
 ### 5c. Create and merge the release branch PR
 
 The release PR merges `stage` into `main` (the default branch). GitHub only
 auto-closes issues when a PR merges into the default branch, so this is the
-only opportunity in the pipeline to auto-close feature issues — every feature
-issue successfully merged in Phase 5b must appear as a `Closes #<N>` line in
-this PR body. Do **not** emit any explicit `gh issue close` calls; rely on
-GitHub's closing keywords.
+only opportunity in the pipeline to auto-close issues — every feature **or
+bug** issue successfully merged in Phase 5b must appear as a `Closes #<N>`
+line in this PR body. Do **not** emit any explicit `gh issue close` calls;
+rely on GitHub's closing keywords.
 
 Construct the release PR body using the template in
 `references/release-pr-template.md` (read that file for the exact format).
 Populate it from the Phase 4 output:
 
-- The **Summary** section lists one line per successfully-merged feature PR,
-  including PR number, title, and issue number.
-- The **Closes** section has one `Closes #<ISSUE_NUMBER>` line per feature
-  issue that was successfully merged in Phase 5b.
+- The **Summary** section lists one line per successfully-merged PR,
+  including PR number, type marker (`feat` or `fix`), title, and issue
+  number. Group features and bug fixes into separate sub-sections so a
+  human reader can scan them at a glance.
+- The **Closes** section has one `Closes #<ISSUE_NUMBER>` line per merged
+  issue, **regardless of type**. The pre-flight check below depends on
+  every merged issue being represented.
 
-Only include features that were successfully merged. Features that failed to
-merge or were labeled `feature - human review` must NOT appear in the Closes
-section — those issues remain open for manual follow-up.
+Only include PRs that were successfully merged. PRs that failed to merge or
+were labeled `feature - human review` / `bug - human review` must NOT appear
+in the Closes section — those issues remain open for manual follow-up.
 
-**Pre-flight check (required before `gh pr create`).** Build the set of issue
-numbers for every PR merged successfully in Phase 5b. For each issue number,
-confirm the composed body contains a matching `Closes #<N>` line. If any
-merged issue is missing, fail with an error and stop — do not create the PR.
-This guarantees the release merge into `main` will auto-close every feature
-issue landed in this release.
+**Pre-flight check (required before `gh pr create`).** Build the set of
+issue numbers for every PR merged successfully in Phase 5b — across both
+types. For each issue number, confirm the composed body contains a matching
+`Closes #<N>` line. If any merged issue is missing, fail with an error and
+stop — do not create the PR. This guarantees the release merge into `main`
+will auto-close every feature **and bug** issue landed in this release.
 
 Write the body to `/tmp/release-pr-body.md` and create the PR with
 `--body-file`:
@@ -305,7 +315,7 @@ gh pr create --repo <OWNER/REPO> --base main --head release/<YYYY-MM-DD> \
 ```
 
 **If `--auto-merge` was NOT passed**: Stop here. Print the release PR link and ask:
-> All feature PRs have been merged. Release PR: <URL>
+> All PRs have been merged. Release PR: <URL>
 > Respond to confirm and I will merge the release branch and clean up.
 
 Wait for explicit user confirmation before continuing to step 5d.
@@ -378,11 +388,11 @@ After all phases complete (or if the pipeline stops early), print a final report
 
 ## Error Handling
 
-- If an entire phase fails (not individual features within a phase), stop the
+- If an entire phase fails (not individual issues within a phase), stop the
   pipeline and report the error. Do not proceed to the next phase.
-- Individual feature failures within a phase are handled by the agents.
-  The pipeline continues with remaining features.
-- If Phase 1 produces no planned features, stop before Phase 2.
-- If Phase 2 flags all features, stop before Phase 3.
-- If Phase 3 flags all features, stop before Phase 4.
-- If Phase 4 produces no PRs, skip Phase 5.
+- Individual issue failures within a phase are handled by the agents.
+  The pipeline continues with remaining issues.
+- If Phase 1 produces no planned issues (across both types), stop before Phase 2.
+- If Phase 2 flags all issues, stop before Phase 3.
+- If Phase 3 flags all issues, stop before Phase 4.
+- If Phase 4 produces no PRs (across both types), skip Phase 5.

@@ -20,7 +20,7 @@ or modify the repo.
 
    gh label create "bug - ready for claude" \
      --color 0E8A16 \
-     --description "Bug filed by bug-sweeper, ready for feature-creator to remediate"
+     --description "Bug ready for automated planning (typically filed by bug-sweeper)"
 
    gh label create "bug - high" \
      --color B60205 \

@@ -89,18 +89,34 @@ Pseudocode:
 feature_buckets = [b for b in buckets if b["type"] == "feature"]
 bug_buckets     = [b for b in buckets if b["type"] == "bug"]
 
-skip_features = len(feature_buckets) == 1 and len(feature_buckets[0]["issues"]) == 1
-skip_bugs     = len(bug_buckets)     == 1 and len(bug_buckets[0]["issues"])     == 1
+# A type "qualifies" for early-exit if either:
+#   (a) it has no buckets at all in this run (nothing to consolidate), or
+#   (b) it has exactly 1 bucket containing exactly 1 issue (true singleton).
+features_qualify = (
+    not feature_buckets
+    or (len(feature_buckets) == 1 and len(feature_buckets[0]["issues"]) == 1)
+)
+bugs_qualify = (
+    not bug_buckets
+    or (len(bug_buckets) == 1 and len(bug_buckets[0]["issues"]) == 1)
+)
 
-if skip_features and skip_bugs:
-    print("Singleton run for both types — skipping consolidation pass entirely")
+if features_qualify and bugs_qualify:
+    print("Every present type is a singleton (or absent) — skipping consolidation pass entirely")
     # Output a minimal summary table and stop.
     exit 0
 ```
 
-If only one type is a singleton, skip the consolidation step for that type
-(do not post a consolidator comment for those issues) but proceed to Step 2
-for the other type. Track which types are still in play.
+The "absent type" treatment matters: a feature-only singleton run has 0 bug
+buckets, so the bug side trivially qualifies and the run early-exits as
+expected. Same for a bug-only singleton. The early-exit fires whenever every
+present type is a singleton.
+
+If one type is a multi-issue/multi-bucket case while the other is a
+singleton (or absent), skip the consolidation step for the qualifying
+type — do not post a consolidator comment for its issue — but proceed to
+Step 2 for the type that needs cross-bucket reconciliation. Track which
+types are still in play.
 
 Do **not** mix features and bugs into a single consolidated plan — they
 remain in separate consolidated comments with separate markers.

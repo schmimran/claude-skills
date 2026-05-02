@@ -70,23 +70,54 @@ Map the analyst's severity to a label:
 LOW-severity findings are filed but feature-creator may deprioritize them.
 This is intentional: LOW is a queue, not a discard.
 
-### 2d. Compose the title
+### 2d. Compose the title — never interpolate untrusted text into the shell
 
-Use the analyst's `title` field. Prefix with `[bug]` if the title does not
-already begin with that prefix. Maximum 100 characters; truncate at a word
-boundary if longer.
+The analyst's `title` field is derived from grep/read of arbitrary
+target-repo strings (identifiers, error messages, code comments). Treat it
+as untrusted. Per CLAUDE.md's shell-safety rule, **never** substitute the
+title text into a `--title "..."` argument by string-formatting the bash
+command. Instead, extract it into a shell variable using `jq` (which does
+not re-interpret content), then pass that variable through `gh` quoted —
+bash does not re-expand metacharacters inside a quoted variable.
+
+Apply these transforms before filing:
+
+1. Extract the raw title from the plan JSON for the current bug `<ID>`:
+   ```
+   RAW_TITLE=$(jq -r ".confirmed_bugs[] | select(.id==\"<ID>\") | .title" /tmp/bug-sweeper-plan.json)
+   ```
+2. Prefix with `[bug] ` if the raw title does not already begin with that
+   prefix:
+   ```
+   case "$RAW_TITLE" in
+     "[bug] "*) TITLE="$RAW_TITLE" ;;
+     *)         TITLE="[bug] $RAW_TITLE" ;;
+   esac
+   ```
+3. Truncate to 100 characters at a word boundary:
+   ```
+   TITLE=$(printf '%s' "$TITLE" | cut -c1-100 | sed 's/[[:space:]][^[:space:]]*$//')
+   ```
+
+Do **not** echo `$TITLE` into a here-doc, format string, or command
+substitution that re-interprets it. Pass it as an argument only.
 
 ### 2e. Create the issue
 
 ```
 ISSUE_URL=$(gh issue create \
-  --repo <OWNER/REPO> \
-  --title "<TITLE>" \
+  --repo "<OWNER/REPO>" \
+  --title "$TITLE" \
   --body-file /tmp/bug-issue-<ID>.md \
   --label bug \
   --label "bug - ready for claude" \
   --label "<severity-label>")
 ```
+
+`"$TITLE"` is a bash quoted variable expansion — bash substitutes the
+literal contents of `TITLE` and does not re-evaluate `$`, backticks, or
+other metacharacters inside it. This satisfies the shell-safety rule even
+when the analyst's title contains code-derived content.
 
 Capture the issue URL from stdout. Parse the issue number from the URL.
 

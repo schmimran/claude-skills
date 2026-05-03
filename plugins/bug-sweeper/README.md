@@ -15,9 +15,10 @@ or modify the repo.
 2. **Create the required labels** on your target repository (once per repo).
    The full bug state machine is needed — bug-sweeper files issues with the
    first three, and [feature-creator](../feature-creator/) walks them through
-   the rest. `gh label create` is idempotent on first run only; if the labels
-   already exist (because feature-creator's setup was run first), the create
-   commands will no-op safely.
+   the rest. The `--force` flag makes each command idempotent: on first run
+   it creates the label; on subsequent runs it overwrites color and
+   description with the same canonical values, so re-running the block is
+   safe.
 
    > **Note for future editors:** the colors and descriptions below are
    > canonical in feature-creator's README per
@@ -26,16 +27,16 @@ or modify the repo.
    > there, not the other way around.
 
    ```bash
-   gh label create "bug" --color d73a4a --description "Defect in the codebase"
-   gh label create "bug - ready for claude" --color 0E8A16 --description "Bug ready for automated planning (typically filed by bug-sweeper)"
-   gh label create "bug - triaged" --color 1D76DB --description "Triaged into a bucket; planner will pick it up"
-   gh label create "bug - planned" --color 1D76DB --description "Implementation plan posted as comment"
-   gh label create "bug - human review" --color D93F0B --description "Flagged for human review (high-risk or failed)"
-   gh label create "bug - in progress" --color FBCA04 --description "Branch created, implementation underway"
-   gh label create "bug - complete" --color 0E8A16 --description "PR created and code-reviewed"
-   gh label create "bug - high" --color B60205 --description "High-severity bug — data loss, security, hot-path crash, partial commit"
-   gh label create "bug - medium" --color D93F0B --description "Medium-severity bug — non-critical regression, leak, UI consistency"
-   gh label create "bug - low" --color FBCA04 --description "Low-severity bug — cosmetic, doc drift, defensive-coding gap"
+   gh label create "bug" --force --color d73a4a --description "Defect in the codebase"
+   gh label create "bug - ready for claude" --force --color 0E8A16 --description "Bug ready for automated planning (typically filed by bug-sweeper)"
+   gh label create "bug - triaged" --force --color 1D76DB --description "Triaged into a bucket; planner will pick it up"
+   gh label create "bug - planned" --force --color 1D76DB --description "Implementation plan posted as comment"
+   gh label create "bug - human review" --force --color D93F0B --description "Flagged for human review (high-risk or failed)"
+   gh label create "bug - in progress" --force --color FBCA04 --description "Branch created, implementation underway"
+   gh label create "bug - complete" --force --color 0E8A16 --description "PR created and code-reviewed"
+   gh label create "bug - high" --force --color B60205 --description "High-severity bug — data loss, security, hot-path crash, partial commit"
+   gh label create "bug - medium" --force --color D93F0B --description "Medium-severity bug — non-critical regression, leak, UI consistency"
+   gh label create "bug - low" --force --color FBCA04 --description "Low-severity bug — cosmetic, doc drift, defensive-coding gap"
    ```
 
 3. **Run an interactive sweep** to inspect findings before any issues are

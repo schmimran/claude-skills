@@ -63,15 +63,23 @@ If not authenticated, stop and tell the user to run
 gh label list --repo <OWNER/REPO> --json name -q '.[].name'
 ```
 
-The repo must have:
+bug-sweeper files issues into `feature-creator`'s bug state machine, so the
+**entire** state machine must exist on the target repo — not just the labels
+bug-sweeper directly applies. Verify all of:
+
 - `bug` (existing convention)
-- `bug - ready for claude`
-- `bug - high`
-- `bug - medium`
-- `bug - low`
+- `bug - ready for claude` (applied by filer)
+- `bug - triaged` (applied by feature-creator's triager)
+- `bug - planned` (applied by feature-creator's planner)
+- `bug - human review` (applied by feature-creator's reviewer/implementer on escalation)
+- `bug - in progress` (applied by feature-creator's implementer)
+- `bug - complete` (applied by feature-creator's implementer)
+- `bug - high` / `bug - medium` / `bug - low` (applied by filer per analyst severity)
 
 If any are missing, print the `gh label create` commands from this plugin's
-`README.md` and stop.
+`README.md` and stop. Catching this at sweep time prevents filing issues
+into an incomplete pipeline (where feature-creator would fail its own
+pre-flight check on the same labels later).
 
 ### 0e. Discover surfaces
 

@@ -1,7 +1,7 @@
 {
   "name": "bug-sweeper",
   "description": "Daily bug-discovery sweep — runs build/audit + multi-agent code review, filters false positives, files confirmed bugs as GitHub Issues for feature-creator to remediate.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "author": {
     "name": "schmimran"
   }

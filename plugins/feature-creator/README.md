@@ -8,27 +8,31 @@ Automates feature development and bug remediation end-to-end. Point it at a GitH
 
 2. **Create the required labels** on your target repository (once per repo).
 
+   `--force` makes each command idempotent — re-running the block overwrites
+   the color and description on already-existing labels with the same
+   canonical values, so it's safe to run more than once.
+
    **Feature state machine:**
    ```bash
-   gh label create "feature - ready for claude" --color 0E8A16 --description "Scoped and ready for automated planning"
-   gh label create "feature - planned" --color 1D76DB --description "Implementation plan posted as comment"
-   gh label create "feature - human review" --color D93F0B --description "Flagged for human review (high-risk or failed)"
-   gh label create "feature - in progress" --color FBCA04 --description "Branch created, implementation underway"
-   gh label create "feature - complete" --color 0E8A16 --description "PR created and code-reviewed"
+   gh label create "feature - ready for claude" --force --color 0E8A16 --description "Scoped and ready for automated planning"
+   gh label create "feature - planned" --force --color 1D76DB --description "Implementation plan posted as comment"
+   gh label create "feature - human review" --force --color D93F0B --description "Flagged for human review (high-risk or failed)"
+   gh label create "feature - in progress" --force --color FBCA04 --description "Branch created, implementation underway"
+   gh label create "feature - complete" --force --color 0E8A16 --description "PR created and code-reviewed"
    ```
 
    **Bug state machine** (also used by [bug-sweeper](../bug-sweeper/)):
    ```bash
-   gh label create "bug" --color d73a4a --description "Defect in the codebase"
-   gh label create "bug - ready for claude" --color 0E8A16 --description "Bug ready for automated planning (typically filed by bug-sweeper)"
-   gh label create "bug - triaged" --color 1D76DB --description "Triaged into a bucket; planner will pick it up"
-   gh label create "bug - planned" --color 1D76DB --description "Implementation plan posted as comment"
-   gh label create "bug - human review" --color D93F0B --description "Flagged for human review (high-risk or failed)"
-   gh label create "bug - in progress" --color FBCA04 --description "Branch created, implementation underway"
-   gh label create "bug - complete" --color 0E8A16 --description "PR created and code-reviewed"
-   gh label create "bug - high" --color B60205 --description "High-severity bug — data loss, security, hot-path crash, partial commit"
-   gh label create "bug - medium" --color D93F0B --description "Medium-severity bug — non-critical regression, leak, UI consistency"
-   gh label create "bug - low" --color FBCA04 --description "Low-severity bug — cosmetic, doc drift, defensive-coding gap"
+   gh label create "bug" --force --color d73a4a --description "Defect in the codebase"
+   gh label create "bug - ready for claude" --force --color 0E8A16 --description "Bug ready for automated planning (typically filed by bug-sweeper)"
+   gh label create "bug - triaged" --force --color 1D76DB --description "Triaged into a bucket; planner will pick it up"
+   gh label create "bug - planned" --force --color 1D76DB --description "Implementation plan posted as comment"
+   gh label create "bug - human review" --force --color D93F0B --description "Flagged for human review (high-risk or failed)"
+   gh label create "bug - in progress" --force --color FBCA04 --description "Branch created, implementation underway"
+   gh label create "bug - complete" --force --color 0E8A16 --description "PR created and code-reviewed"
+   gh label create "bug - high" --force --color B60205 --description "High-severity bug — data loss, security, hot-path crash, partial commit"
+   gh label create "bug - medium" --force --color D93F0B --description "Medium-severity bug — non-critical regression, leak, UI consistency"
+   gh label create "bug - low" --force --color FBCA04 --description "Low-severity bug — cosmetic, doc drift, defensive-coding gap"
    ```
 
 3. **Label one or more issues** with either `feature - ready for claude` (features) or `bug - ready for claude` (bugs).

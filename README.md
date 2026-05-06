@@ -21,7 +21,7 @@ Plugins are self-contained: each lives in its own directory with its own agents,
 | [feature-creator](plugins/feature-creator/) | 0.6.0 | Feature and bug-fix pipeline — GitHub issues to implementation plans to PRs (handles `feature - ready for claude` and `bug - ready for claude`) | [README](plugins/feature-creator/README.md) |
 | [security-scanner](plugins/security-scanner/) | 0.4.0 | Multi-tool security audit for Node.js web apps and Supabase projects — files findings as GitHub Issues with deduplication, reopen on re-detection, and expert advisory comments | [README](plugins/security-scanner/README.md) |
 | [docs-steward](plugins/docs-steward/) | 0.5.0 | Docs maintenance pipeline — builds canonical indexes of a repo, audits docs for drift, duplication, orphans, and onboarding gaps, then actively edits docs and opens a PR | [README](plugins/docs-steward/README.md) |
-| [bug-sweeper](plugins/bug-sweeper/) | 0.1.0 | Daily bug-discovery sweep for Node.js apps — runs build/audit + multi-agent code review, filters false positives, and files confirmed bugs as GitHub Issues for feature-creator to remediate | [README](plugins/bug-sweeper/README.md) |
+| [bug-sweeper](plugins/bug-sweeper/) | 0.1.1 | Daily bug-discovery sweep for Node.js apps — runs build/audit + multi-agent code review, filters false positives, and files confirmed bugs as GitHub Issues for feature-creator to remediate | [README](plugins/bug-sweeper/README.md) |
 
 ## What Each Plugin Does
 

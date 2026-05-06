@@ -35,7 +35,7 @@
       "name": "bug-sweeper",
       "source": "./plugins/bug-sweeper",
       "description": "Daily bug-discovery sweep for Node.js apps — runs build/audit + multi-agent code review, filters false positives, and files confirmed bugs as GitHub Issues for feature-creator to remediate.",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "author": {
         "name": "schmimran"
       }

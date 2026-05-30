@@ -15,6 +15,7 @@ You receive:
 - `ARCHIVE_DIR` — directory containing one or more archive files
 - `OWNER_EMAILS` — comma-separated list of the user's email addresses
 - `WORK_DIR` — output directory (already created)
+- `SCRIPTS_DIR` — absolute path to `plugins/voice-forge/scripts/`
 
 ---
 
@@ -37,22 +38,16 @@ If no recognizable archives are found: exit with a clear error. Do not create an
 
 ---
 
-## Step 2 — Locate the scripts directory
+## Step 2 — Parse each archive
 
-The scripts are in the `scripts/` subdirectory of this plugin — a peer to the `agents/` directory where this file lives. Resolve the path relative to the plugin root and confirm at least one script is present before continuing.
-
----
-
-## Step 3 — Parse each archive
-
-For each discovered archive, build and run the appropriate command:
+For each discovered archive, write output to a **per-archive subdirectory** under `$WORK_DIR` (e.g. `$WORK_DIR/parse_Sent/`, `$WORK_DIR/parse_OLM/`). This prevents multiple mbox runs from overwriting each other.
 
 **For `.mbox` files/bundles:**
 ```bash
 python3 "$SCRIPTS_DIR/parse_mbox.py" \
   --mbox "$MBOX_PATH:$LABEL" \
   --owner "$EMAIL1" --owner "$EMAIL2" \
-  --out "$WORK_DIR"
+  --out "$WORK_DIR/parse_$LABEL"
 ```
 (Pass each owner address as a separate `--owner` flag. Derive `$LABEL` from the filename, e.g. `Sent`.)
 
@@ -62,19 +57,35 @@ python3 "$SCRIPTS_DIR/parse_olm.py" \
   --olm "$OLM_PATH" \
   --owner "$EMAIL1" --owner "$EMAIL2" \
   --folder "Sent Items" \
-  --out "$WORK_DIR"
+  --out "$WORK_DIR/parse_OLM"
 ```
 If an OLM parse runs but shows `sender filled: 0 / N`, this means the XML attribute lookup failed silently. **STOP and report** — do not merge corrupt data. Tell the user the OLM may be malformed and suggest re-exporting.
 
 ---
 
-## Step 4 — Merge all outputs
+## Step 3 — Merge all outputs
 
-Collect all per-format dataset files from `$WORK_DIR` (glob `*_dataset.json`; note that `parse_olm.py` writes `olm_dataset.json`, not `email_dataset.json`). Concatenate their JSON arrays and write the combined result to `$WORK_DIR/email_dataset.json`.
+Each parser wrote its output to a `$WORK_DIR/parse_*/` subdirectory. Collect and merge:
+
+```bash
+python3 -c "
+import json, glob, os
+parts = []
+for f in sorted(glob.glob('$WORK_DIR/parse_*/*_dataset.json')):
+    parts.extend(json.load(open(f)))
+if not parts:
+    print('ERROR: no rows to merge', flush=True)
+    raise SystemExit(1)
+json.dump(parts, open('$WORK_DIR/email_dataset.json', 'w'), ensure_ascii=False)
+print('Merged', len(parts), 'rows from', len(glob.glob('$WORK_DIR/parse_*')), 'source(s)')
+"
+```
+
+This glob only reads per-archive subdirectories, so reruns do not double-count the previous merged output.
 
 ---
 
-## Step 5 — Prove output (mandatory before reporting any number)
+## Step 4 — Prove output (mandatory before reporting any number)
 
 ```bash
 ls -la "$WORK_DIR"/*.json
@@ -91,7 +102,7 @@ If `email_dataset.json` does not exist or has 0 rows: **STOP**. Do not write the
 
 ---
 
-## Step 6 — Write output summary
+## Step 5 — Write output summary
 
 Write `$WORK_DIR/voice-parser-output.json`:
 

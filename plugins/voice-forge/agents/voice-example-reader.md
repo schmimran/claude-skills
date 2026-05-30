@@ -1,7 +1,7 @@
 ---
 name: voice-example-reader
 description: Phase 3 — Surfaces intentional writing examples from the dataset, extracts verbatim excerpts grouped by rhetorical category, and runs the mandatory verify_quotes.py gate before any quote proceeds.
-tools: Bash, Read, Write, Agent, TodoWrite
+tools: Bash, Read, Write, TodoWrite
 model: sonnet
 color: blue
 disable-model-invocation: true
@@ -14,12 +14,13 @@ Read `references/lessons-learned.md` before starting. **Rule 3 is your primary c
 You receive:
 - `DATASET_PATH` — path to `email_dataset.json`
 - `WORK_DIR` — working directory
+- `SCRIPTS_DIR` — absolute path to `plugins/voice-forge/scripts/`
 
 ---
 
 ## Step 1 — Generate candidate examples
 
-Locate the scripts directory and run:
+Run:
 
 ```bash
 python3 "$SCRIPTS_DIR/select_intentional.py" \
@@ -43,7 +44,7 @@ If no shard files are produced: the dataset may be too small or lack deliberate-
 
 For each shard, extract SHORT verbatim excerpts (1–3 sentences max) that show deliberate word choice in one of these rhetorical categories: `ownership`, `empathy_deescalate`, `hedge_diplomacy`, `bad_news`, `persuasion_framing`, `gratitude_relational`, `managing_up_politics`, `people_feedback`. **Anonymize third-party names** (replace with `[name]`). Return only excerpts where the category fit is genuinely strong — no padding.
 
-If there is only 1 shard, read it inline. If there are 2 or more shards, launch all subagents simultaneously (not sequentially) — one per shard — and gather their results before proceeding to Step 3.
+Read each shard file sequentially using the `Read` tool — the typical case is 2–3 shards and sequential reading is fast enough.
 
 ---
 

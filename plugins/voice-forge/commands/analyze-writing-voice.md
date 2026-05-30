@@ -28,6 +28,11 @@ After collecting:
 - Run `ls -la "$ARCHIVE_DIR"` to confirm the directory exists and contains files.
 - If the directory is empty, does not exist, or contains no recognizable archive formats (`.mbox`, `.olm`, `.pst`), stop and guide the user before continuing.
 - Create the working directory: `mkdir -p "$WORK_DIR"`
+- Resolve the scripts directory:
+  ```bash
+  SCRIPTS_DIR="$(find . -path "*/voice-forge/scripts" -type d 2>/dev/null | head -1)"
+  ```
+  If the result is empty, try an absolute search from the home directory. Confirm `$SCRIPTS_DIR/parse_mbox.py` exists before continuing.
 
 ---
 
@@ -37,6 +42,7 @@ Launch the `voice-parser` agent with:
 - `ARCHIVE_DIR` — the archive drop directory
 - `OWNER_EMAILS` — comma-separated list of the user's addresses
 - `WORK_DIR` — the working directory
+- `SCRIPTS_DIR` — the resolved scripts directory path
 
 **After the agent returns**, read `$WORK_DIR/voice-parser-output.json`. If the file is absent or `row_count` is 0: **STOP**. Tell the user that parsing produced no data, suggest re-checking the archive directory, and do not continue to Phase 2.
 
@@ -47,6 +53,7 @@ Launch the `voice-parser` agent with:
 Launch the `voice-analyst` agent with:
 - `DATASET_PATH` = `$WORK_DIR/email_dataset.json`
 - `WORK_DIR`
+- `SCRIPTS_DIR`
 
 ---
 
@@ -55,6 +62,7 @@ Launch the `voice-analyst` agent with:
 Launch the `voice-example-reader` agent with:
 - `DATASET_PATH` = `$WORK_DIR/email_dataset.json`
 - `WORK_DIR`
+- `SCRIPTS_DIR`
 
 **After the agent returns**, read `$WORK_DIR/voice-example-reader-status.json`. If `verify_gate_passed` is false: **STOP**. Report how many quotes failed verification and why, and tell the user that no findings doc will be written until all quotes are verified.
 

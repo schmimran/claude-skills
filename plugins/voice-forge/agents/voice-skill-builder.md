@@ -15,13 +15,16 @@ Read `references/lessons-learned.md` — Rule 5 (measured ≠ stated) determines
 You receive:
 - `FINDINGS_PATH` — path to the voice-findings markdown doc
 - `VOICE_MODE` — `measured`, `aspirational`, or `both-labeled`
-- `WORK_DIR` — output directory
+- `ANALYSIS_DIR` — original analysis working directory (may be empty if not available)
+- `WORK_DIR` — output directory for the skill
 
 ---
 
 ## Step 1 — Load inputs
 
-Read the findings doc at `$FINDINGS_PATH`, `$WORK_DIR/verified-quotes.json` (if present), `$WORK_DIR/voice-analyst-output.json` (if present), and `references/ghostwriting-skill-template.md`. If the findings doc is missing, stop and report.
+Read the findings doc at `$FINDINGS_PATH` and `references/ghostwriting-skill-template.md`. If the findings doc is missing, stop and report.
+
+If `ANALYSIS_DIR` is set, also read `$ANALYSIS_DIR/verified-quotes.json` (for verified examples) and `$ANALYSIS_DIR/voice-analyst-output.json` (for raw stats). If `ANALYSIS_DIR` is empty, the skill will be built from the findings doc alone — note this in the output.
 
 ---
 
@@ -67,7 +70,7 @@ Write `$WORK_DIR/voice-skill/SKILL.md` following `references/ghostwriting-skill-
 
 Write `$WORK_DIR/voice-skill/references/voice-examples.md`.
 
-Include only verified excerpts from `verified-quotes.json`. Group by rhetorical category. For each example:
+Include only verified excerpts from `$ANALYSIS_DIR/verified-quotes.json` (if `ANALYSIS_DIR` was provided). Group by rhetorical category. For each example:
 
 ```markdown
 ### [Category: e.g. Ownership]
@@ -75,7 +78,7 @@ Include only verified excerpts from `verified-quotes.json`. Group by rhetorical 
 > "[verbatim excerpt]"
 ```
 
-If `verified-quotes.json` is unavailable or empty, write the file with a note: "(No verified examples available. Run `/analyze-writing-voice` first to generate and verify examples.)"
+If no verified quotes are available, write the file with a note: "(No verified examples available. Re-run `/build-ghostwriting-skill` with your original analysis directory to populate this file.)"
 
 ---
 

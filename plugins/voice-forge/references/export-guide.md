@@ -20,11 +20,7 @@ Sent.mbox/          ← this is a directory
   mbox              ← this is the file you need
 ```
 
-When asked for the archive path, provide the path to the **inner `mbox` file**, not the outer bundle directory. Example:
-
-```
-/Users/you/Desktop/Sent.mbox/mbox
-```
+Drop the outer `Sent.mbox` bundle directory into your archive folder — voice-forge discovers the inner `mbox` file automatically. Do **not** pass the inner file path directly.
 
 To export multiple mailboxes (e.g. Sent + a sent archive), select all of them with Cmd-click before exporting. Each produces its own `.mbox` bundle. Drop all bundles into the archive directory — voice-forge will parse each one.
 

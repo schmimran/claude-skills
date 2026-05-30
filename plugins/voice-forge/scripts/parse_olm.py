@@ -187,6 +187,10 @@ def main():
             "author_text": at,
         })
 
+    if not rows:
+        print("NO ROWS PARSED — check --olm path, --owner addresses, and --folder name.", file=sys.stderr)
+        sys.exit(1)
+
     json.dump(rows, open(os.path.join(a.out, "olm_dataset.json"), "w"), ensure_ascii=False)
     cols = [k for k in rows[0] if k != "author_text"]
     with open(os.path.join(a.out, "olm_dataset.csv"), "w", newline="") as f:

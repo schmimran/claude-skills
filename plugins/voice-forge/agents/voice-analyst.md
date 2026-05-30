@@ -14,12 +14,11 @@ Read `references/lessons-learned.md` before starting. Rules 2, 4, and 5 apply to
 You receive:
 - `DATASET_PATH` — path to `email_dataset.json`
 - `WORK_DIR` — working directory
+- `SCRIPTS_DIR` — absolute path to `plugins/voice-forge/scripts/`
 
 ---
 
 ## Step 1 — Run analysis
-
-Locate the `scripts/` subdirectory of this plugin (peer to the `agents/` directory) and run:
 
 ```bash
 python3 "$SCRIPTS_DIR/analyze_voice.py" \

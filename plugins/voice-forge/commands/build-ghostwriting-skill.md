@@ -25,7 +25,9 @@ Ask the user the following before doing anything else:
    - `aspirational` — uses habits the user wants to cultivate (user must describe them)
    - `both-labeled` — includes both, clearly labeled so Claude can distinguish
 
-4. **Work directory** — where to write the output. Default: same directory as the findings doc. Offer to let the user override.
+4. **Original analysis directory** (optional) — "If you still have the working directory from your original `/analyze-writing-voice` run (e.g. `~/voice-forge-work/2026-05-30`), provide the path. It contains your verified quotes and stats, which make the skill more detailed. Leave blank to skip."
+
+5. **Output directory** — where to write the skill. Default: same directory as the findings doc. Offer to let the user override.
 
 ---
 
@@ -34,6 +36,7 @@ Ask the user the following before doing anything else:
 Launch the `voice-skill-builder` agent with:
 - `FINDINGS_PATH` — confirmed path to the findings doc
 - `VOICE_MODE` — `measured`, `aspirational`, or `both-labeled`
+- `ANALYSIS_DIR` — original analysis working directory (may be empty if not provided)
 - `WORK_DIR` — output directory
 
 After the agent completes, tell the user:

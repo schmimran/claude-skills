@@ -113,6 +113,31 @@ plugins/
       bug-issue-template.md       # GitHub Issue body format with `<!-- claude-bug-sweeper-v1 -->` marker
       headless-mode.md            # What changes when `--headless` is passed (no plan mode, no AskUserQuestion)
     README.md                     # Plugin-specific documentation
+  voice-forge/                    # Plugin: sent-mail voice analysis + personalized ghostwriting skill generator
+    .claude-plugin/
+      plugin.json                 # Plugin manifest
+    commands/
+      analyze-writing-voice.md    # Workflow 1: guide export → parse → analyze → verify quotes → findings doc
+      build-ghostwriting-skill.md # Workflow 2: confirm-first → synthesize SKILL.md from findings
+    agents/
+      voice-parser.md             # Phase 1: discover archive formats, run parsers, merge, prove output
+      voice-analyst.md            # Phase 2: run analyze_voice.py, interpret stats, write analyst JSON
+      voice-example-reader.md     # Phase 3: select intentional examples, fan-out shard reading, verify quotes gate
+      voice-findings-writer.md    # Phase 4: assemble findings doc from verified stats + quotes only
+      voice-skill-builder.md      # Workflow 2: synthesize SKILL.md + voice-examples.md from findings
+    references/
+      lessons-learned.md          # 6 hard-won guardrails (export-first, prove-recount, verify-quotes, etc.)
+      export-guide.md             # Step-by-step export instructions for Apple Mail, Outlook, Thunderbird, PST
+      dataset-schema.md           # Field definitions for the JSON emitted by parsers; greeting/signoff enums
+      findings-template.md        # Required structure for the voice findings markdown doc
+      ghostwriting-skill-template.md # Required structure for the generated SKILL.md
+    scripts/
+      parse_mbox.py               # Apple Mail / Thunderbird .mbox → normalized dataset (stdlib only)
+      parse_olm.py                # Outlook-for-Mac .olm (streamed, attachments skipped) → dataset
+      analyze_voice.py            # Dataset → aggregate voice stats (results.txt)
+      select_intentional.py       # Dataset → sharded candidate emails for careful reading
+      verify_quotes.py            # Gate: confirms every quote exists verbatim in the dataset
+    README.md                     # Plugin-specific documentation
 ```
 
 Each plugin lives under `plugins/<name>/` and is independently installable. Plugins use the **commands + agents** pattern: commands are user-invocable orchestrators, agents are specialized workers launched by commands.

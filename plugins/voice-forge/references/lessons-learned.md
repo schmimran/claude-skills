@@ -76,3 +76,16 @@ OLM files can be 10 GB or more. The bundled `parse_olm.py` already streams entri
 For mbox files: `mailbox.mbox()` is lazy and does not load the full file at once.
 
 If a user provides an unusually large archive (> 1 GB), remind them that parsing sent-only mail is the right scope. Parsing an entire inbox will be slow and produce off-voice signal from received mail.
+
+---
+
+## Rule 7 — Run only in a Cowork/Claude Desktop session; resolve plugin paths from `/sessions`
+
+`/analyze-writing-voice` depends on two things that only exist inside a Cowork or
+Claude Desktop session: the mounted plugin directory (so the bundled scripts and
+references are reachable) and an attached exports folder under `/sessions` (so
+there is mail to parse).
+
+- Resolve `SCRIPTS_DIR` and `PLUGIN_REFS_DIR` with `find /sessions -path "*/voice-forge/scripts"` (and `.../references`), not `find .`. The old `find .` lookup resolved against the agent's working directory, which is not the mounted plugin dir in the sandbox — it silently returned nothing.
+- **Fast-fail**: if either path is empty or its sentinel file (`parse_mbox.py`, `lessons-learned.md`) is missing, stop immediately with a clear message that the command requires a Cowork/Claude Desktop session. Do not fall back to scanning the whole filesystem.
+- Pass both `SCRIPTS_DIR` and `PLUGIN_REFS_DIR` explicitly to every agent. Inside agent Bash/Read calls, use `$SCRIPTS_DIR` / `$PLUGIN_REFS_DIR`. Instruction prose may still refer to `references/...` by name — that prose is injected from the mounted plugin dir at invocation time.

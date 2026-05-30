@@ -14,7 +14,12 @@ Read `references/lessons-learned.md` before starting. Rules 2, 4, and 5 apply to
 You receive:
 - `DATASET_PATH` — path to `email_dataset.json`
 - `WORK_DIR` — working directory
-- `SCRIPTS_DIR` — absolute path to `plugins/voice-forge/scripts/`
+- `SCRIPTS_DIR` — absolute path to the mounted `voice-forge/scripts/` directory
+- `PLUGIN_REFS_DIR` — absolute path to the mounted `voice-forge/references/` directory
+
+<!-- Use $SCRIPTS_DIR / $PLUGIN_REFS_DIR only in Bash/Read calls. Instruction
+     prose (injected from the mounted plugin dir at invocation) refers to
+     references/... by name. -->
 
 ---
 

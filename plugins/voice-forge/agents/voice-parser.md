@@ -15,7 +15,13 @@ You receive:
 - `ARCHIVE_DIR` — directory containing one or more archive files
 - `OWNER_EMAILS` — comma-separated list of the user's email addresses
 - `WORK_DIR` — output directory (already created)
-- `SCRIPTS_DIR` — absolute path to `plugins/voice-forge/scripts/`
+- `SCRIPTS_DIR` — absolute path to the mounted `voice-forge/scripts/` directory
+- `PLUGIN_REFS_DIR` — absolute path to the mounted `voice-forge/references/` directory
+
+<!-- Use $SCRIPTS_DIR / $PLUGIN_REFS_DIR only in Bash/Read calls. Instruction
+     prose (injected from the mounted plugin dir at invocation) refers to
+     references/... by name. -->
+Read `$PLUGIN_REFS_DIR/lessons-learned.md` before starting (the prose reference above resolves to this same file).
 
 ---
 

@@ -15,6 +15,10 @@ Read `references/lessons-learned.md` before writing — the caveats in rules 4 a
 You receive:
 - `WORK_DIR` — working directory containing all intermediate outputs
 - `SAVE_PATH` — where to write the findings doc
+- `PLUGIN_REFS_DIR` — absolute path to the mounted `voice-forge/references/` directory
+
+<!-- Use $PLUGIN_REFS_DIR only in Read calls. Instruction prose (injected from
+     the mounted plugin dir at invocation) refers to references/... by name. -->
 
 ---
 
@@ -26,7 +30,7 @@ Read each of these files before writing:
 - `$WORK_DIR/verified-quotes.json` — verified example excerpts
 - `$WORK_DIR/voice-parser-output.json` — data provenance (sources, row count, date range)
 - `$WORK_DIR/results.txt` — raw stats output (for any numbers not in the analyst JSON)
-- `references/findings-template.md` — structure to follow
+- `$PLUGIN_REFS_DIR/findings-template.md` — structure to follow
 
 If any of these files is missing, STOP and report which file is absent before writing anything.
 

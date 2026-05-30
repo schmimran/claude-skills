@@ -15,7 +15,8 @@ You receive:
 - `ARCHIVE_DIR` — directory containing one or more archive files
 - `OWNER_EMAILS` — comma-separated list of the user's email addresses
 - `WORK_DIR` — output directory (already created)
-- `SCRIPTS_DIR` — absolute path to `plugins/voice-forge/scripts/`
+- `SCRIPTS_DIR` — absolute path to the mounted `voice-forge/scripts/` directory
+- `PLUGIN_REFS_DIR` — absolute path to the mounted `voice-forge/references/` directory
 
 ---
 

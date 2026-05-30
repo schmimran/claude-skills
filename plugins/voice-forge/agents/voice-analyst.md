@@ -17,10 +17,6 @@ You receive:
 - `SCRIPTS_DIR` — absolute path to the mounted `voice-forge/scripts/` directory
 - `PLUGIN_REFS_DIR` — absolute path to the mounted `voice-forge/references/` directory
 
-<!-- Use $SCRIPTS_DIR / $PLUGIN_REFS_DIR only in Bash/Read calls. Instruction
-     prose (injected from the mounted plugin dir at invocation) refers to
-     references/... by name. -->
-
 ---
 
 ## Step 1 — Run analysis

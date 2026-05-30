@@ -22,8 +22,9 @@ Resolve the scripts and references directories from the mounted plugin under
 `/sessions`. Both lookups must succeed before anything else runs:
 
 ```bash
-SCRIPTS_DIR="$(find /sessions -path "*/voice-forge/scripts" -type d 2>/dev/null | head -1)"
-PLUGIN_REFS_DIR="$(find /sessions -path "*/voice-forge/references" -type d 2>/dev/null | head -1)"
+_VF_ROOT="$(find /sessions -type d -name voice-forge 2>/dev/null | head -1)"
+SCRIPTS_DIR="$_VF_ROOT/scripts"
+PLUGIN_REFS_DIR="$_VF_ROOT/references"
 
 if [ -z "$SCRIPTS_DIR" ] || [ ! -f "$SCRIPTS_DIR/parse_mbox.py" ]; then
   echo "ERROR: could not locate voice-forge scripts under /sessions."
@@ -64,16 +65,9 @@ Scan the attached session folder(s) under `/sessions` for recognizable archive
 files and derive the inputs automatically — do not prompt for the path:
 
 ```bash
-ATTACHED_DIR="$(find /sessions -maxdepth 4 -type d \
-  \( -iname '*.mbox' -o -name '*' \) 2>/dev/null \
-  | xargs -I{} sh -c 'ls "{}"/*.olm "{}"/*.mbox 2>/dev/null | head -1 >/dev/null 2>&1 && echo "{}"' \
-  | head -1)"
-
-# Fallback: locate the directory that directly contains any archive file.
-if [ -z "$ATTACHED_DIR" ]; then
-  ATTACHED_DIR="$(find /sessions -type f \( -iname '*.olm' -o -iname '*.mbox' \) 2>/dev/null \
-    | head -1 | xargs -r dirname)"
-fi
+# Locate the directory containing any archive file.
+ATTACHED_DIR="$(find /sessions -type f \( -iname '*.olm' -o -iname '*.mbox' \) 2>/dev/null \
+  | head -1 | xargs -r dirname)"
 # Apple Mail bundles are directories named *.mbox — also detect those.
 if [ -z "$ATTACHED_DIR" ]; then
   ATTACHED_DIR="$(find /sessions -type d -iname '*.mbox' 2>/dev/null \

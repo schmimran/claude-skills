@@ -17,9 +17,6 @@ You receive:
 - `SAVE_PATH` — where to write the findings doc
 - `PLUGIN_REFS_DIR` — absolute path to the mounted `voice-forge/references/` directory
 
-<!-- Use $PLUGIN_REFS_DIR only in Read calls. Instruction prose (injected from
-     the mounted plugin dir at invocation) refers to references/... by name. -->
-
 ---
 
 ## Step 1 — Load all inputs

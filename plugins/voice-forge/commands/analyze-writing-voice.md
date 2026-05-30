@@ -26,7 +26,7 @@ _VF_ROOT="$(find /sessions -type d -name voice-forge 2>/dev/null | head -1)"
 SCRIPTS_DIR="$_VF_ROOT/scripts"
 PLUGIN_REFS_DIR="$_VF_ROOT/references"
 
-if [ -z "$SCRIPTS_DIR" ] || [ ! -f "$SCRIPTS_DIR/parse_mbox.py" ]; then
+if [ -z "$_VF_ROOT" ] || [ ! -f "$SCRIPTS_DIR/parse_mbox.py" ]; then
   echo "ERROR: could not locate voice-forge scripts under /sessions."
   echo "This command runs only in a Cowork or Claude Desktop session where the"
   echo "voice-forge plugin is mounted. Aborting."

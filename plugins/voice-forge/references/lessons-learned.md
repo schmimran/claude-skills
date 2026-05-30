@@ -86,6 +86,6 @@ Claude Desktop session: the mounted plugin directory (so the bundled scripts and
 references are reachable) and an attached exports folder under `/sessions` (so
 there is mail to parse).
 
-- Resolve `SCRIPTS_DIR` and `PLUGIN_REFS_DIR` with `find /sessions -path "*/voice-forge/scripts"` (and `.../references`), not `find .`. The old `find .` lookup resolved against the agent's working directory, which is not the mounted plugin dir in the sandbox — it silently returned nothing.
+- Resolve both paths by finding the plugin root once (`find /sessions -type d -name voice-forge | head -1`), then deriving `SCRIPTS_DIR="$ROOT/scripts"` and `PLUGIN_REFS_DIR="$ROOT/references"`. Do not use `find .` — that resolves against the agent's working directory, which is not the mounted plugin dir in the sandbox.
 - **Fast-fail**: if either path is empty or its sentinel file (`parse_mbox.py`, `lessons-learned.md`) is missing, stop immediately with a clear message that the command requires a Cowork/Claude Desktop session. Do not fall back to scanning the whole filesystem.
 - Pass both `SCRIPTS_DIR` and `PLUGIN_REFS_DIR` explicitly to every agent. Inside agent Bash/Read calls, use `$SCRIPTS_DIR` / `$PLUGIN_REFS_DIR`. Instruction prose may still refer to `references/...` by name — that prose is injected from the mounted plugin dir at invocation time.

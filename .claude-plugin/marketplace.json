@@ -39,6 +39,15 @@
       "author": {
         "name": "schmimran"
       }
+    },
+    {
+      "name": "voice-forge",
+      "source": "./plugins/voice-forge",
+      "description": "Analyze a sent-mail export to produce a data-driven written voice profile, then optionally generate a personalized ghostwriting skill.",
+      "version": "0.1.0",
+      "author": {
+        "name": "schmimran"
+      }
     }
   ]
 }

@@ -1,5 +1,10 @@
 # Merge Checklist
 
+> **`<INTEGRATION_BRANCH>` placeholder**: wherever this file shows
+> `<INTEGRATION_BRANCH>`, substitute the actual integration branch name
+> (e.g. `stage`, `develop`) from the `Integration branch:` value in your
+> prompt before executing any command.
+
 Follow these steps in order after implementation and verification pass.
 
 ## 1. Simplify

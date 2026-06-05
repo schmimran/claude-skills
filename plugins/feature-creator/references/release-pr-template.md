@@ -17,6 +17,10 @@ successfully-merged issue from Phase 4 (across both types) appears in the
 `Closes` section. Missing entries must fail the pre-flight check and block PR
 creation.
 
+The orchestrator substitutes `<INTEGRATION_BRANCH>` in the template body below
+with the detected integration branch value before writing to
+`/tmp/release-pr-body.md`.
+
 ---
 
 ```markdown

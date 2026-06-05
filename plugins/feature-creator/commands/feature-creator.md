@@ -60,6 +60,11 @@ after the plan is posted.
    - If neither works, stop and ask the user for the repository.
    - Note whether `--auto-merge` was passed — this controls Phase 5 behavior.
    - Note the value of `--integration-branch` if provided — it overrides CLAUDE.md detection in step 4.
+   - Capture the repo's default branch now (reused in step 4 as `RELEASE_TARGET`):
+     ```
+     DEFAULT_BRANCH=$(gh repo view <OWNER/REPO> --json defaultBranchRef -q .defaultBranchRef.name)
+     ```
+     Record `DEFAULT_BRANCH` as a pipeline-scoped variable.
 
 3. Verify required labels exist on the repo:
    ```
@@ -79,10 +84,11 @@ after the plan is posted.
 
 4. Detect the branching configuration for the target repository. Record
    `INTEGRATION_BRANCH` and `RELEASE_TARGET` as pipeline-scoped variables —
-   pass them to all downstream phases that need them.
+   pass them to all downstream phases that need them. `RELEASE_TARGET` is
+   always `DEFAULT_BRANCH` (captured in step 2).
 
-   If `--integration-branch <name>` was provided in `$ARGUMENTS`, use that
-   value as `INTEGRATION_BRANCH` and skip the CLAUDE.md parse. Otherwise:
+   If `--integration-branch <name>` was provided, use that value directly.
+   Otherwise parse from CLAUDE.md:
 
    ```bash
    # Fetch target repo's CLAUDE.md (silently skip if absent)
@@ -93,12 +99,14 @@ after the plan is posted.
    INTEGRATION_BRANCH=$(printf '%s' "$CLAUDE_MD" \
      | sed -nE 's/.*rooted at `([^`]+)`.*/\1/p' | head -1)
 
-   # Default branch (used for fallback and release target)
-   DEFAULT_BRANCH=$(gh repo view <OWNER/REPO> --json defaultBranchRef -q .defaultBranchRef.name)
-
+   # Error if no pattern found and no --integration-branch override was given
    if [ -z "$INTEGRATION_BRANCH" ]; then
-     INTEGRATION_BRANCH="$DEFAULT_BRANCH"
+     echo "ERROR: Could not detect an integration branch from CLAUDE.md (looked for 'rooted at \`<branch>\`')."
+     echo "       Add the pattern to your CLAUDE.md Branching section (e.g. 'One branch per change rooted at \`stage\`')"
+     echo "       or pass --integration-branch <name> to specify the branch explicitly."
+     exit 1
    fi
+
    RELEASE_TARGET="$DEFAULT_BRANCH"
 
    echo "Integration branch: ${INTEGRATION_BRANCH}"
@@ -110,9 +118,9 @@ after the plan is posted.
      exit 1
    fi
 
-   # Guard: two-tier branching model required
+   # Guard: integration branch must differ from the default branch
    if [ "$INTEGRATION_BRANCH" = "$RELEASE_TARGET" ]; then
-     echo "ERROR: INTEGRATION_BRANCH and RELEASE_TARGET are both '${INTEGRATION_BRANCH}' — feature-creator requires a two-tier branching model (integration branch ≠ default branch). Use --integration-branch <name> to specify a non-default integration branch."
+     echo "ERROR: integration branch '${INTEGRATION_BRANCH}' is the same as the default branch '${RELEASE_TARGET}'. feature-creator requires a two-tier model (integration branch ≠ default branch)."
      exit 1
    fi
    ```
@@ -315,7 +323,9 @@ rely on GitHub's closing keywords.
 
 Construct the release PR body using the template in
 `references/release-pr-template.md` (read that file for the exact format).
-Populate it from the Phase 4 output:
+Substitute `<INTEGRATION_BRANCH>` in the template body with the detected
+`INTEGRATION_BRANCH` value before writing to `/tmp/release-pr-body.md`.
+Populate from the Phase 4 output:
 
 - The **Summary** section lists one line per successfully-merged PR,
   including PR number, type marker (`feat` or `fix`), title, and issue

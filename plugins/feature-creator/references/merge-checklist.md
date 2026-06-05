@@ -91,11 +91,6 @@ PR_EOF
 gh pr create --repo <OWNER/REPO> --title "<TITLE>" --body-file /tmp/pr-body-<N>.md --base <INTEGRATION_BRANCH>
 ```
 
-`<INTEGRATION_BRANCH>` is the integration branch detected by the orchestrator
-and passed to the implementer via `Integration branch: <name>` in the prompt —
-substitute the actual branch name (e.g. `stage`, `develop`) wherever this
-placeholder appears.
-
 ## 6. Code Review
 
 Run `/code-review` (a built-in Claude Code skill) on the PR. This checks for:

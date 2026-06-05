@@ -1,7 +1,7 @@
 ---
 name: feature-creator
 description: End-to-end pipeline — plans, reviews, and implements GitHub issues labeled `feature - ready for claude` or `bug - ready for claude`
-argument-hint: "[repo-owner/repo-name] [--auto-merge]"
+argument-hint: "[repo-owner/repo-name] [--auto-merge] [--integration-branch <name>]"
 disable-model-invocation: true
 ---
 
@@ -104,6 +104,12 @@ after the plan is posted.
      echo "ERROR: Could not detect an integration branch from CLAUDE.md (looked for 'rooted at \`<branch>\`')."
      echo "       Add the pattern to your CLAUDE.md Branching section (e.g. 'One branch per change rooted at \`stage\`')"
      echo "       or pass --integration-branch <name> to specify the branch explicitly."
+     exit 1
+   fi
+
+   # Guard: branch name must contain only safe characters
+   if ! echo "$INTEGRATION_BRANCH" | grep -qE '^[a-zA-Z0-9._/-]+$'; then
+     echo "ERROR: detected integration branch '${INTEGRATION_BRANCH}' contains unsafe characters — halting"
      exit 1
    fi
 

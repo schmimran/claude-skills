@@ -60,8 +60,9 @@ Automates feature development and bug remediation end-to-end. Point it at a GitH
 3. **Branching convention**: The pipeline detects the integration branch (where
    feature/fix branches are based) from the target repo's CLAUDE.md by looking
    for the pattern `` rooted at `<branch>` `` in the Branching section. If no
-   match is found, it falls back to the repo's default branch. The release PR
-   always targets the repo's default branch. To override detection, pass
+   match is found, the pipeline halts with an error and instructions to either
+   add the pattern or use `--integration-branch`. The release PR always targets
+   the repo's default branch. To override CLAUDE.md detection, pass
    `--integration-branch <name>`:
    ```
    /feature-creator owner/repo --integration-branch develop

@@ -57,6 +57,19 @@ Automates feature development and bug remediation end-to-end. Point it at a GitH
 
 2. **Labels** must exist on the target repository (see step 2 in Quick Start above).
 
+3. **Branching convention**: The pipeline detects the integration branch (where
+   feature/fix branches are based) from the target repo's CLAUDE.md by looking
+   for the pattern `` rooted at `<branch>` `` in the Branching section. If no
+   match is found, the pipeline halts with an error and instructions to either
+   add the pattern or use `--integration-branch`. The release PR always targets
+   the repo's default branch. To override CLAUDE.md detection, pass
+   `--integration-branch <name>`:
+   ```
+   /feature-creator owner/repo --integration-branch develop
+   ```
+   The plugin requires a two-tier branching model (integration branch ≠ default
+   branch). If both resolve to the same branch, the pipeline halts with an error.
+
 ## Architecture
 
 | Component | Type | Model | Role |
@@ -121,7 +134,7 @@ The pipeline moves through six phases, 0 through 5.
 
 **Phase 4 — Implementation**: The implementer agent works through approved features one at a time. For each: it creates a branch, writes the code, runs tests (with up to 3 retry attempts), follows the merge checklist (`/simplify` + `/code-review`), and opens a PR.
 
-**Phase 5 — Merge and Cleanup**: Feature PRs are merged in implementation order. The release branch PR is created linking all features. By default, the pipeline pauses here for your confirmation before merging the release branch. Pass `--auto-merge` to skip the pause. After merge, it deletes all feature branches (local and remote), pulls main, and removes any worktree.
+**Phase 5 — Merge and Cleanup**: Feature PRs are merged in implementation order. The release branch PR is created linking all features. By default, the pipeline pauses here for your confirmation before merging the release branch. Pass `--auto-merge` to skip the pause. After merge, it deletes all feature branches (local and remote), pulls the default branch, and removes any worktree.
 
 ### Label Lifecycles
 
@@ -164,7 +177,7 @@ ready for claude  -->  triaged  -->  planned  -->  in progress  -->  complete
 
 ## Pausing Before Merge
 
-By default, the pipeline pauses after merging all feature PRs and creating the release branch PR. It prints the release PR link and asks for your confirmation before merging. This gives you a final review opportunity before the changes land on main.
+By default, the pipeline pauses after merging all feature PRs and creating the release branch PR. It prints the release PR link and asks for your confirmation before merging. This gives you a final review opportunity before the changes land on the default branch.
 
 To skip the pause and run the full pipeline end-to-end without stopping, pass `--auto-merge`:
 

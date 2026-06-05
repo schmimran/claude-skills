@@ -21,7 +21,11 @@ The branch prefix and conventional commit type vary by issue type:
 | Feature | `feature/` | `feat:` |
 | Bug | `fix/` | `fix:` |
 
-Both types branch from `stage` (single base; never stack).
+Both types branch from `<INTEGRATION_BRANCH>` (single base; never stack).
+
+Your prompt includes `Integration branch: <name>` — read that value and
+substitute it wherever you see `<INTEGRATION_BRANCH>` in these instructions
+and in the reference files you consult (merge-checklist, etc.).
 
 ## Prerequisites
 
@@ -84,23 +88,24 @@ gate in Step 2d.
 
 Process features **sequentially**, one at a time. For each feature:
 
-### 2a. Create Branch (flat-branch from stage — hard-coded)
+### 2a. Create Branch (flat-branch from `<INTEGRATION_BRANCH>`)
 
 **Never branch off another `feature/*` branch.** Every feature branch must be a
-flat branch rooted at `stage`. This is not a judgment call — it is a hard-coded
-first action. Stacking feature branches caused silent conflicts on prior runs.
+flat branch rooted at `<INTEGRATION_BRANCH>`. This is not a judgment call — it
+is a hard-coded first action. Stacking feature branches caused silent conflicts
+on prior runs.
 
-First, check out `stage` and pull:
+First, check out `<INTEGRATION_BRANCH>` and pull:
 ```
-git checkout stage && git pull origin stage
+git checkout <INTEGRATION_BRANCH> && git pull origin <INTEGRATION_BRANCH>
 ```
 
-Then verify the current branch is exactly `stage` before creating the feature
-branch. If it is not, abort this feature immediately:
+Then verify the current branch is exactly `<INTEGRATION_BRANCH>` before
+creating the feature branch. If it is not, abort this feature immediately:
 ```
 CURRENT=$(git branch --show-current)
-if [ "$CURRENT" != "stage" ]; then
-  echo "ERROR: expected stage, got $CURRENT — aborting feature #<NUMBER>"
+if [ "$CURRENT" != "<INTEGRATION_BRANCH>" ]; then
+  echo "ERROR: expected <INTEGRATION_BRANCH>, got $CURRENT — aborting feature #<NUMBER>"
   # go to Error Recovery, label the issue "feature - human review"
   exit 1
 fi
@@ -182,7 +187,7 @@ Extract the "Affected Files" list from the plan (saved in `/tmp/plan-<N>.md`)
 and for every file whose action is `Create` or `Modify`, run:
 
 ```
-git diff origin/stage -- <planned-file>
+git diff origin/<INTEGRATION_BRANCH> -- <planned-file>
 ```
 
 For every planned `Create`/`Modify` file, confirm the diff is **non-empty**. If
@@ -190,7 +195,7 @@ any planned file shows an empty diff, conflict resolution silently dropped the
 feature's changes. Do not push. Go to **Error Recovery** with an error message
 identifying which planned file lost its changes.
 
-Deleted files should be verified with `git log origin/stage..HEAD -- <file>`
+Deleted files should be verified with `git log origin/<INTEGRATION_BRANCH>..HEAD -- <file>`
 showing a deletion commit.
 
 ### 2e. Follow Merge Checklist
@@ -224,19 +229,19 @@ gh issue edit <NUMBER> --repo <OWNER/REPO> \
   --remove-label "bug - in progress" --add-label "bug - complete"
 ```
 
-### 2g. Return to stage
+### 2g. Return to `<INTEGRATION_BRANCH>`
 
 ```
-git checkout stage
+git checkout <INTEGRATION_BRANCH>
 ```
 
 ## Step 3: Create Release Branch
 
 After all features are implemented, create and push the release branch from
-`stage`:
+`<INTEGRATION_BRANCH>`:
 
 ```
-git checkout stage && git pull origin stage
+git checkout <INTEGRATION_BRANCH> && git pull origin <INTEGRATION_BRANCH>
 git checkout -b release/<YYYY-MM-DD>
 git push origin release/<YYYY-MM-DD>
 ```
@@ -277,7 +282,7 @@ fails:
 
 3. Clean up the local branch (use the prefix that was created in 2a):
    ```
-   git checkout stage
+   git checkout <INTEGRATION_BRANCH>
    git branch -D feature/<NUMBER>-<SLUG>   # or fix/<NUMBER>-<SLUG> for bugs
    ```
 

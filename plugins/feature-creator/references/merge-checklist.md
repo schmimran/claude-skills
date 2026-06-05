@@ -1,5 +1,10 @@
 # Merge Checklist
 
+> **`<INTEGRATION_BRANCH>` placeholder**: wherever this file shows
+> `<INTEGRATION_BRANCH>`, substitute the actual integration branch name
+> (e.g. `stage`, `develop`) from the `Integration branch:` value in your
+> prompt before executing any command.
+
 Follow these steps in order after implementation and verification pass.
 
 ## 1. Simplify
@@ -57,7 +62,7 @@ For every file listed as `Create` or `Modify` in the plan's "Affected Files"
 table, run:
 
 ```
-git diff origin/stage -- <planned-file>
+git diff origin/<INTEGRATION_BRANCH> -- <planned-file>
 ```
 
 Every planned `Create`/`Modify` file must show a non-empty diff. If any planned
@@ -83,7 +88,7 @@ injection and cross-feature collisions:
 cat > /tmp/pr-body-<N>.md << 'PR_EOF'
 <BODY>
 PR_EOF
-gh pr create --repo <OWNER/REPO> --title "<TITLE>" --body-file /tmp/pr-body-<N>.md --base stage
+gh pr create --repo <OWNER/REPO> --title "<TITLE>" --body-file /tmp/pr-body-<N>.md --base <INTEGRATION_BRANCH>
 ```
 
 ## 6. Code Review

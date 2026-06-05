@@ -35,6 +35,12 @@ and future archaeologists can understand the fix without opening the issue.>
 ## Related Issue
 
 Closes #<ISSUE_NUMBER>
+<!--
+Note: GitHub only auto-closes issues on merges to the default branch.
+Individual feature/bug PRs target the integration branch, so this Closes
+line is informational here — the release PR is responsible for actual issue
+closure when it merges into the default branch.
+-->
 
 ---
 *Automated by feature-implementer*

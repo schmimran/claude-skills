@@ -57,7 +57,7 @@ For every file listed as `Create` or `Modify` in the plan's "Affected Files"
 table, run:
 
 ```
-git diff origin/stage -- <planned-file>
+git diff origin/<INTEGRATION_BRANCH> -- <planned-file>
 ```
 
 Every planned `Create`/`Modify` file must show a non-empty diff. If any planned
@@ -83,8 +83,13 @@ injection and cross-feature collisions:
 cat > /tmp/pr-body-<N>.md << 'PR_EOF'
 <BODY>
 PR_EOF
-gh pr create --repo <OWNER/REPO> --title "<TITLE>" --body-file /tmp/pr-body-<N>.md --base stage
+gh pr create --repo <OWNER/REPO> --title "<TITLE>" --body-file /tmp/pr-body-<N>.md --base <INTEGRATION_BRANCH>
 ```
+
+`<INTEGRATION_BRANCH>` is the integration branch detected by the orchestrator
+and passed to the implementer via `Integration branch: <name>` in the prompt —
+substitute the actual branch name (e.g. `stage`, `develop`) wherever this
+placeholder appears.
 
 ## 6. Code Review
 

@@ -5,12 +5,12 @@ Use this template to construct the release PR body. The orchestrator
 Phase 4 implementation output.
 
 The **`Closes` section is required**. GitHub only auto-closes issues when a PR
-merges into the repository's default branch (`main`). Feature and bug-fix PRs
-merge into `stage`, so per-issue auto-close does not fire there. The release
-PR is the only merge into `main`, so every feature **and bug** issue that
-landed in this release must appear as a `Closes #<N>` line in this body —
-otherwise the issues will remain open after the release merges and require
-manual cleanup.
+merges into the repository's default branch. Feature and bug-fix PRs
+merge into `<INTEGRATION_BRANCH>`, so per-issue auto-close does not fire there.
+The release PR is the only merge into the default branch, so every feature
+**and bug** issue that landed in this release must appear as a `Closes #<N>`
+line in this body — otherwise the issues will remain open after the release
+merges and require manual cleanup.
 
 Before calling `gh pr create`, the orchestrator must confirm that every
 successfully-merged issue from Phase 4 (across both types) appears in the
@@ -24,7 +24,7 @@ creation.
 
 ## Summary
 
-This release bundles the following PRs merged into `stage`:
+This release bundles the following PRs merged into `<INTEGRATION_BRANCH>`:
 
 ### Features
 

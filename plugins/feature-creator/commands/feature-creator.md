@@ -55,10 +55,11 @@ after the plan is posted.
    If not authenticated, stop and tell the user to run `gh auth login`.
 
 2. Resolve the target repository and flags:
-   - Parse `$ARGUMENTS`: extract `OWNER/REPO` and check for the `--auto-merge` flag.
+   - Parse `$ARGUMENTS`: extract `OWNER/REPO`, check for the `--auto-merge` flag, and check for `--integration-branch <name>`.
    - If no `OWNER/REPO` is given, detect from the current directory: `gh repo view --json nameWithOwner -q .nameWithOwner`
    - If neither works, stop and ask the user for the repository.
    - Note whether `--auto-merge` was passed — this controls Phase 5 behavior.
+   - Note the value of `--integration-branch` if provided — it overrides CLAUDE.md detection in step 4.
 
 3. Verify required labels exist on the repo:
    ```
@@ -75,6 +76,46 @@ after the plan is posted.
 
    If any are missing, print the `gh label create` commands from the plugin
    README and stop.
+
+4. Detect the branching configuration for the target repository. Record
+   `INTEGRATION_BRANCH` and `RELEASE_TARGET` as pipeline-scoped variables —
+   pass them to all downstream phases that need them.
+
+   If `--integration-branch <name>` was provided in `$ARGUMENTS`, use that
+   value as `INTEGRATION_BRANCH` and skip the CLAUDE.md parse. Otherwise:
+
+   ```bash
+   # Fetch target repo's CLAUDE.md (silently skip if absent)
+   CLAUDE_MD=$(gh api repos/<OWNER/REPO>/contents/CLAUDE.md --jq '.content' 2>/dev/null \
+     | tr -d '\n' | base64 --decode 2>/dev/null || echo "")
+
+   # Extract integration branch from "rooted at `<branch>`" pattern (BSD/GNU-safe)
+   INTEGRATION_BRANCH=$(printf '%s' "$CLAUDE_MD" \
+     | sed -nE 's/.*rooted at `([^`]+)`.*/\1/p' | head -1)
+
+   # Default branch (used for fallback and release target)
+   DEFAULT_BRANCH=$(gh repo view <OWNER/REPO> --json defaultBranchRef -q .defaultBranchRef.name)
+
+   if [ -z "$INTEGRATION_BRANCH" ]; then
+     INTEGRATION_BRANCH="$DEFAULT_BRANCH"
+   fi
+   RELEASE_TARGET="$DEFAULT_BRANCH"
+
+   echo "Integration branch: ${INTEGRATION_BRANCH}"
+   echo "Release target: ${RELEASE_TARGET}"
+
+   # Guard: verify integration branch exists on remote
+   if ! git ls-remote --heads origin "$INTEGRATION_BRANCH" | grep -q "$INTEGRATION_BRANCH"; then
+     echo "ERROR: integration branch '${INTEGRATION_BRANCH}' not found on remote — halting"
+     exit 1
+   fi
+
+   # Guard: two-tier branching model required
+   if [ "$INTEGRATION_BRANCH" = "$RELEASE_TARGET" ]; then
+     echo "ERROR: INTEGRATION_BRANCH and RELEASE_TARGET are both '${INTEGRATION_BRANCH}' — feature-creator requires a two-tier branching model (integration branch ≠ default branch). Use --integration-branch <name> to specify a non-default integration branch."
+     exit 1
+   fi
+   ```
 
 ## Phase 0: Triage
 
@@ -229,6 +270,7 @@ Wait for the agent to complete. Check its output:
 Use the Agent tool to launch the feature-implementer agent with the following prompt:
 
 > You are the feature-implementer. Target repository: <OWNER/REPO>
+> Integration branch: <INTEGRATION_BRANCH>
 
 Wait for the agent to complete. Collect its output:
 - Record each PR number alongside its issue type (feature or bug) and the
@@ -264,7 +306,7 @@ to the **type-appropriate** human-review label, and continue with the next PR:
 
 ### 5c. Create and merge the release branch PR
 
-The release PR merges `stage` into `main` (the default branch). GitHub only
+The release PR merges `<INTEGRATION_BRANCH>` into `<RELEASE_TARGET>` (the default branch). GitHub only
 auto-closes issues when a PR merges into the default branch, so this is the
 only opportunity in the pipeline to auto-close issues — every feature **or
 bug** issue successfully merged in Phase 5b must appear as a `Closes #<N>`
@@ -291,7 +333,7 @@ in the Closes section — those issues remain open for manual follow-up.
 issue numbers for every PR merged successfully in Phase 5b — across both
 types. For each issue number, confirm the composed body contains a matching
 `Closes #<N>` line. If any merged issue is missing, fail with an error and
-stop — do not create the PR. This guarantees the release merge into `main`
+stop — do not create the PR. This guarantees the release merge into `<RELEASE_TARGET>`
 will auto-close every feature **and bug** issue landed in this release.
 
 Write the body to `/tmp/release-pr-body.md` and create the PR with
@@ -310,7 +352,7 @@ for N in <merged_issue_numbers>; do
   fi
 done
 
-gh pr create --repo <OWNER/REPO> --base main --head release/<YYYY-MM-DD> \
+gh pr create --repo <OWNER/REPO> --base <RELEASE_TARGET> --head release/<YYYY-MM-DD> \
   --title "Release <YYYY-MM-DD>" --body-file /tmp/release-pr-body.md
 ```
 
@@ -335,7 +377,7 @@ prefix is `feature/` for feature issues and `fix/` for bug issues — clean up
 both:
 
 ```
-git checkout main && git pull
+git checkout <RELEASE_TARGET> && git pull
 
 # Delete remote branches (always run — --delete-branch in 5b handles
 # GitHub's remote ref but local tracking refs require explicit cleanup)

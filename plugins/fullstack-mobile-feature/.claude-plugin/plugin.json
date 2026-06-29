@@ -1,0 +1,8 @@
+{
+  "name": "fullstack-mobile-feature",
+  "description": "Supervisor-led full-stack mobile feature development — intake, master plan, parallel iOS/Android implementation, cross peer review, and reconciliation on one branch. No PR, no mobile build.",
+  "version": "0.1.0",
+  "author": {
+    "name": "schmimran"
+  }
+}

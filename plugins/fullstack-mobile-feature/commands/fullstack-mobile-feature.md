@@ -236,7 +236,9 @@ ANDROID_ROOT=$(grep "^android_root:" "$WORK_DIR/discovery.md" | awk -F': ' '{pri
 BACKEND_ROOT=$(grep "^backend_root:" "$WORK_DIR/discovery.md" | awk -F': ' '{print $2}')
 CONTRACT_DOC=$(grep "^contract_doc:" "$WORK_DIR/discovery.md" | awk -F': ' '{print $2}')
 
-git add "$IOS_ROOT" "$ANDROID_ROOT" "$BACKEND_ROOT" "$CONTRACT_DOC"
+for SURFACE in "$IOS_ROOT" "$ANDROID_ROOT" "$BACKEND_ROOT" "$CONTRACT_DOC"; do
+  [ -n "$SURFACE" ] && [ "$SURFACE" != "not found" ] && git add "$SURFACE"
+done
 git status
 ```
 
@@ -249,7 +251,11 @@ If backend changes were made in Phase 2:
 ```bash
 BACKEND_ROOT=$(grep "^backend_root:" "$WORK_DIR/discovery.md" | awk -F': ' '{print $2}')
 TYPECHECK_CMD=$(grep "^typecheck_cmd:" "$WORK_DIR/discovery.md" | awk -F': ' '{print $2}')
-cd "$BACKEND_ROOT" && $TYPECHECK_CMD
+if [ -n "$TYPECHECK_CMD" ] && [ "$TYPECHECK_CMD" != "not found" ]; then
+  cd "$BACKEND_ROOT" && $TYPECHECK_CMD
+else
+  echo "No typecheck command discovered — skipping."
+fi
 ```
 
 If typecheck fails: fix the errors before committing. Do not skip typecheck.

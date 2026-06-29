@@ -23,7 +23,7 @@ Plugins are self-contained: each lives in its own directory with its own agents,
 | [docs-steward](plugins/docs-steward/) | 0.5.0 | Docs maintenance pipeline — builds canonical indexes of a repo, audits docs for drift, duplication, orphans, and onboarding gaps, then actively edits docs and opens a PR | [README](plugins/docs-steward/README.md) |
 | [bug-sweeper](plugins/bug-sweeper/) | 0.1.1 | Daily bug-discovery sweep for Node.js apps — runs build/audit + multi-agent code review, filters false positives, and files confirmed bugs as GitHub Issues for feature-creator to remediate | [README](plugins/bug-sweeper/README.md) |
 | [voice-forge](plugins/voice-forge/) | 0.2.0 | Analyze a sent-mail export to produce a data-driven written voice profile, then optionally generate a personalized ghostwriting skill | [README](plugins/voice-forge/README.md) |
-| [fullstack-mobile-feature](plugins/fullstack-mobile-feature/) | 0.1.0 | Supervisor-led full-stack mobile feature development — intake, master plan, parallel iOS/Android implementation, cross peer review, and reconciliation on one branch. No PR, no mobile build. | [README](plugins/fullstack-mobile-feature/README.md) |
+| [fullstack-mobile-feature](plugins/fullstack-mobile-feature/) | 0.2.0 | Supervisor-led full-stack mobile feature development — intake, master plan, parallel iOS/Android implementation, cross peer review, and reconciliation on one branch. No PR, no mobile build. | [README](plugins/fullstack-mobile-feature/README.md) |
 
 ## What Each Plugin Does
 

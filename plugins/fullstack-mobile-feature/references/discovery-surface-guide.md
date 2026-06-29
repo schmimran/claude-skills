@@ -60,13 +60,15 @@ android_package: <com.example.app>
 
 Search heuristics:
 
-1. `find . -name "package.json" -maxdepth 3 | xargs grep -l '"express"' 2>/dev/null | head -3` — directory containing this is likely the backend root.
+1. `find . -name "package.json" -maxdepth 3 | xargs grep -l '"express"\|"fastify"\|"hono"\|"@nestjs/core"' 2>/dev/null | head -3` — directory containing this is likely the backend root.
 2. `ls -d api/ backend/ server/ src/` — common backend directory names.
 3. Look for entry point: `find <backend_root> -name "app.ts" -o -name "index.ts" -o -name "server.ts" | head -3`
 4. Look for module/route layout:
    ```bash
    ls <backend_root>/src/modules/ 2>/dev/null || ls <backend_root>/src/routes/ 2>/dev/null
    ```
+
+**Fallback (no Node.js framework found):** If step 1 returns nothing, try `find . -name "package.json" -maxdepth 3 | head -5` without the framework filter to find any JS/TS project, then confirm with the user which is the backend. If the backend is non-Node (Python, Go, etc.), stop and ask the user to provide the backend root path — do not guess.
 
 Discover the typecheck command from `package.json`:
 ```bash

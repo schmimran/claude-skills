@@ -138,6 +138,24 @@ plugins/
       select_intentional.py       # Dataset → sharded candidate emails for careful reading
       verify_quotes.py            # Gate: confirms every quote exists verbatim in the dataset
     README.md                     # Plugin-specific documentation
+  fullstack-mobile-feature/       # Plugin: supervisor-led multi-agent mobile feature dev (iOS + Android + backend)
+    .claude-plugin/
+      plugin.json                 # Plugin manifest
+    commands/
+      fullstack-mobile-feature.md # Supervisor orchestrator — intake, master plan, parallel impl, peer review, reconciliation, land
+    agents/
+      ios-developer.md            # iOS dev (SwiftUI/MVVM) — dual mode: implement | peer-review
+      android-developer.md        # Android dev (Kotlin/Compose/Hilt) — dual mode: implement | peer-review
+    references/
+      discovery-surface-guide.md  # How to locate iOS/Android/backend/contract/parity surfaces on any repo
+      project-fit-spec.md         # Per-repo fit file format, consent rule, project memory schema
+      master-plan-template.md     # Supervisor's plan template (data model + UX spec + API interaction spec)
+      platform-brief-template.md  # Per-platform dev brief (shared contract + platform-specific guidance)
+      completion-report-template.md # Developer completion-report format
+      peer-review-template.md     # Two-part review: feedback for peer + self-reflection/convergence verdict
+      reconciliation-rubric.md    # Priority order and decision matrix for Phase 6 reconciliation
+      parity-guardrails.md        # Rules for honoring the parity registry (match behavior, not implementation)
+    README.md                     # Plugin-specific documentation
 ```
 
 Each plugin lives under `plugins/<name>/` and is independently installable. Plugins use the **commands + agents** pattern: commands are user-invocable orchestrators, agents are specialized workers launched by commands.

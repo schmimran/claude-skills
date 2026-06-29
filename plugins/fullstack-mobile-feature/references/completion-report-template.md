@@ -7,7 +7,7 @@ Developer agents return this report at the end of *implement* mode. Fill in ever
 ```markdown
 # Completion Report: <Feature Name>
 
-**Platform:** iOS | Android  
+**Platform:** iOS | Android  *(delete inapplicable)*
 **Date:** YYYY-MM-DD
 
 ---

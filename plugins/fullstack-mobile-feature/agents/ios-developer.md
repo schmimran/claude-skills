@@ -50,7 +50,7 @@ You will receive:
 
 ### What NOT to do
 - Do not touch the Android directory or any shared backend code
-- Do not add dependencies without noting it in the completion report as a deviation
+- Do not add dependencies without noting it in the completion report as a deviation (include the package name and version)
 - Do not invent API endpoints or response shapes beyond what the contract doc specifies
 - Do not update the parity registry (read-only during a feature run)
 

@@ -44,10 +44,7 @@ All intermediate files go under `$WORK_DIR/`. Never use bare `/tmp/` paths.
 
 2. Present a **Discovery Summary** to the user — the paths and conventions you found.
 
-3. **Fit file offer** (only when absent or stale):
-   > "I can save these paths to `.claude/fullstack-mobile-feature/project-fit.md` in this repo so future runs skip discovery. Save it? (yes/no)"
-   
-   Create the fit file **only on explicit "yes"**. Follow the format in `references/project-fit-spec.md`.
+3. **Fit file offer** (only when absent or stale): follow the consent rule and format in `references/project-fit-spec.md`.
 
 Save discovery results to `$WORK_DIR/discovery.md` for use in later phases.
 
@@ -79,8 +76,8 @@ Save the confirmed feature description and answers to `$WORK_DIR/intake.md`.
 ### 2a. Create the feature branch
 
 ```bash
-TRUNK=$(cat "$WORK_DIR/discovery.md" | grep "trunk:" | awk '{print $2}')
-SLUG=$(echo "$ARGUMENTS" | tr '[:upper:]' ' ' | tr -cs 'a-z0-9' '-' | sed 's/^-//;s/-$//' | cut -c1-40)
+TRUNK=$(grep "^trunk:" "$WORK_DIR/discovery.md" | awk -F': ' '{print $2}')
+SLUG=$(echo "$ARGUMENTS" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '-' | sed 's/^-//;s/-$//' | cut -c1-40)
 git checkout "$TRUNK"
 git pull
 git checkout -b "feature/${SLUG}"
@@ -141,19 +138,13 @@ Launch `ios-developer` and `android-developer` **in a single message** (both too
 ```
 MODE: implement
 
-MASTER PLAN:
-[contents of $WORK_DIR/master-plan.md]
-
 IOS BRIEF:
 [contents of $WORK_DIR/ios-brief.md]
 
 DISCOVERY:
 [contents of $WORK_DIR/discovery.md]
 
-PARITY REGISTRY:
-[contents of parity registry file, or "not found — treat all UX-visible behaviors as requiring parity"]
-
-Implement the feature per the brief. Edit only the iOS directory. Do not build or test. Return your completion report in the format from references/completion-report-template.md.
+Implement the feature per the brief. Return your completion report in the format from references/completion-report-template.md.
 ```
 
 **Prompt template for android-developer:** (same structure, use android-brief.md)
@@ -171,8 +162,8 @@ Save each agent's completion report:
 Gather diffs:
 
 ```bash
-IOS_ROOT=$(cat "$WORK_DIR/discovery.md" | grep "ios_root:" | awk '{print $2}')
-ANDROID_ROOT=$(cat "$WORK_DIR/discovery.md" | grep "android_root:" | awk '{print $2}')
+IOS_ROOT=$(grep "^ios_root:" "$WORK_DIR/discovery.md" | awk -F': ' '{print $2}')
+ANDROID_ROOT=$(grep "^android_root:" "$WORK_DIR/discovery.md" | awk -F': ' '{print $2}')
 
 git diff HEAD -- "$IOS_ROOT" > "$WORK_DIR/ios-diff.txt"
 git diff HEAD -- "$ANDROID_ROOT" > "$WORK_DIR/android-diff.txt"
@@ -223,9 +214,9 @@ Apply `references/reconciliation-rubric.md`. For each open issue (parity gap, co
 2. Decide: adopt selectively | partial refactor | full redo | no change
 3. For items requiring code changes, dispatch targeted tasks back to the relevant developer agent(s)
 
-When dispatching round-3 tasks, be precise: name the exact files and behaviors to change. Do not re-implement — send focused instructions.
+When dispatching reconciliation tasks, be precise: name the exact files and behaviors to change. Do not re-implement — send focused instructions.
 
-**Iteration rule:** Continue reconciliation rounds until both platforms have no open parity, correctness, or contract issues. If after 3 full rounds issues remain, stop and escalate to the user with a clear list of unresolved items.
+**Iteration rule:** Apply the iteration rule from `references/reconciliation-rubric.md` — continue until clean or escalate to the user.
 
 Save the reconciliation decision log to `$WORK_DIR/reconciliation.md`.
 
@@ -240,7 +231,12 @@ Save the reconciliation decision log to `$WORK_DIR/reconciliation.md`.
 Verify that all iOS, Android, and backend changes (and any contract doc updates) are staged:
 
 ```bash
-git add -A
+IOS_ROOT=$(grep "^ios_root:" "$WORK_DIR/discovery.md" | awk -F': ' '{print $2}')
+ANDROID_ROOT=$(grep "^android_root:" "$WORK_DIR/discovery.md" | awk -F': ' '{print $2}')
+BACKEND_ROOT=$(grep "^backend_root:" "$WORK_DIR/discovery.md" | awk -F': ' '{print $2}')
+CONTRACT_DOC=$(grep "^contract_doc:" "$WORK_DIR/discovery.md" | awk -F': ' '{print $2}')
+
+git add "$IOS_ROOT" "$ANDROID_ROOT" "$BACKEND_ROOT" "$CONTRACT_DOC"
 git status
 ```
 
@@ -251,8 +247,8 @@ Review the staged file list with the user. If anything is unexpected (wrong dire
 If backend changes were made in Phase 2:
 
 ```bash
-BACKEND_ROOT=$(cat "$WORK_DIR/discovery.md" | grep "backend_root:" | awk '{print $2}')
-TYPECHECK_CMD=$(cat "$WORK_DIR/discovery.md" | grep "typecheck_cmd:" | awk '{print $2}')
+BACKEND_ROOT=$(grep "^backend_root:" "$WORK_DIR/discovery.md" | awk -F': ' '{print $2}')
+TYPECHECK_CMD=$(grep "^typecheck_cmd:" "$WORK_DIR/discovery.md" | awk -F': ' '{print $2}')
 cd "$BACKEND_ROOT" && $TYPECHECK_CMD
 ```
 
@@ -290,4 +286,4 @@ Print a final summary:
 - **Agent returns malformed report**: Ask the agent to retry with the correct template before proceeding to Phase 5.
 - **Typecheck fails**: Fix errors. Do not commit broken backend code.
 - **Reconciliation stalemate** (3 rounds, issues remain): Surface unresolved items to the user. Do not commit until resolved or user explicitly accepts the known gaps.
-- **No parity registry found**: Default to treating all UX-visible behaviors as requiring parity. Note this in the master plan.
+- **No parity registry found**: Apply the fallback rule from `references/parity-guardrails.md` Rule 3. Note this in the master plan.

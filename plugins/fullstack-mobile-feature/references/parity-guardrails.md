@@ -66,6 +66,18 @@ Ask: "If a user ran this feature on iOS and then on Android, would they notice a
 
 Animated vs instant transitions, different loading indicator styles, different keyboard types for the same input field — these are parity gaps if the registry requires a match.
 
+### Rule 6: Aesthetic Parity Is High Priority
+
+Visual consistency is as important as behavioral consistency. Even when the parity registry is silent, the two apps should look and feel like they belong to the same product family.
+
+This includes: color palette and theme tokens, typography scale and weights, spacing and padding rhythm, iconography style and sizing, animation duration and easing, loading and skeleton states, empty state illustrations and copy, and error presentation patterns.
+
+**Acceptable aesthetic divergence:** platform-native navigation chrome (iOS tab bar vs Android bottom nav), platform-native form controls, system fonts when no custom font is specified. These are idiomatic and expected.
+
+**Unacceptable aesthetic divergence:** one platform using a filled button style and the other an outlined button for the same action; different loading indicator designs for the same flow; mismatched empty state copy or illustration style; different color values for the same semantic element (primary action, destructive action, etc.).
+
+When the parity registry is absent, apply the aesthetic parity default: flag any visible aesthetic gap in the peer review and let the supervisor decide in reconciliation.
+
 ---
 
 ## Parity Registry Format (Expected)

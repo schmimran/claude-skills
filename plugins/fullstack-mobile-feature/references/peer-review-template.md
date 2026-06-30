@@ -27,6 +27,25 @@ Behaviors that will produce a different user experience than my own implementati
 
 If none: "No parity gaps found."
 
+### Aesthetic Parity
+
+Visual and aesthetic differences that would make the apps feel inconsistent to a user who uses both platforms, even if behavior is functionally identical.
+
+| Element | My implementation | Peer's implementation | Verdict |
+|---------|------------------|----------------------|---------|
+| Colors / theme tokens | <what I used> | <what peer used> | Match / Acceptable divergence / Must fix |
+| Typography (sizes, weights, line height) | | | |
+| Spacing and padding | | | |
+| Iconography style and sizing | | | |
+| Animation / transition timing | | | |
+| Loading / skeleton state appearance | | | |
+| Empty state design | | | |
+| Error state presentation | | | |
+
+Acceptable divergence: platform-native navigation chrome (iOS tab bar vs Android bottom nav), system form controls, system fonts when no custom font is specified — these are idiomatic. Everything else should match.
+
+If aesthetics are consistent: "Aesthetic parity: consistent."
+
 ### UX Inconsistencies
 
 Interactions, copy, flows, or timing differences that diverge from my implementation in ways the parity registry does not sanction.

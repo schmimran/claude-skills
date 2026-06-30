@@ -132,7 +132,11 @@ Both briefs must:
 
 **Goal:** Both platform developers implement their brief simultaneously.
 
-Launch `ios-developer` and `android-developer` **in a single message** (both tool calls in parallel). Pass each its brief and the master plan.
+> **SUPERVISOR RULE — MANDATORY:** You are the backend lead and coordinator, not a platform developer. You must NOT write any Swift, SwiftUI, Kotlin, or Compose code. You must NOT implement any iOS or Android features yourself — not even partially, not even "just the foundation." Your only job in Phase 4 is to launch the two developer agents via the Agent tool. If you find yourself writing mobile code, stop immediately and hand it to the appropriate agent instead.
+
+Use the Agent tool to launch both agents **in a single message** (two parallel tool calls):
+- Agent type: `fullstack-mobile-feature:ios-developer`, prompt: [ios prompt below]
+- Agent type: `fullstack-mobile-feature:android-developer`, prompt: [android prompt — same structure, use android-brief.md]
 
 **Prompt template for ios-developer:**
 ```
@@ -146,8 +150,6 @@ DISCOVERY:
 
 Implement the feature per the brief. Return your completion report in the format from references/completion-report-template.md.
 ```
-
-**Prompt template for android-developer:** (same structure, use android-brief.md)
 
 Save each agent's completion report:
 - `$WORK_DIR/ios-report.md`
@@ -189,12 +191,20 @@ YOUR OWN COMPLETION REPORT (for self-reflection context):
 PARITY REGISTRY:
 [contents of parity registry, or fallback]
 
+AESTHETIC PARITY FOCUS:
+Pay close attention to visual and aesthetic consistency between platforms. Flag gaps in:
+colors and theme tokens, typography (sizes, weights, line height), spacing and padding
+rhythm, iconography style and sizing, animation and transition timing, loading/skeleton
+state appearance, empty state design, and error state presentation. The two apps should
+feel like visual siblings — a user switching between them should never feel jarred by
+inconsistent aesthetics, even where the parity registry is silent.
+
 Return your two-part review per references/peer-review-template.md:
-Part A: feedback for the Android developer
+Part A: feedback for the Android developer (include an Aesthetic Parity section)
 Part B: your self-reflection and convergence verdict for your own code
 ```
 
-**Prompt template for android-developer (reviewing iOS):** (symmetric — swap iOS/Android)
+**Prompt template for android-developer (reviewing iOS):** (symmetric — swap iOS/Android; include the same AESTHETIC PARITY FOCUS block)
 
 Save reviews:
 - `$WORK_DIR/ios-review.md` (iOS developer's review of Android)

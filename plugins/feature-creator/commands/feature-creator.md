@@ -1,7 +1,7 @@
 ---
 name: feature-creator
 description: End-to-end pipeline — plans, reviews, and implements GitHub issues labeled `feature - ready for claude` or `bug - ready for claude`
-argument-hint: "[repo-owner/repo-name] [--auto-merge] [--integration-branch <name>]"
+argument-hint: "[repo-owner/repo-name] [--auto-merge] [--integration-branch <name>] [--release-target <name>]"
 disable-model-invocation: true
 ---
 
@@ -55,12 +55,13 @@ after the plan is posted.
    If not authenticated, stop and tell the user to run `gh auth login`.
 
 2. Resolve the target repository and flags:
-   - Parse `$ARGUMENTS`: extract `OWNER/REPO`, check for the `--auto-merge` flag, and check for `--integration-branch <name>`.
+   - Parse `$ARGUMENTS`: extract `OWNER/REPO`, check for the `--auto-merge` flag, check for `--integration-branch <name>`, and check for `--release-target <name>`.
    - If no `OWNER/REPO` is given, detect from the current directory: `gh repo view --json nameWithOwner -q .nameWithOwner`
    - If neither works, stop and ask the user for the repository.
    - Note whether `--auto-merge` was passed — this controls Phase 5 behavior.
    - Note the value of `--integration-branch` if provided — it overrides CLAUDE.md detection in step 4.
-   - Capture the repo's default branch now (reused in step 4 as `RELEASE_TARGET`):
+   - Note the value of `--release-target` if provided, as `RELEASE_TARGET_FLAG` — it overrides the default-branch fallback for `RELEASE_TARGET` in step 4.
+   - Capture the repo's default branch now (used in step 4 as the fallback value for `RELEASE_TARGET`):
      ```
      DEFAULT_BRANCH=$(gh repo view <OWNER/REPO> --json defaultBranchRef -q .defaultBranchRef.name)
      ```
@@ -85,7 +86,8 @@ after the plan is posted.
 4. Detect the branching configuration for the target repository. Record
    `INTEGRATION_BRANCH` and `RELEASE_TARGET` as pipeline-scoped variables —
    pass them to all downstream phases that need them. `RELEASE_TARGET` is
-   always `DEFAULT_BRANCH` (captured in step 2).
+   `--release-target` if provided, otherwise it falls back to
+   `DEFAULT_BRANCH` (captured in step 2).
 
    If `--integration-branch <name>` was provided, use that value directly.
    Otherwise parse from CLAUDE.md:
@@ -107,27 +109,45 @@ after the plan is posted.
      exit 1
    fi
 
-   # Guard: branch name must contain only safe characters
-   if ! echo "$INTEGRATION_BRANCH" | grep -qE '^[a-zA-Z0-9._/-]+$'; then
-     echo "ERROR: detected integration branch '${INTEGRATION_BRANCH}' contains unsafe characters — halting"
-     exit 1
-   fi
-
-   RELEASE_TARGET="$DEFAULT_BRANCH"
+   # RELEASE_TARGET: use --release-target if the flag was passed, else fall back to DEFAULT_BRANCH
+   RELEASE_TARGET="${RELEASE_TARGET_FLAG:-$DEFAULT_BRANCH}"
 
    echo "Integration branch: ${INTEGRATION_BRANCH}"
    echo "Release target: ${RELEASE_TARGET}"
 
-   # Guard: verify integration branch exists on remote
-   if ! git ls-remote --heads origin "$INTEGRATION_BRANCH" | grep -q "$INTEGRATION_BRANCH"; then
+   # Guard: both branch names must contain only safe characters
+   for branch_var in INTEGRATION_BRANCH RELEASE_TARGET; do
+     branch_val="${!branch_var}"
+     if ! echo "$branch_val" | grep -qE '^[a-zA-Z0-9._/-]+$'; then
+       echo "ERROR: ${branch_var} '${branch_val}' contains unsafe characters — halting"
+       exit 1
+     fi
+   done
+
+   # Guard: both branches must exist on remote (single ls-remote round trip)
+   REMOTE_REFS=$(git ls-remote --heads origin "$INTEGRATION_BRANCH" "$RELEASE_TARGET")
+   if ! echo "$REMOTE_REFS" | grep -q "refs/heads/${INTEGRATION_BRANCH}$"; then
      echo "ERROR: integration branch '${INTEGRATION_BRANCH}' not found on remote — halting"
      exit 1
    fi
-
-   # Guard: integration branch must differ from the default branch
-   if [ "$INTEGRATION_BRANCH" = "$RELEASE_TARGET" ]; then
-     echo "ERROR: integration branch '${INTEGRATION_BRANCH}' is the same as the default branch '${RELEASE_TARGET}'. feature-creator requires a two-tier model (integration branch ≠ default branch)."
+   if ! echo "$REMOTE_REFS" | grep -q "refs/heads/${RELEASE_TARGET}$"; then
+     echo "ERROR: release target '${RELEASE_TARGET}' not found on remote — halting"
      exit 1
+   fi
+
+   # Guard: integration branch must differ from the release target
+   if [ "$INTEGRATION_BRANCH" = "$RELEASE_TARGET" ]; then
+     echo "ERROR: integration branch '${INTEGRATION_BRANCH}' is the same as the release target '${RELEASE_TARGET}'. feature-creator requires a two-tier model (integration branch ≠ release target)."
+     exit 1
+   fi
+
+   # Note (non-fatal): GitHub only auto-closes linked issues (Closes #N) when
+   # a PR merges into the repo's *actual* configured default branch — this is
+   # a GitHub-side behavior the pipeline cannot control. Warn if the resolved
+   # release target isn't that branch; Phase 5c still runs, issues just won't
+   # auto-close.
+   if [ "$RELEASE_TARGET" != "$DEFAULT_BRANCH" ]; then
+     echo "NOTE: --release-target '${RELEASE_TARGET}' differs from the repo's actual default branch '${DEFAULT_BRANCH}' — GitHub will NOT auto-close linked issues on this merge; issues will need to be closed manually."
    fi
    ```
 
@@ -320,12 +340,12 @@ to the **type-appropriate** human-review label, and continue with the next PR:
 
 ### 5c. Create and merge the release branch PR
 
-The release PR merges `<INTEGRATION_BRANCH>` into `<RELEASE_TARGET>` (the default branch). GitHub only
-auto-closes issues when a PR merges into the default branch, so this is the
-only opportunity in the pipeline to auto-close issues — every feature **or
-bug** issue successfully merged in Phase 5b must appear as a `Closes #<N>`
-line in this PR body. Do **not** emit any explicit `gh issue close` calls;
-rely on GitHub's closing keywords.
+The release PR merges `<INTEGRATION_BRANCH>` into `<RELEASE_TARGET>`. Every
+feature **or bug** issue successfully merged in Phase 5b must appear as a
+`Closes #<N>` line in this PR body — see the auto-close caveat printed in
+Prerequisites step 4 for when GitHub will and won't act on these
+automatically. Do **not** emit any explicit `gh issue close` calls; rely on
+GitHub's closing keywords.
 
 Construct the release PR body using the template in
 `references/release-pr-template.md` (read that file for the exact format).
@@ -349,8 +369,10 @@ in the Closes section — those issues remain open for manual follow-up.
 issue numbers for every PR merged successfully in Phase 5b — across both
 types. For each issue number, confirm the composed body contains a matching
 `Closes #<N>` line. If any merged issue is missing, fail with an error and
-stop — do not create the PR. This guarantees the release merge into `<RELEASE_TARGET>`
-will auto-close every feature **and bug** issue landed in this release.
+stop — do not create the PR. This guarantees the release PR body correctly
+requests closure of every feature **and bug** issue landed in this release
+(auto-close depends on `<RELEASE_TARGET>` matching the real default branch —
+see the caveat above).
 
 Write the body to `/tmp/release-pr-body.md` and create the PR with
 `--body-file`:

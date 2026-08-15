@@ -29,6 +29,7 @@ plugins/
       bug-plan-template.md        # Bug-fix plan template (requires Reproduction Steps, Root Cause, regression test)
       consolidated-plan-template.md # Bucket-centric template for consolidated plan comments
       repo-analysis-guide.md      # What to look for in the target repo
+      repo-profile-spec.md        # `.claude/repo-profile.md` standard — branch policy, project roots, verification commands
       risk-criteria.md            # Feature risk rubric (HIGH/MEDIUM/LOW)
       bug-risk-criteria.md        # Bug-tuned risk rubric — different factors than features (some flip)
       review-checklist.md         # Review subagent checklist for feature plans
@@ -239,7 +240,7 @@ Agents declare tool access with the `tools:` field. Common tool sets:
 
 - **Naming**: Directory names are lowercase with hyphens (e.g., `feature-creator`)
 - **Issue interaction**: Plans are posted as comments, never by modifying the issue body
-- **Branching**: One branch per change rooted at `stage` — `feature/<number>-<slug>` for features, `fix/<number>-<slug>` for bug fixes — plus a single release branch (`release/<YYYY-MM-DD>`) after all branches are implemented
+- **Branching**: One branch per change, based on the integration branch — `feature/<number>-<slug>` for features, `fix/<number>-<slug>` for bug fixes — plus a single release branch (`release/<YYYY-MM-DD>`) after all branches are implemented. In *this* repo the integration branch is `stage`. In a *target* repo it is resolved from an explicit flag or that repo's committed `.claude/repo-profile.md` — **never** by parsing prose out of a CLAUDE.md. An earlier version of feature-creator scraped this very sentence with a regex; it broke on every repo that did not happen to contain the phrase. Do not reintroduce prose-derived branch names.
 - **Commits**: Conventional commit format, referencing the issue number. `feat: add widget (#42)` for features, `fix: prevent crash on logout (#21)` for bugs.
 - **Comment markers**: Used by downstream agents to locate content. Always include the correct marker — extraction will fail otherwise.
 

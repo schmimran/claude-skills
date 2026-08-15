@@ -8,7 +8,7 @@
       "name": "feature-creator",
       "source": "./plugins/feature-creator",
       "description": "Feature and bug-fix pipeline — plans, reviews, and implements GitHub issues labeled `feature - ready for claude` or `bug - ready for claude`.",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "author": {
         "name": "schmimran"
       }
@@ -17,7 +17,7 @@
       "name": "security-scanner",
       "source": "./plugins/security-scanner",
       "description": "Multi-tool security audit for Node.js web apps and Supabase projects — files findings as GitHub Issues with deduplication and auto-close.",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "author": {
         "name": "schmimran"
       }

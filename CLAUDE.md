@@ -303,7 +303,11 @@ These apply to every Claude Code session in this repo.
 2. **No silent additions.** Do not add new files, directories, or environment variables without stating what you are adding and why.
 3. **Agent isolation.** Agents must not reference files outside their plugin directory. Each plugin must be independently installable.
 4. **Shell safety.** Follow the `--body-file` rule in Agent Authoring Guidelines above — it applies to every plugin, not just feature-creator.
-5. **Version sync.** When modifying an existing plugin, update `version` in both `plugin.json` and `marketplace.json` simultaneously — they must always match.
+5. **Version sync.** When modifying an existing plugin, update `version` in both `plugin.json` and `marketplace.json` simultaneously — they must always match. Keep the root README's plugin catalog in step too; all three are the same fact written in three places.
+
+   **Every edit needs a bump — including documentation-only edits.** Any change to a command, agent, or reference file requires at minimum a patch bump. This is not bookkeeping pedantry: the version is the only handle the install cache has. Plugins install to `~/.claude/plugins/cache/<marketplace>/<plugin>/<version>/`, so editing a file without bumping leaves installed copies silently diverged from source while still reporting the same version — a version number that no longer identifies its contents. This has already happened in this repo: `docs-steward` and `security-scanner` drifted from their cached copies across six files under an unchanged version. The deltas were cosmetic; the loss of a reliable version handle was not.
+
+   Behavior changes take a minor bump, wording-only changes a patch.
 6. **New plugin completeness.** Do not create a new plugin directory without completing all 5 steps of the Adding a New Plugin checklist above.
 7. **Issue body immutability.** The issue body is never modified. All communication (plans, risk assessments, error reports) happens via comments.
 8. **Plan comment markers.** Always include the correct marker prefix (see Conventions above). Downstream agents will fail to locate comments if the marker is missing or wrong.

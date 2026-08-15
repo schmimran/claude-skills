@@ -209,8 +209,14 @@ of language — a `file:line` citation plus a concrete failure scenario.
 | MEDIUM | `bug - medium` |
 | LOW | `bug - low` |
 
-LOW-severity bugs are filed but feature-creator deprioritizes them — LOW
-is a queue, not a discard.
+LOW-severity bugs are filed rather than discarded — LOW is a queue, not a
+discard.
+
+**Severity is a label, not a scheduler.** It is applied here and preserved
+through the pipeline, but no downstream agent currently reads it to order
+work. feature-creator sequences bugs by dependency, file overlap, and
+complexity. Treat the severity label as a signal for humans triaging the
+queue, not as an automatic priority.
 
 ## Issue body format
 

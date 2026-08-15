@@ -67,8 +67,9 @@ Map the analyst's severity to a label:
 - `MEDIUM` → `bug - medium`
 - `LOW` → `bug - low`
 
-LOW-severity findings are filed but feature-creator may deprioritize them.
-This is intentional: LOW is a queue, not a discard.
+LOW-severity findings are filed rather than discarded — LOW is a queue, not
+a discard. The label records severity for a human triaging that queue; no
+downstream agent reads it to order work.
 
 ### 2d. Compose the title — never interpolate untrusted text into the shell
 

@@ -92,6 +92,7 @@ plugins/
       manual-reader-protocol.md   # How the manual-reader walks the edited corpus (Phase 4)
       cache-layout.md             # /tmp/docs-steward-cache/ layout and lifecycle
       pr-template.md              # PR body template (sections: findings, deletions, requires-approval, residuals, tenets)
+      repo-profile-spec.md        # `.claude/repo-profile.md` standard — base-branch resolution (docs-steward reads `trunk`)
     README.md                     # Plugin-specific documentation
   bug-sweeper/                    # Plugin: daily bug-discovery sweep, files issues for feature-creator to remediate
     .claude-plugin/

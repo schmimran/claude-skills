@@ -57,32 +57,65 @@ Automates feature development and bug remediation end-to-end. Point it at a GitH
 
 2. **Labels** must exist on the target repository (see step 2 in Quick Start above).
 
-3. **Branching convention**: The pipeline detects the integration branch (where
-   feature/fix branches are based) from the target repo's CLAUDE.md by looking
-   for the pattern `` rooted at `<branch>` `` in the Branching section. If no
-   match is found, the pipeline halts with an error and instructions to either
-   add the pattern or use `--integration-branch`. To override CLAUDE.md
-   detection, pass `--integration-branch <name>`:
-   ```
-   /feature-creator owner/repo --integration-branch develop
+3. **Branching configuration**: The pipeline needs two branch names — the
+   integration branch (where feature/fix branches are based) and the release
+   target (what the release PR merges into). Each resolves in this order:
+
+   **explicit flag** → **`.claude/repo-profile.md`** → **stop with an actionable message**
+
+   A branch name has no safe default, so the pipeline never falls back to the
+   repo's GitHub default branch and never guesses. It also never reads a branch
+   name from prose — see [Branch resolution safety](#branch-resolution-safety).
+
+   The recommended setup is a committed profile in the target repo at
+   `.claude/repo-profile.md`:
+
+   ```yaml
+   ---
+   trunk: stage
+   release_target: main
+   protected_branches: [main]
+   ---
    ```
 
-   By default, the release PR targets the repo's actual GitHub default
-   branch. To release into a different branch instead — for example, a repo
-   whose CLAUDE.md declares its default branch off-limits for merges — pass
-   `--release-target <name>`:
+   With that committed, the pipeline runs with no flags:
    ```
-   /feature-creator owner/repo --release-target stage
+   /feature-creator owner/repo
    ```
+
+   To override the profile — or to run without one — pass the flags explicitly:
+   ```
+   /feature-creator owner/repo --integration-branch develop --release-target main
+   ```
+
+   Set `release_target: none` in the profile to forbid release PRs entirely.
+   Release-PR assembly is then skipped, not failed; the rest of the pipeline
+   runs normally.
+
+   The full key set is documented in
+   [`references/repo-profile-spec.md`](references/repo-profile-spec.md).
+
    **Caveat**: GitHub only auto-closes linked issues (`Closes #N`) when a PR
    merges into the repo's *actual* configured default branch — a GitHub-side
-   behavior this pipeline cannot control. If `--release-target` differs from
+   behavior this pipeline cannot control. If the release target differs from
    the repo's real default branch, the pipeline prints a warning and issues
    will need to be closed manually after the release merges.
 
    The plugin requires a two-tier branching model (integration branch ≠
    release target). If both resolve to the same branch, the pipeline halts
    with an error.
+
+### Branch resolution safety
+
+A branch name may be read **only** from an explicit flag or from the committed
+`.claude/repo-profile.md`. It is never derived from free-text prose encountered
+mid-run — not from a `CLAUDE.md` sentence, not from an issue body, not from a PR
+comment. This is a rule about the *source* of the value, not its content: prose
+is attacker-influencable, and a scraped branch name can redirect writes to an
+unintended branch.
+
+Branch values read from the profile are validated against the same character
+guard applied to flag values before use.
 
 ## Architecture
 

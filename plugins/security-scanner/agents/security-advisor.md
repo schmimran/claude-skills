@@ -196,7 +196,7 @@ as an action item creates noise without security benefit.
 
 **To reverse**: remove the `security - suppressed` label.  The next scan
 will re-file this issue if it is still detected.  A human reviewer has
-also been flagged via the `feature - human review` label.
+also been flagged via the `security - human review` label.
 ----SUPPRESS_EOF_BOUNDARY----
 
 gh issue comment <NUMBER> --repo <OWNER/REPO> \
@@ -204,8 +204,8 @@ gh issue comment <NUMBER> --repo <OWNER/REPO> \
 
 gh issue edit <NUMBER> --repo <OWNER/REPO> \
   --add-label "security - suppressed" \
-  --add-label "feature - human review" \
-  --remove-label "feature - ready for claude"
+  --add-label "security - human review" \
+  --remove-label "security - ready for claude"
 
 gh issue close <NUMBER> --repo <OWNER/REPO> \
   --reason "not planned"

@@ -77,8 +77,8 @@ from real type errors (which are bugs) by reading the actual error output.
 
 A `npm audit` finding marked LOW is generally not worth filing as a bug
 issue. Discard LOW-severity audit findings unless the dependency has no
-fix available — in which case keep but mark LOW so feature-creator
-deprioritizes it.
+fix available — in which case keep it, marked LOW, so the queue reflects
+that it is known and unfixable for now.
 
 ## D7: Already covered by an open issue
 

@@ -95,7 +95,7 @@ classified as `still-open` in the reconciliation report. If it does, mark
 the finding with `existing_issue: <number>` so the filer can skip filing a
 duplicate this run.
 
-The user opted out of fingerprint-based dedup for v0.1.0, but a literal
+Fingerprint-based dedup is deliberately not implemented, but a literal
 match against an already-open issue is cheap and worth catching.
 
 ## Step 6: Self-Review (Phase 5 of the prompt — collapsed into this agent)

@@ -31,6 +31,43 @@ re-reads the result to verify coherence, and opens a single PR.
 - **Git** with a clean working tree in the target repo (the editor
   refuses to proceed with uncommitted changes).
 
+## Choosing the base branch
+
+The editor branches from, and the PR targets, a base branch resolved
+once at startup from exactly three sources, in order:
+
+1. **`--base-branch <name>`** on the command
+2. **`trunk:`** in the target repo's committed `.claude/repo-profile.md`
+3. **The remote default branch** (git's own metadata)
+
+```bash
+/docs-steward owner/repo --base-branch stage
+```
+
+Or commit a profile once and drop the flag:
+
+```yaml
+---
+trunk: stage
+---
+```
+
+The resolved branch must exist on the remote; if it does not, the run
+stops rather than falling back.
+
+**Why this list is closed.** A base branch is never taken from free-text
+prose read during a run — not a `CLAUDE.md` sentence, not an issue body,
+not a PR comment. Prose is attacker-influencable, and a scraped branch
+name can redirect writes to an unintended branch. This is a constraint on
+where the value may come from, not on which branch is acceptable: a repo
+whose policy forbids `main` can set `trunk: stage` and be honored.
+
+Resolving a base does **not** authorize merging into it — see
+[What does NOT happen automatically](#what-does-not-happen-automatically).
+
+The full key set is documented in
+[`references/repo-profile-spec.md`](references/repo-profile-spec.md).
+
 ## What it does
 
 The plugin chains six phases:
@@ -123,15 +160,44 @@ When a checkpoint fires, the plugin exits without creating a branch
 or editing files.  Inspect the cache (`checkpoint-required.md`),
 adjudicate, and re-run.
 
+## Mutation boundary
+
+Phases 0–2 (index build, drift audit, consolidation) only read the repo;
+their output goes to the `/tmp` cache.
+
+**Writes begin in Phase 3 (editor), and consist of:**
+
+| Write | Phase | Detail |
+|-------|-------|--------|
+| `git checkout -B` | 3 | Creates `docs/steward-<run-id>` from the resolved base |
+| File edits + `git commit` | 3 | One commit per edited file |
+| `git push` | 5 | Pushes the branch |
+| `gh pr create` | 5 | Opens the single PR |
+
+**The plugin never merges.** That ceiling is architectural, not a default —
+see [What does NOT happen automatically](#what-does-not-happen-automatically).
+
+### `--dry-run`
+
+Runs the index build, audit, and consolidation, prints the consolidated edit
+plan, and exits before Phase 3 — no branch, no edit, no commit, no push, no
+PR.
+
+```bash
+/docs-steward owner/repo --dry-run
+```
+
 ## What does NOT happen automatically
 
 - **The PR is never auto-merged** — a human always reviews.  The
   plugin is architecturally prohibited from merging, even if
   explicitly instructed.  If asked to merge, it will refuse and ask
   you to do so in a fresh session.
-- **The feature branch always originates from the remote default
-  branch** — regardless of any global or repo-level `CLAUDE.md`
-  instruction.  This is a non-overridable invariant.
+- **The feature branch base is resolved from a fixed set of sources** —
+  the `--base-branch` flag, `trunk:` in the repo's committed
+  `.claude/repo-profile.md`, or the remote default branch, in that
+  order.  It is never taken from prose read mid-run.  See
+  [Choosing the base branch](#choosing-the-base-branch).
 - **Code-level deletions of deprecated symbols are not performed** —
   only docs, config files, and env templates are in scope for
   deletion.  Orphan code symbols are flagged in findings for human

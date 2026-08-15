@@ -157,6 +157,62 @@ Re-detected closed issues are reopened rather than duplicated, preserving the
 history of prior fix attempts.  See `references/fingerprint-spec.md` for the
 full fingerprint specification.
 
+## Mutation boundary
+
+Phase 1 (scan) and Phase 1.5 (merge) only read. Scanners run ephemerally via
+`npx --yes`, so a default run leaves the audited repo's `package.json` and
+lockfile untouched.
+
+**Writes begin in Phase 2, and consist of:**
+
+| Write | Detail |
+|-------|--------|
+| `gh issue create` | New findings, labeled `security` + `security - ready for claude` |
+| `gh issue reopen` + `gh issue edit` | Re-detected findings |
+| `gh issue comment` | Advisory comments, re-detection notices |
+| `gh issue close` | Findings no longer detected |
+| `gh label create` | Only with `--create-missing-labels` |
+| `npm install --save-dev` | Only with `--install-tools` |
+
+No branch is created and no source file is modified.
+
+### `--dry-run`
+
+security-scanner has **no approval gate** — absent `--dry-run` it files,
+reopens, comments, and closes the moment it is invoked. `--dry-run` runs the
+scan, writes the full plan to `/tmp/security-dry-run-plan.json`, prints what
+it would file, reopen, skip, and close, and exits before any write.
+
+```bash
+/security-scanner owner/repo full --dry-run
+```
+
+## Monorepo repos and tool execution
+
+The Node.js manifest does not need to be at the repo root. The project root is
+resolved in this order:
+
+1. `--project-root <dir>`
+2. `project_roots.backend` in the repo's committed `.claude/repo-profile.md`
+3. Discovery via `git ls-files '*package.json'` (excluding `node_modules`)
+
+`npm audit` and Supabase dependency detection run there. The static scanners
+(semgrep, nodejsscan) deliberately scan from the **repo root**, so Swift,
+Kotlin, and every other source tree stay in scope.
+
+### Scanners run ephemerally — the default writes nothing to your repo
+
+Scanners are invoked with `npx --yes`, so nothing is added to the audited
+repo's `package.json` or lockfile. A scanner's job is to read a repo, not to
+modify it, and a dev-dependency install would show up in your diff as though
+you had made it.
+
+Pass `--install-tools` to persist them as dev dependencies instead — useful for
+repeated scans on a slow connection. That **does** modify `package.json` and
+the lockfile, and happens only when the flag is passed explicitly.
+
+See [`references/repo-profile-spec.md`](references/repo-profile-spec.md).
+
 ## Handoff to remediation
 
 security-scanner files findings under its own labels — `security` plus

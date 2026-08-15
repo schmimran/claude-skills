@@ -15,7 +15,12 @@ the target repository and emit a structured JSON findings report.
 ## Prerequisites
 
 Read `tool-install-guide.md` in the `references/` directory of this plugin
-before proceeding.  Install any missing tools per those instructions.
+before proceeding.  Tools run ephemerally via `npx --yes` by default and write
+nothing to the target repo.
+
+The orchestrator resolved `<PROJECT_ROOT>` — the directory holding the Node.js
+manifest, which is often **not** the repo root (see
+`references/repo-profile-spec.md`).  Use it verbatim for `npm audit`.
 
 ## Step 1: Determine Mode
 
@@ -26,9 +31,15 @@ Read the mode from your prompt: `quick` or `full`.
 
 ## Step 2: Dependency CVE Scan (both modes)
 
+`npm audit` resolves the lockfile relative to the working directory, so it must
+run in `<PROJECT_ROOT>`, not the repo root:
+
 ```bash
-npm audit --json > /tmp/sec-npm-audit.json 2>&1
+(cd "<PROJECT_ROOT>" && npm audit --json) > /tmp/sec-npm-audit.json 2>&1
 ```
+
+If `<PROJECT_ROOT>` holds no manifest, record a `tool_status` of `skipped` for
+`npm-audit` and continue — the static scans below still apply.
 
 Parse `/tmp/sec-npm-audit.json`.  Extract each vulnerability:
 - `package_name`
@@ -40,7 +51,7 @@ Parse `/tmp/sec-npm-audit.json`.  Extract each vulnerability:
 ## Step 3: OWASP Static Analysis (full mode only)
 
 ```bash
-npx semgrep --config p/nodejs --config p/owasp-top-ten --json \
+npx --yes semgrep --config p/nodejs --config p/owasp-top-ten --json \
   --output /tmp/sec-semgrep-owasp.json . 2>/dev/null
 ```
 
@@ -56,7 +67,7 @@ Parse `/tmp/sec-semgrep-owasp.json`.  Extract each finding:
 ## Step 4: Secrets Scan (both modes)
 
 ```bash
-npx semgrep --config p/secrets --json \
+npx --yes semgrep --config p/secrets --json \
   --output /tmp/sec-semgrep-secrets.json . 2>/dev/null
 ```
 
@@ -67,7 +78,7 @@ semgrep's reported level.
 ## Step 5: Node-Specific Patterns (full mode only)
 
 ```bash
-npx nodejsscan -d . --json > /tmp/sec-nodejsscan.json 2>/dev/null
+npx --yes nodejsscan -d . --json > /tmp/sec-nodejsscan.json 2>/dev/null
 ```
 
 Parse `/tmp/sec-nodejsscan.json`.  Extract findings not already present in the

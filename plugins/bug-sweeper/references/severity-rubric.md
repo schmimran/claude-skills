@@ -2,8 +2,12 @@
 
 Used by the `bug-sweeper-analyst` agent to assign HIGH / MEDIUM / LOW to
 each confirmed bug. Severity flows through to the issue label
-(`bug - high`, `bug - medium`, `bug - low`) and feature-creator uses it to
-prioritize remediation.
+(`bug - high`, `bug - medium`, `bug - low`) and is preserved through the
+pipeline.
+
+Note that no downstream agent reads the severity label to order work —
+feature-creator sequences by dependency, file overlap, and complexity. The
+label is a signal for humans triaging the queue.
 
 A bug receives a single severity. If two factors point to different levels,
 take the higher one.
@@ -54,8 +58,8 @@ Any of:
 - **`npm audit` low CVE** — usually filed only if there is no fix available
   on a higher-severity dependency
 
-LOW-severity bugs are filed but expected to sit in the queue. feature-creator
-prioritizes HIGH and MEDIUM over LOW.
+LOW-severity bugs are filed and expected to sit in the queue until a human
+picks them up.
 
 ## Cross-checks
 

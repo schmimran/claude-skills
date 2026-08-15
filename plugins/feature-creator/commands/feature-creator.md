@@ -1,7 +1,7 @@
 ---
 name: feature-creator
 description: End-to-end pipeline — plans, reviews, and implements GitHub issues labeled `feature - ready for claude` or `bug - ready for claude`
-argument-hint: "[repo-owner/repo-name] [--auto-merge] [--include-security] [--integration-branch <name>] [--release-target <name>]"
+argument-hint: "[repo-owner/repo-name] [--auto-merge] [--dry-run] [--create-missing-labels] [--include-security] [--integration-branch <name>] [--release-target <name>]"
 disable-model-invocation: true
 ---
 
@@ -59,6 +59,8 @@ after the plan is posted.
    - If no `OWNER/REPO` is given, detect from the current directory: `gh repo view --json nameWithOwner -q .nameWithOwner`
    - If neither works, stop and ask the user for the repository.
    - Note whether `--auto-merge` was passed — this controls Phase 5 behavior.
+   - Note whether `--dry-run` was passed — see the **Dry run** section below.
+   - Note whether `--create-missing-labels` was passed — it creates any missing labels in step 3 rather than stopping.
    - Note whether `--include-security` was passed, as `INCLUDE_SECURITY`. By default the triager skips issues carrying the `security` label: security-scanner files those unattended with no approval gate, and picking them up here would take unreviewed scanner output straight through plan → branch → code → PR. Pass this flag only when a human has already reviewed the findings.
    - Note the value of `--integration-branch` if provided, as `INTEGRATION_BRANCH_FLAG` — it takes precedence over the repo profile in step 4.
    - Note the value of `--release-target` if provided, as `RELEASE_TARGET_FLAG` — it takes precedence over the repo profile in step 4.
@@ -81,8 +83,14 @@ after the plan is posted.
      `bug - human review`, `bug - in progress`, `bug - complete`,
      `bug - high`, `bug - medium`, `bug - low`
 
-   If any are missing, print the `gh label create` commands from the plugin
-   README and stop.
+   If any are missing, print the **exact** `gh label create` command for each
+   missing label — copy-pasteable, not a pointer to the README — using the
+   canonical colors and descriptions from this plugin's README, then stop.
+   Print only the lines for labels that are actually missing.
+
+   With `--create-missing-labels`, run those commands instead of stopping,
+   report which were created, and continue.  Label creation is a mutation:
+   under `--dry-run`, list what would be created and stop.
 
 4. Resolve the branching configuration for the target repository. Record
    `INTEGRATION_BRANCH`, `RELEASE_TARGET`, and `RELEASE_PR_ENABLED` as
@@ -197,6 +205,24 @@ after the plan is posted.
      fi
    fi
    ```
+
+## Dry run
+
+`--dry-run` runs Phase 0 (triage) through Phase 3 (review) — all read-only
+analysis — writes the full mutation plan to
+`/tmp/feature-creator-dry-run-plan.json`, prints it, and exits before
+Phase 4.
+
+The plan lists, per issue: the bucket, the branch that would be created, the
+files that would change, the risk verdict, and the PR that would be opened.
+
+**Under `--dry-run`, not a single mutating call is made:** no branch, no
+commit, no push, no `gh pr create`, no `gh pr merge`, no `gh issue comment`,
+no `gh issue edit`, no `gh label create`, and no edit to any file in the
+target repo.
+
+Note that plan and triage comments posted to issues are themselves writes.
+Under `--dry-run` they are printed, not posted.
 
 ## Phase 0: Triage
 
@@ -350,6 +376,13 @@ Wait for the agent to complete. Check its output:
 - Record the implementation order from the reviewer's output — you will need it in Phase 5.
 
 ## Phase 4: Implementation
+
+**This is the mutation boundary.**  Phases 0-3 read the codebase and post
+plan comments; Phase 4 onward creates branches, writes code, pushes, and
+opens PRs.
+
+Stop here and print the plan if `--dry-run` was passed.
+
 
 Use the Agent tool to launch the feature-implementer agent with the following prompt:
 

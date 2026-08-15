@@ -56,15 +56,23 @@ re-detection, close resolved ones, and post expert advisory comments.
    ```
    gh label list --repo <OWNER/REPO> --json name -q '.[].name'
    ```
-   Check for: `security`, `security - suppressed`, `feature - ready for claude`,
-   `feature - human review`.
+   Check for: `security`, `security - ready for claude`,
+   `security - suppressed`, `security - human review`.
    If any are missing, print the create commands below and stop:
    ```bash
    gh label create "security" --repo <OWNER/REPO> --color "d73a4a" --description "Security finding"
+   gh label create "security - ready for claude" --repo <OWNER/REPO> --color "0075ca" --description "Security finding reviewed by a human and cleared for remediation"
    gh label create "security - suppressed" --repo <OWNER/REPO> --color "e4e669" --description "Confirmed false positive — scanner will skip"
-   gh label create "feature - ready for claude" --repo <OWNER/REPO> --color "0075ca" --description "Ready for a Claude fixing agent"
-   gh label create "feature - human review" --repo <OWNER/REPO> --color "0075ca" --description "Needs a human to review before proceeding"
+   gh label create "security - human review" --repo <OWNER/REPO> --color "0075ca" --description "Needs a human to review before proceeding"
    ```
+
+   **Why security has its own labels:** security-scanner files findings
+   unattended and has no approval gate. Filing under
+   `feature - ready for claude` would hand unreviewed findings straight to
+   feature-creator's implementer, which plans, branches, codes, and opens a
+   PR. A human triages `security - ready for claude` issues and decides what
+   reaches an implementer. feature-creator ignores `security`-labelled issues
+   unless explicitly told otherwise with `--include-security`.
 
 ## Phase 1: Scan (parallel)
 

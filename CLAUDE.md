@@ -275,9 +275,17 @@ claude --plugin-dir /path/to/claude-skills/plugins/feature-creator
 |--------|-------------------|
 | feature-creator | Feature state machine: `feature - ready for claude`, `feature - planned`, `feature - human review`, `feature - in progress`, `feature - complete`. Bug state machine (shared with bug-sweeper): `bug`, `bug - ready for claude`, `bug - triaged`, `bug - planned`, `bug - human review`, `bug - in progress`, `bug - complete`, `bug - high`, `bug - medium`, `bug - low`. |
 | bug-sweeper | Files issues with `bug`, `bug - ready for claude`, and one of the severity labels (`bug - high|medium|low`) — all defined in feature-creator's set; bug-sweeper does not introduce its own labels |
-| security-scanner | `security`, `security - suppressed`, plus shared `feature - ready for claude` and `feature - human review` |
+| security-scanner | Security state machine (its own, shared with no other plugin): `security`, `security - ready for claude`, `security - suppressed`, `security - human review` |
 
-Where label names are shared across plugins (notably `feature - ready for claude`, `feature - human review`, and the entire `bug - *` set), the colors and descriptions in feature-creator's README are canonical — use those when creating labels.
+Where label names are shared across plugins (notably `feature - ready for claude` and the entire `bug - *` set), the colors and descriptions in feature-creator's README are canonical — use those when creating labels.
+
+### Security findings do not auto-route to an implementer
+
+security-scanner owns a separate label set and never files under `feature - ready for claude`. It runs unattended with no approval gate, so routing its output into feature-creator's pickup queue would take unreviewed findings straight through plan → branch → code → PR with no human in between.
+
+**A human sits between scan and implementation.** feature-creator's triager excludes any issue carrying the `security` label unless invoked with `--include-security`, and reports how many it excluded. Security findings reach an implementer only when a human has reviewed them and deliberately routed them there.
+
+When adding a new plugin that files issues, give it its own `<type> - ready for claude` label rather than borrowing another plugin's. Sharing a pickup label couples two pipelines' trigger conditions.
 
 ## Build & Test Commands
 

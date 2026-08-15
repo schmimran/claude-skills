@@ -96,13 +96,13 @@ to terminal only — do not file or reopen issues.
 ## Step 4.5: Reopen Closed Issues
 
 For each finding that matches a closed issue, reopen it, restore the
-`feature - ready for claude` label, and add a re-detection comment:
+`security - ready for claude` label, and add a re-detection comment:
 
 ```bash
 gh issue reopen <NUMBER> --repo <OWNER/REPO>
 
 gh issue edit <NUMBER> --repo <OWNER/REPO> \
-  --add-label "feature - ready for claude"
+  --add-label "security - ready for claude"
 
 cat > /tmp/sec-reopen-comment-<FINGERPRINT>.md << 'COMMENT_EOF'
 Re-detected in scan <SCAN_TIMESTAMP>. Prior fix did not resolve this finding. Please review the original fix and this scan's context before re-attempting.
@@ -133,7 +133,7 @@ gh issue create \
   --repo <OWNER/REPO> \
   --title "[SEC-<SEVERITY>] <RULE_ID>: <FINGERPRINT_SHORT>" \
   --label "security" \
-  --label "feature - ready for claude" \
+  --label "security - ready for claude" \
   --body-file /tmp/sec-issue-body-<FINGERPRINT>.md
 ```
 

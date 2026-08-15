@@ -1,7 +1,7 @@
 ---
 name: feature-creator
 description: End-to-end pipeline — plans, reviews, and implements GitHub issues labeled `feature - ready for claude` or `bug - ready for claude`
-argument-hint: "[repo-owner/repo-name] [--auto-merge] [--integration-branch <name>] [--release-target <name>]"
+argument-hint: "[repo-owner/repo-name] [--auto-merge] [--include-security] [--integration-branch <name>] [--release-target <name>]"
 disable-model-invocation: true
 ---
 
@@ -55,10 +55,11 @@ after the plan is posted.
    If not authenticated, stop and tell the user to run `gh auth login`.
 
 2. Resolve the target repository and flags:
-   - Parse `$ARGUMENTS`: extract `OWNER/REPO`, check for the `--auto-merge` flag, check for `--integration-branch <name>`, and check for `--release-target <name>`.
+   - Parse `$ARGUMENTS`: extract `OWNER/REPO`, check for the `--auto-merge` flag, check for `--include-security`, check for `--integration-branch <name>`, and check for `--release-target <name>`.
    - If no `OWNER/REPO` is given, detect from the current directory: `gh repo view --json nameWithOwner -q .nameWithOwner`
    - If neither works, stop and ask the user for the repository.
    - Note whether `--auto-merge` was passed — this controls Phase 5 behavior.
+   - Note whether `--include-security` was passed, as `INCLUDE_SECURITY`. By default the triager skips issues carrying the `security` label: security-scanner files those unattended with no approval gate, and picking them up here would take unreviewed scanner output straight through plan → branch → code → PR. Pass this flag only when a human has already reviewed the findings.
    - Note the value of `--integration-branch` if provided, as `INTEGRATION_BRANCH_FLAG` — it takes precedence over the repo profile in step 4.
    - Note the value of `--release-target` if provided, as `RELEASE_TARGET_FLAG` — it takes precedence over the repo profile in step 4.
    - Capture the repo's default branch now (used in step 4 only for the non-fatal auto-close warning — never as a branch fallback):
@@ -221,9 +222,12 @@ Use the Agent tool to launch the **feature-triager** agent with this prompt:
 
 > You are the feature-triager. Target repository: <OWNER/REPO>
 > Bucket manifest path: <BUCKET_MANIFEST_PATH>
+> Include security-labelled issues: <INCLUDE_SECURITY>
 >
 > Fetch all open issues labeled `feature - ready for claude` **or**
-> `bug - ready for claude`, run one shared codebase exploration pass, group
+> `bug - ready for claude`. Unless the flag above is true, exclude any issue
+> also carrying the `security` label, and report how many were excluded.
+> Run one shared codebase exploration pass, group
 > the issues into buckets per `references/triage-guide.md` (features and bugs
 > in separate buckets), write the manifest to the path above, and post
 > per-issue triage comments.

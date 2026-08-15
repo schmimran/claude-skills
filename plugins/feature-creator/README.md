@@ -271,6 +271,28 @@ Or specify a repository explicitly:
 /feature-creator owner/repo
 ```
 
+### Flags
+
+| Flag | Effect |
+|------|--------|
+| `--auto-merge` | Skip the confirmation pause before merging the release branch. |
+| `--integration-branch <name>` | Integration branch. Takes precedence over `trunk:` in the repo profile. |
+| `--release-target <name>` | Release PR base. Takes precedence over `release_target:` in the repo profile. |
+| `--include-security` | Include issues carrying the `security` label. Off by default — see below. |
+
+### Security issues are excluded by default
+
+The triager skips any issue carrying the `security` label.
+
+[security-scanner](../security-scanner/README.md) files findings unattended and
+has no approval gate. If this pipeline picked them up, unreviewed scanner output
+would go straight through plan → branch → code → PR with no human in between.
+Security findings are triaged by a human first and reach this pipeline only when
+someone deliberately relabels them.
+
+Pass `--include-security` only when the findings have already been reviewed. The
+triager reports how many issues it excluded, so the exclusion is never silent.
+
 ## Scheduling
 
 The pipeline can be wrapped in a scheduled task for recurring automation:

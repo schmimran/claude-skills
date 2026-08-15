@@ -16,18 +16,22 @@ posts expert advisory comments with root-cause analysis on each acted issue.
      --color d73a4a \
      --description "Security vulnerability finding"
 
+   gh label create "security - ready for claude" \
+     --color 0E8A16 \
+     --description "Security finding reviewed by a human and cleared for remediation"
+
    gh label create "security - suppressed" \
      --color e4e669 \
      --description "Confirmed false positive — scanner will skip this finding"
 
-   gh label create "feature - ready for claude" \
-     --color 0E8A16 \
-     --description "Ready for a Claude fixing agent"
-
-   gh label create "feature - human review" \
+   gh label create "security - human review" \
      --color D93F0B \
      --description "Needs a human to review before proceeding"
    ```
+
+   **These labels are security-scanner's own.** The scanner deliberately does
+   not file under `feature - ready for claude` — see
+   [Handoff to remediation](#handoff-to-remediation).
 
 3. **Run a quick scan** (before feature work):
    ```bash
@@ -152,6 +156,88 @@ The triager checks fingerprints in this order:
 Re-detected closed issues are reopened rather than duplicated, preserving the
 history of prior fix attempts.  See `references/fingerprint-spec.md` for the
 full fingerprint specification.
+
+## Mutation boundary
+
+Phase 1 (scan) and Phase 1.5 (merge) only read. Scanners run ephemerally via
+`npx --yes`, so a default run leaves the audited repo's `package.json` and
+lockfile untouched.
+
+**Writes begin in Phase 2, and consist of:**
+
+| Write | Detail |
+|-------|--------|
+| `gh issue create` | New findings, labeled `security` + `security - ready for claude` |
+| `gh issue reopen` + `gh issue edit` | Re-detected findings |
+| `gh issue comment` | Advisory comments, re-detection notices |
+| `gh issue close` | Findings no longer detected |
+| `gh label create` | Only with `--create-missing-labels` |
+| `npm install --save-dev` | Only with `--install-tools` |
+
+No branch is created and no source file is modified.
+
+### `--dry-run`
+
+security-scanner has **no approval gate** — absent `--dry-run` it files,
+reopens, comments, and closes the moment it is invoked. `--dry-run` runs the
+scan, writes the full plan to `/tmp/security-dry-run-plan.json`, prints what
+it would file, reopen, skip, and close, and exits before any write.
+
+```bash
+/security-scanner owner/repo full --dry-run
+```
+
+## Monorepo repos and tool execution
+
+The Node.js manifest does not need to be at the repo root. The project root is
+resolved in this order:
+
+1. `--project-root <dir>`
+2. `project_roots.backend` in the repo's committed `.claude/repo-profile.md`
+3. Discovery via `git ls-files '*package.json'` (excluding `node_modules`)
+
+`npm audit` and Supabase dependency detection run there. The static scanners
+(semgrep, nodejsscan) deliberately scan from the **repo root**, so Swift,
+Kotlin, and every other source tree stay in scope.
+
+### Scanners run ephemerally — the default writes nothing to your repo
+
+Scanners are invoked with `npx --yes`, so nothing is added to the audited
+repo's `package.json` or lockfile. A scanner's job is to read a repo, not to
+modify it, and a dev-dependency install would show up in your diff as though
+you had made it.
+
+Pass `--install-tools` to persist them as dev dependencies instead — useful for
+repeated scans on a slow connection. That **does** modify `package.json` and
+the lockfile, and happens only when the flag is passed explicitly.
+
+See [`references/repo-profile-spec.md`](references/repo-profile-spec.md).
+
+## Handoff to remediation
+
+security-scanner files findings under its own labels — `security` plus
+`security - ready for claude` — and **never** under
+`feature - ready for claude`.
+
+This matters because the scanner runs unattended and has no approval gate: it
+files, reopens, comments, and closes the moment it is invoked. Filing under
+`feature - ready for claude` would put unreviewed scanner output directly into
+[feature-creator](../feature-creator/README.md)'s pickup queue, where it would
+be planned, branched, coded, and opened as a PR with no human in between.
+
+**A human sits between scan and implementation.** The intended flow is:
+
+1. security-scanner files the finding and the advisor comments on it.
+2. A human triages it — confirms it is real, or suppresses it.
+3. If it should be fixed automatically, the human relabels it for whichever
+   pipeline should do the work.
+
+feature-creator ignores any issue carrying the `security` label unless it is
+invoked with `--include-security`, so a freshly filed security issue does not
+appear in its default queue.
+
+Severity is carried in the issue title (`[SEC-<SEVERITY>] …`), not in a
+separate label set.
 
 ## Suppression (False Positives)
 

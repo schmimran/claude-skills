@@ -91,7 +91,7 @@ Process features **sequentially**, one at a time. For each feature:
 ### 2a. Create Branch (flat-branch from `<INTEGRATION_BRANCH>`)
 
 **Never branch off another `feature/*` branch.** Every feature branch must be a
-flat branch rooted at `<INTEGRATION_BRANCH>`. This is not a judgment call — it
+flat branch based directly on `<INTEGRATION_BRANCH>`. This is not a judgment call — it
 is a hard-coded first action. Stacking feature branches caused silent conflicts
 on prior runs.
 
@@ -159,23 +159,63 @@ to create and modify files. Key guidelines:
 
 ### 2c. Verify
 
-Detect and run the test command. Check in this order:
-1. CLAUDE.md — look for documented test/build commands
-2. `package.json` — `npm test` or `npm run test`
-3. `Makefile` — `make test`
-4. `Cargo.toml` — `cargo test`
-5. `go.mod` — `go test ./...`
-6. `pyproject.toml` or `pytest.ini` — `pytest`
+**Verification is per surface, not per repo.** A change touching `api/` and
+`Android/` has two surfaces, and running the backend tests says nothing about
+the Kotlin. Determine which surfaces the change touched, then verify each one
+independently.
 
-Also run the build command if one is documented.
+Map each changed file to a surface using `project_roots` in
+`.claude/repo-profile.md` (see `references/repo-profile-spec.md`), or by path
+when no profile exists.
 
-If no test command can be found, note this in the PR description and proceed
-with a warning.
+For each touched surface, resolve its command in this order:
+
+1. `test_cmd.<surface>` / `typecheck_cmd.<surface>` in `.claude/repo-profile.md`
+2. CLAUDE.md — documented test/build commands
+3. The language adapter below
+
+| Surface language | Marker file | Command |
+|---|---|---|
+| TypeScript / JavaScript | `package.json` | `npm --prefix <root> test` |
+| Kotlin / Android | `build.gradle`, `build.gradle.kts`, `settings.gradle` | `./gradlew <module>:test` (module from `settings.gradle`; `./gradlew test` if only one) |
+| Swift / SwiftPM | `Package.swift` | `swift test` |
+| Swift / Xcode | `*.xcodeproj`, `*.xcworkspace` | `xcodebuild test -scheme <scheme> -destination 'platform=iOS Simulator,name=iPhone 15'` |
+| Rust | `Cargo.toml` | `cargo test` |
+| Go | `go.mod` | `go test ./...` |
+| Python | `pyproject.toml`, `pytest.ini` | `pytest` |
+| Make | `Makefile` | `make test` |
+
+Run each surface's command from that surface's root. Also run the build or
+typecheck command where one is documented.
+
+#### Recording the outcome
+
+Track a result per surface — `passed`, `failed`, or `not verified` with a
+reason:
+
+```
+| Surface  | Command                  | Result       |
+|----------|--------------------------|--------------|
+| backend  | npm test                 | passed       |
+| android  | ./gradlew app:test       | passed       |
+| ios      | —                        | not verified — no runnable test command found |
+```
+
+**Never report a blanket warning.** If any surface could not be verified, say
+which one and why, in **both** the PR body and the issue comment. A PR that
+changed Swift and Kotlin must state explicitly that those surfaces were not
+verified — an unqualified "proceeding with a warning" reads as success and
+hides the gap.
+
+If **no** surface could be verified, still open the PR, but lead the PR body
+with the unverified list. Do not describe the change as tested.
 
 If tests or build fail:
 - Read the error output carefully
 - Attempt to fix the issue (up to 3 attempts)
 - If still failing after 3 attempts, go to **Error Recovery**
+- A failure on one surface does not excuse skipping the others — verify every
+  touched surface before deciding the outcome
 
 ### 2d. Post-conflict diff verification gate
 

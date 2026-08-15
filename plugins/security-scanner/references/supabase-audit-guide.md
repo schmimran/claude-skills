@@ -10,7 +10,8 @@ The auditor only runs if Supabase is in use. Signals, checked in order — any
 one match is sufficient:
 
 1. `supabase/config.toml` exists at repo root.
-2. `@supabase/supabase-js` is listed in `package.json` `dependencies` or
+2. `@supabase/supabase-js` is listed in `<PROJECT_ROOT>/package.json`
+   (the resolved manifest, not necessarily the repo root) `dependencies` or
    `devDependencies`.
 3. `SUPABASE_URL` is set in any `.env*` file in the repo root.
 4. `supabase/migrations/` exists and contains at least one `.sql` file.

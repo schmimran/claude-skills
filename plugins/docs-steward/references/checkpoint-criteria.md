@@ -85,5 +85,5 @@ The orchestrator:
 3. Leaves `${CACHE_DIR}` in place for inspection and manual adjudication.
 4. Exits with a non-zero status code so scheduled runs surface as failed.
 
-Resumption (the `--resume` flag) is out of scope for v0.1.0; after
+Resumption (a `--resume` flag) is not implemented; after
 adjudication, re-run the pipeline with the same arguments.

@@ -1,7 +1,39 @@
 # Tool Install Guide
 
-The security-runner agent checks for and installs these tools before scanning.
-All tools are installed as dev dependencies or via npx — no global installs.
+The security-runner agent runs its scanners **ephemerally** with `npx --yes`.
+
+## The default writes nothing to the target repo
+
+A scanner's job is to read a repo, not to modify it. Installing a dev
+dependency would rewrite the `package.json` and lockfile of the very repo under
+audit — a source change made by a read-only tool, appearing in the user's diff
+as if they had made it.
+
+So the default is ephemeral execution:
+
+```bash
+npx --yes semgrep …
+npx --yes nodejsscan …
+```
+
+`--yes` suppresses the interactive install prompt, which would otherwise hang
+an unattended run. Packages land in npx's own cache, never in the repo.
+
+**A default-flags run leaves `package.json` and the lockfile untouched.**
+
+## `--install-tools` (opt-in)
+
+Pass `--install-tools` to persist the scanners as dev dependencies instead —
+useful for repeated scans on a slow connection, where re-resolving each run is
+wasteful:
+
+```bash
+npm install --save-dev semgrep nodejsscan
+```
+
+This **does** modify the target repo's `package.json` and lockfile. It happens
+only when the flag is passed explicitly. Never install as a side effect of a
+scan, and never without the flag.
 
 ## Orchestrator prerequisites
 
@@ -31,33 +63,31 @@ If this fails, the Node.js installation is broken.  Stop and report.
 
 ### semgrep (secrets rules)
 ```bash
-# Check if available
-npx semgrep --version 2>/dev/null
-
-# If not available, install
-npm install --save-dev semgrep
+# Resolved on demand; no install step, no repo modification.
+npx --yes semgrep --version 2>/dev/null
 ```
+If this fails, the environment has no outbound network access to the npm
+registry.  Record `tool_status: unavailable` for the secrets scan and continue
+with the remaining tools — do not install as a fallback.
 
 ## Required for full mode (in addition to above)
 
 ### semgrep (OWASP rules)
-Same binary as above — just additional rule configs.  No extra install needed.
+Same binary as above — just additional rule configs.  Nothing extra to resolve.
 
 ### nodejsscan
 ```bash
-# Check if available
-npx nodejsscan --version 2>/dev/null
-
-# If not available, install
-npm install --save-dev nodejsscan
+npx --yes nodejsscan --version 2>/dev/null
 ```
+Same handling as semgrep: on failure, record `tool_status: unavailable` and
+continue.
 
 ## Verifying the Rule Configs
 
 semgrep rule configs are fetched at runtime from the semgrep registry.  They
 require internet access.  If the scan environment is air-gapped, these configs
-must be pre-downloaded and referenced by local path.  This is out of scope for
-v0.1 — flag it if the environment has no outbound internet.
+must be pre-downloaded and referenced by local path.  This is not supported —
+flag it if the environment has no outbound internet.
 
 ## Supabase auditing (optional)
 

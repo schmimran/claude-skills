@@ -48,20 +48,33 @@ gh issue list --repo <OWNER/REPO> --label "bug - ready for claude" --state open 
 ```
 
 Merge into a single list, tagging each issue with its `type` for downstream
-classification:
+classification, and drop any issue carrying the `security` label:
 
 ```
-python3 - <<'PY' > /tmp/triager-issues.json
-import json
+INCLUDE_SECURITY="${INCLUDE_SECURITY:-false}" python3 - <<'PY' > /tmp/triager-issues.json
+import json, os
+include_security = os.environ.get("INCLUDE_SECURITY") == "true"
 features = json.load(open("/tmp/triager-features.json"))
 bugs = json.load(open("/tmp/triager-bugs.json"))
 for f in features: f["type"] = "feature"
 for b in bugs: b["type"] = "bug"
-print(json.dumps(features + bugs))
+issues = features + bugs
+if not include_security:
+    issues = [i for i in issues
+              if not any(l["name"] == "security" for l in i.get("labels", []))]
+print(json.dumps(issues))
 PY
 ```
 
-If 0 total issues are returned, output:
+**Why security issues are excluded.** security-scanner files findings
+unattended and has no approval gate. Picking them up here would take
+unreviewed scanner output straight through plan → branch → code → PR with no
+human in between. Security findings are triaged by a human first; they reach
+this pipeline only when someone deliberately relabels them, or when the
+operator passes `--include-security`. Report the count of excluded issues so
+the exclusion is visible rather than silent.
+
+If 0 total issues remain, output:
 
 > No issues labeled `feature - ready for claude` or `bug - ready for claude` found.
 

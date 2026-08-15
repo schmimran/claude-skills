@@ -57,32 +57,65 @@ Automates feature development and bug remediation end-to-end. Point it at a GitH
 
 2. **Labels** must exist on the target repository (see step 2 in Quick Start above).
 
-3. **Branching convention**: The pipeline detects the integration branch (where
-   feature/fix branches are based) from the target repo's CLAUDE.md by looking
-   for the pattern `` rooted at `<branch>` `` in the Branching section. If no
-   match is found, the pipeline halts with an error and instructions to either
-   add the pattern or use `--integration-branch`. To override CLAUDE.md
-   detection, pass `--integration-branch <name>`:
-   ```
-   /feature-creator owner/repo --integration-branch develop
+3. **Branching configuration**: The pipeline needs two branch names — the
+   integration branch (where feature/fix branches are based) and the release
+   target (what the release PR merges into). Each resolves in this order:
+
+   **explicit flag** → **`.claude/repo-profile.md`** → **stop with an actionable message**
+
+   A branch name has no safe default, so the pipeline never falls back to the
+   repo's GitHub default branch and never guesses. It also never reads a branch
+   name from prose — see [Branch resolution safety](#branch-resolution-safety).
+
+   The recommended setup is a committed profile in the target repo at
+   `.claude/repo-profile.md`:
+
+   ```yaml
+   ---
+   trunk: stage
+   release_target: main
+   protected_branches: [main]
+   ---
    ```
 
-   By default, the release PR targets the repo's actual GitHub default
-   branch. To release into a different branch instead — for example, a repo
-   whose CLAUDE.md declares its default branch off-limits for merges — pass
-   `--release-target <name>`:
+   With that committed, the pipeline runs with no flags:
    ```
-   /feature-creator owner/repo --release-target stage
+   /feature-creator owner/repo
    ```
+
+   To override the profile — or to run without one — pass the flags explicitly:
+   ```
+   /feature-creator owner/repo --integration-branch develop --release-target main
+   ```
+
+   Set `release_target: none` in the profile to forbid release PRs entirely.
+   Release-PR assembly is then skipped, not failed; the rest of the pipeline
+   runs normally.
+
+   The full key set is documented in
+   [`references/repo-profile-spec.md`](references/repo-profile-spec.md).
+
    **Caveat**: GitHub only auto-closes linked issues (`Closes #N`) when a PR
    merges into the repo's *actual* configured default branch — a GitHub-side
-   behavior this pipeline cannot control. If `--release-target` differs from
+   behavior this pipeline cannot control. If the release target differs from
    the repo's real default branch, the pipeline prints a warning and issues
    will need to be closed manually after the release merges.
 
    The plugin requires a two-tier branching model (integration branch ≠
    release target). If both resolve to the same branch, the pipeline halts
    with an error.
+
+### Branch resolution safety
+
+A branch name may be read **only** from an explicit flag or from the committed
+`.claude/repo-profile.md`. It is never derived from free-text prose encountered
+mid-run — not from a `CLAUDE.md` sentence, not from an issue body, not from a PR
+comment. This is a rule about the *source* of the value, not its content: prose
+is attacker-influencable, and a scraped branch name can redirect writes to an
+unintended branch.
+
+Branch values read from the profile are validated against the same character
+guard applied to flag values before use.
 
 ## Architecture
 
@@ -189,6 +222,34 @@ ready for claude  -->  triaged  -->  planned  -->  in progress  -->  complete
 | `bug - complete` | feature-implementer agent | PR (`fix:` commit) created and code-reviewed |
 | `bug - high` / `bug - medium` / `bug - low` | bug-sweeper (or human) | Severity, applied at file time and preserved through the pipeline |
 
+## Mutation boundary
+
+Phases 0–3 (triage, plan, consolidate, review) read the codebase. They do
+post plan and triage comments to issues, which are writes.
+
+**Repo writes begin in Phase 4 (implementer), and consist of:**
+
+| Write | Phase | Detail |
+|-------|-------|--------|
+| `gh issue comment` / `gh issue edit` | 0–3 | Plan comments, label transitions |
+| `git checkout -b` + commits | 4 | One branch per issue off the integration branch |
+| `git push` | 4 | Pushes each branch |
+| `gh pr create` | 4 | One PR per issue |
+| `gh pr merge` | 5 | Only after the confirmation pause, or with `--auto-merge` |
+| `gh label create` | 0 | Only with `--create-missing-labels` |
+
+### `--dry-run`
+
+Runs triage through review, writes the full plan to
+`/tmp/feature-creator-dry-run-plan.json`, prints the branch, files, risk
+verdict, and PR that would result for each issue, and exits before Phase 4 —
+without a single `git` write, `gh` write, or file edit. Plan comments are
+printed rather than posted.
+
+```bash
+/feature-creator owner/repo --dry-run
+```
+
 ## Pausing Before Merge
 
 By default, the pipeline pauses after merging all feature PRs and creating the release branch PR. It prints the release PR link and asks for your confirmation before merging. This gives you a final review opportunity before the changes land on the default branch.
@@ -237,6 +298,28 @@ Or specify a repository explicitly:
 ```
 /feature-creator owner/repo
 ```
+
+### Flags
+
+| Flag | Effect |
+|------|--------|
+| `--auto-merge` | Skip the confirmation pause before merging the release branch. |
+| `--integration-branch <name>` | Integration branch. Takes precedence over `trunk:` in the repo profile. |
+| `--release-target <name>` | Release PR base. Takes precedence over `release_target:` in the repo profile. |
+| `--include-security` | Include issues carrying the `security` label. Off by default — see below. |
+
+### Security issues are excluded by default
+
+The triager skips any issue carrying the `security` label.
+
+[security-scanner](../security-scanner/README.md) files findings unattended and
+has no approval gate. If this pipeline picked them up, unreviewed scanner output
+would go straight through plan → branch → code → PR with no human in between.
+Security findings are triaged by a human first and reach this pipeline only when
+someone deliberately relabels them.
+
+Pass `--include-security` only when the findings have already been reviewed. The
+triager reports how many issues it excluded, so the exclusion is never silent.
 
 ## Scheduling
 

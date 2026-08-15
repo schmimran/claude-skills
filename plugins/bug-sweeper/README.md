@@ -157,6 +157,32 @@ With that committed, a polyglot repo sweeps every surface with no flags. See
 | `--project-root <dir>` | Skip manifest discovery. |
 | `--languages <list>` | Restrict review, e.g. `typescript,kotlin`. |
 
+## Mutation boundary
+
+bug-sweeper is find-only. Phases 1–5 read the repo and the issue tracker and
+write nothing outside `/tmp`. The reviewer and tracer agents hold
+`tools: Glob, Grep, Read, TodoWrite` — they have no write access at all.
+
+**Writes begin in Phase 6 (filer), and consist of:**
+
+| Write | Detail |
+|-------|--------|
+| `gh issue create` | One per confirmed bug, with `bug`, `bug - ready for claude`, and a severity label |
+| `gh label create` | Only with `--create-missing-labels` |
+
+No branch is created, no commit is made, no file in the repo is modified.
+Remediation is feature-creator's job.
+
+### `--dry-run`
+
+Runs every read-only phase, writes the full plan to
+`/tmp/bug-sweeper-plan.json`, prints it, and exits without a single `gh`
+write. `--dry-run` overrides `--headless`.
+
+```bash
+/bug-sweeper owner/repo --dry-run
+```
+
 ## Coverage
 
 | Bug class | Detected by |

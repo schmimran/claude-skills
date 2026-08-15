@@ -8,7 +8,7 @@
       "name": "feature-creator",
       "source": "./plugins/feature-creator",
       "description": "Feature and bug-fix pipeline — plans, reviews, and implements GitHub issues labeled `feature - ready for claude` or `bug - ready for claude`.",
-      "version": "0.10.0",
+      "version": "0.11.0",
       "author": {
         "name": "schmimran"
       }
@@ -17,7 +17,7 @@
       "name": "security-scanner",
       "source": "./plugins/security-scanner",
       "description": "Multi-tool security audit for Node.js web apps and Supabase projects — files findings as GitHub Issues with deduplication and auto-close.",
-      "version": "0.6.0",
+      "version": "0.7.0",
       "author": {
         "name": "schmimran"
       }
@@ -26,7 +26,7 @@
       "name": "docs-steward",
       "source": "./plugins/docs-steward",
       "description": "Docs maintenance pipeline — builds canonical indexes of a repo, audits docs for drift, duplication, orphans, and onboarding gaps, then actively edits docs and opens a PR.",
-      "version": "0.6.0",
+      "version": "0.7.0",
       "author": {
         "name": "schmimran"
       }
@@ -35,7 +35,7 @@
       "name": "bug-sweeper",
       "source": "./plugins/bug-sweeper",
       "description": "Daily bug-discovery sweep for Node.js apps — runs build/audit + multi-agent code review, filters false positives, and files confirmed bugs as GitHub Issues for feature-creator to remediate.",
-      "version": "0.3.0",
+      "version": "0.4.0",
       "author": {
         "name": "schmimran"
       }

@@ -1,7 +1,7 @@
 {
   "name": "feature-creator",
   "description": "Feature and bug-fix pipeline — plans, reviews, and implements GitHub issues labeled `feature - ready for claude` or `bug - ready for claude`.",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "author": {
     "name": "schmimran"
   }

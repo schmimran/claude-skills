@@ -160,6 +160,33 @@ When a checkpoint fires, the plugin exits without creating a branch
 or editing files.  Inspect the cache (`checkpoint-required.md`),
 adjudicate, and re-run.
 
+## Mutation boundary
+
+Phases 0–2 (index build, drift audit, consolidation) only read the repo;
+their output goes to the `/tmp` cache.
+
+**Writes begin in Phase 3 (editor), and consist of:**
+
+| Write | Phase | Detail |
+|-------|-------|--------|
+| `git checkout -B` | 3 | Creates `docs/steward-<run-id>` from the resolved base |
+| File edits + `git commit` | 3 | One commit per edited file |
+| `git push` | 5 | Pushes the branch |
+| `gh pr create` | 5 | Opens the single PR |
+
+**The plugin never merges.** That ceiling is architectural, not a default —
+see [What does NOT happen automatically](#what-does-not-happen-automatically).
+
+### `--dry-run`
+
+Runs the index build, audit, and consolidation, prints the consolidated edit
+plan, and exits before Phase 3 — no branch, no edit, no commit, no push, no
+PR.
+
+```bash
+/docs-steward owner/repo --dry-run
+```
+
 ## What does NOT happen automatically
 
 - **The PR is never auto-merged** — a human always reviews.  The

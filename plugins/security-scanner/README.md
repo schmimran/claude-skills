@@ -157,6 +157,36 @@ Re-detected closed issues are reopened rather than duplicated, preserving the
 history of prior fix attempts.  See `references/fingerprint-spec.md` for the
 full fingerprint specification.
 
+## Mutation boundary
+
+Phase 1 (scan) and Phase 1.5 (merge) only read. Scanners run ephemerally via
+`npx --yes`, so a default run leaves the audited repo's `package.json` and
+lockfile untouched.
+
+**Writes begin in Phase 2, and consist of:**
+
+| Write | Detail |
+|-------|--------|
+| `gh issue create` | New findings, labeled `security` + `security - ready for claude` |
+| `gh issue reopen` + `gh issue edit` | Re-detected findings |
+| `gh issue comment` | Advisory comments, re-detection notices |
+| `gh issue close` | Findings no longer detected |
+| `gh label create` | Only with `--create-missing-labels` |
+| `npm install --save-dev` | Only with `--install-tools` |
+
+No branch is created and no source file is modified.
+
+### `--dry-run`
+
+security-scanner has **no approval gate** — absent `--dry-run` it files,
+reopens, comments, and closes the moment it is invoked. `--dry-run` runs the
+scan, writes the full plan to `/tmp/security-dry-run-plan.json`, prints what
+it would file, reopen, skip, and close, and exits before any write.
+
+```bash
+/security-scanner owner/repo full --dry-run
+```
+
 ## Monorepo repos and tool execution
 
 The Node.js manifest does not need to be at the repo root. The project root is

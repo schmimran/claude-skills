@@ -222,6 +222,34 @@ ready for claude  -->  triaged  -->  planned  -->  in progress  -->  complete
 | `bug - complete` | feature-implementer agent | PR (`fix:` commit) created and code-reviewed |
 | `bug - high` / `bug - medium` / `bug - low` | bug-sweeper (or human) | Severity, applied at file time and preserved through the pipeline |
 
+## Mutation boundary
+
+Phases 0–3 (triage, plan, consolidate, review) read the codebase. They do
+post plan and triage comments to issues, which are writes.
+
+**Repo writes begin in Phase 4 (implementer), and consist of:**
+
+| Write | Phase | Detail |
+|-------|-------|--------|
+| `gh issue comment` / `gh issue edit` | 0–3 | Plan comments, label transitions |
+| `git checkout -b` + commits | 4 | One branch per issue off the integration branch |
+| `git push` | 4 | Pushes each branch |
+| `gh pr create` | 4 | One PR per issue |
+| `gh pr merge` | 5 | Only after the confirmation pause, or with `--auto-merge` |
+| `gh label create` | 0 | Only with `--create-missing-labels` |
+
+### `--dry-run`
+
+Runs triage through review, writes the full plan to
+`/tmp/feature-creator-dry-run-plan.json`, prints the branch, files, risk
+verdict, and PR that would result for each issue, and exits before Phase 4 —
+without a single `git` write, `gh` write, or file edit. Plan comments are
+printed rather than posted.
+
+```bash
+/feature-creator owner/repo --dry-run
+```
+
 ## Pausing Before Merge
 
 By default, the pipeline pauses after merging all feature PRs and creating the release branch PR. It prints the release PR link and asks for your confirmation before merging. This gives you a final review opportunity before the changes land on the default branch.

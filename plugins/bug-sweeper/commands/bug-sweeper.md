@@ -1,7 +1,7 @@
 ---
 name: bug-sweeper
-description: Bug-discovery sweep for Node.js, Swift, and Kotlin repos — analyzes, filters false positives, and files confirmed bugs as GitHub Issues labeled `bug - ready for claude`. Args: [repo-owner/repo-name] [--headless] [--project-root <dir>] [--languages <list>]
-argument-hint: "[repo-owner/repo-name] [--headless] [--project-root <dir>] [--languages <list>]"
+description: Bug-discovery sweep for Node.js, Swift, and Kotlin repos — analyzes, filters false positives, and files confirmed bugs as GitHub Issues labeled `bug - ready for claude`. Args: [repo-owner/repo-name] [--headless] [--dry-run] [--create-missing-labels] [--project-root <dir>] [--languages <list>]
+argument-hint: "[repo-owner/repo-name] [--headless] [--dry-run] [--create-missing-labels] [--project-root <dir>] [--languages <list>]"
 disable-model-invocation: true
 ---
 
@@ -37,6 +37,9 @@ issues are filed.
   ```
   If neither works, stop and ask the user for the repository.
 - Check for the `--headless` flag. If present, set `HEADLESS=true`.
+- Check for `--dry-run`. If present, set `DRY_RUN=true`. See **Dry run** below.
+- Check for `--create-missing-labels`. If present, create any missing labels
+  in step 0d rather than stopping.
 - Check for `--project-root <dir>`. If present, set `PROJECT_ROOT_FLAG` — it
   skips manifest discovery entirely in step 0e.
 - Check for `--languages <list>` (comma-separated, e.g.
@@ -85,10 +88,33 @@ bug-sweeper directly applies. Verify all of:
 - `bug - complete` (applied by feature-creator's implementer)
 - `bug - high` / `bug - medium` / `bug - low` (applied by filer per analyst severity)
 
-If any are missing, print the `gh label create` commands from this plugin's
-`README.md` and stop. Catching this at sweep time prevents filing issues
-into an incomplete pipeline (where feature-creator would fail its own
-pre-flight check on the same labels later).
+If any are missing, print the **exact** `gh label create` command for each
+missing label — copy-pasteable, not a pointer to the README — then stop:
+
+```bash
+gh label create "bug" --repo <OWNER/REPO> --force --color d73a4a --description "Defect in the codebase"
+gh label create "bug - ready for claude" --repo <OWNER/REPO> --force --color 0E8A16 --description "Bug ready for automated planning (typically filed by bug-sweeper)"
+gh label create "bug - triaged" --repo <OWNER/REPO> --force --color 1D76DB --description "Triaged into a bucket; planner will pick it up"
+gh label create "bug - planned" --repo <OWNER/REPO> --force --color 1D76DB --description "Implementation plan posted as comment"
+gh label create "bug - human review" --repo <OWNER/REPO> --force --color D93F0B --description "Flagged for human review (high-risk or failed)"
+gh label create "bug - in progress" --repo <OWNER/REPO> --force --color FBCA04 --description "Branch created, implementation underway"
+gh label create "bug - complete" --repo <OWNER/REPO> --force --color 0E8A16 --description "PR created and code-reviewed"
+gh label create "bug - high" --repo <OWNER/REPO> --force --color B60205 --description "High-severity bug — data loss, security, hot-path crash, partial commit"
+gh label create "bug - medium" --repo <OWNER/REPO> --force --color D93F0B --description "Medium-severity bug — non-critical regression, leak, UI consistency"
+gh label create "bug - low" --repo <OWNER/REPO> --force --color FBCA04 --description "Low-severity bug — cosmetic, doc drift, defensive-coding gap"
+```
+
+Print only the lines for labels that are actually missing. Colors and
+descriptions are feature-creator's canonical set (see the repo CLAUDE.md).
+
+**`--create-missing-labels`**: if that flag was passed, run the commands
+above for the missing labels instead of stopping, report which were
+created, and continue. Label creation is a mutation — under `--dry-run`,
+list what would be created and stop.
+
+Catching this at sweep time prevents filing issues into an incomplete
+pipeline (where feature-creator would fail its own pre-flight check on the
+same labels later).
 
 ### 0e. Resolve the project root
 
@@ -168,6 +194,23 @@ stop. (`WEB_DIR` is optional — APIs without a web UI are valid.)
 ```
 rm -f /tmp/bug-sweeper-*.json /tmp/bug-sweeper-*.txt /tmp/bug-issue-*.md
 ```
+
+## Dry run
+
+`--dry-run` runs every read-only phase — signals, review, reconciliation,
+analysis, self-review — writes the full mutation plan to
+`/tmp/bug-sweeper-plan.json`, prints it, and exits.
+
+**Under `--dry-run`, not a single mutating call is made:** no `gh issue
+create`, no `gh issue edit`, no `gh label create`, no `git` write, no `npm
+install`, no file edit in the target repo. Phase 6 is skipped entirely.
+
+`--dry-run` overrides `--headless`. If both are passed, the run is a dry
+run: the approval gate is moot when nothing will be written.
+
+The read-only phases are safe by construction — the reviewer and tracer
+agents hold `tools: Glob, Grep, Read, TodoWrite` and have no write access at
+all. The mutation boundary is Phase 6.
 
 ## Phase 1: Automated Checks (runner)
 
@@ -280,6 +323,12 @@ Skip this entire phase — do not render the plan, do not call
 `ExitPlanMode`, do not wait. Proceed directly to Phase 6.
 
 ## Phase 6: File Issues
+
+**This is the mutation boundary.** Every write bug-sweeper performs happens
+here: `gh issue create` for each confirmed bug, with its `bug`,
+`bug - ready for claude`, and severity labels.
+
+Skip this phase entirely if `DRY_RUN=true` — print the plan and stop.
 
 Skip this phase if the empty-plan short-circuit fired in Phase 5.
 

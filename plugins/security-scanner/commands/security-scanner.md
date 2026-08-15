@@ -1,7 +1,7 @@
 ---
 name: security-scanner
-description: Security audit for Node.js apps — files findings as GitHub Issues. Args: [repo-owner/repo-name] [full|quick]
-argument-hint: "[repo-owner/repo-name] [full|quick]"
+description: Security audit for Node.js apps — files findings as GitHub Issues. Args: [repo-owner/repo-name] [full|quick] [--dry-run] [--create-missing-labels] [--project-root <dir>] [--install-tools]
+argument-hint: "[repo-owner/repo-name] [full|quick] [--dry-run] [--create-missing-labels] [--project-root <dir>] [--install-tools]"
 disable-model-invocation: true
 ---
 
@@ -59,6 +59,8 @@ re-detection, close resolved ones, and post expert advisory comments.
      target repo's `package.json` and lockfile**.  See
      `references/tool-install-guide.md`.
    - Check for `--dry-run`.  See the **Dry run** section below.
+   - Check for `--create-missing-labels`.  If present, create any missing
+     labels in step 4 rather than stopping.
 
 3.5. Resolve the project root.  The Node.js manifest is often **not** at the
    repo root — in a polyglot monorepo the only `package.json` may live in
@@ -116,7 +118,11 @@ re-detection, close resolved ones, and post expert advisory comments.
    ```
    Check for: `security`, `security - ready for claude`,
    `security - suppressed`, `security - human review`.
-   If any are missing, print the create commands below and stop:
+   If any are missing, print the create commands below — only the lines for
+   labels that are actually missing — and stop.  With
+   `--create-missing-labels`, run them instead and continue, reporting which
+   were created.  Label creation is a mutation: under `--dry-run`, list what
+   would be created and stop.
    ```bash
    gh label create "security" --repo <OWNER/REPO> --color "d73a4a" --description "Security finding"
    gh label create "security - ready for claude" --repo <OWNER/REPO> --color "0075ca" --description "Security finding reviewed by a human and cleared for remediation"
@@ -131,6 +137,27 @@ re-detection, close resolved ones, and post expert advisory comments.
    PR. A human triages `security - ready for claude` issues and decides what
    reaches an implementer. feature-creator ignores `security`-labelled issues
    unless explicitly told otherwise with `--include-security`.
+
+## Dry run
+
+`--dry-run` runs Phase 1 (scan) and Phase 1.5 (merge) — both read-only —
+then writes the full mutation plan to `/tmp/security-dry-run-plan.json`,
+prints it, and exits before Phase 2.
+
+The plan lists, per finding: the fingerprint, the action that would be taken
+(`file`, `reopen`, `skip-duplicate`, `skip-suppressed`, `close`), and the
+issue number where one already exists.
+
+**Under `--dry-run`, not a single mutating call is made:** no `gh issue
+create`, no `gh issue reopen`, no `gh issue edit`, no `gh issue comment`, no
+`gh issue close`, no `gh label create`, and no `npm install` (scanners run
+ephemerally via `npx --yes` regardless — see
+`references/tool-install-guide.md`).
+
+This matters more here than elsewhere in the fleet: security-scanner has no
+approval gate, so absent `--dry-run` it files, reopens, comments, and closes
+the moment it is invoked.  `--dry-run` is how you see what a scan would do
+to your issue tracker before it does it.
 
 ## Phase 1: Scan (parallel)
 
@@ -190,6 +217,14 @@ as the canonical file.  Either way, `/tmp/security-findings.json` is the
 single input to Phase 2.
 
 ## Phase 2: Triage and Close (parallel)
+
+**This is the mutation boundary.**  Phases 1 and 1.5 only read.  Every write
+security-scanner performs happens in Phase 2 and Phase 3: filing issues,
+reopening closed ones, editing labels, posting comments, and closing resolved
+findings.
+
+Stop here and print the plan if `DRY_RUN=true`.
+
 
 Launch **security-triager** and **security-closer** simultaneously — they read
 from the same findings file and write to non-overlapping GitHub Issues, so they

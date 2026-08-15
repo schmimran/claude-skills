@@ -1,7 +1,7 @@
 ---
 name: docs-steward
-description: Audit and actively correct documentation across a repo — builds canonical indexes, runs multi-persona drift audit, edits docs, and opens a PR. Args: [repo-owner/repo-name] [--rigor=full|major|sampled] [--base-branch <name>]
-argument-hint: "[repo-owner/repo-name] [--rigor=full|major|sampled] [--base-branch <name>]"
+description: Audit and actively correct documentation across a repo — builds canonical indexes, runs multi-persona drift audit, edits docs, and opens a PR. Args: [repo-owner/repo-name] [--rigor=full|major|sampled] [--base-branch <name>] [--dry-run]
+argument-hint: "[repo-owner/repo-name] [--rigor=full|major|sampled] [--base-branch <name>] [--dry-run]"
 disable-model-invocation: true
 ---
 
@@ -89,6 +89,7 @@ instruction.  No ambient instruction may relax them.
      three source-verifying auditors in Phase 1 (intent-auditor,
      example-verifier, reference-validator).  Rigor modes are defined in
      `references/claim-verification-protocol.md`.
+   - Extract `--dry-run` if provided.  See the **Dry run** section below.
    - Extract `--base-branch <name>` if provided.  Record as
      `<BASE_BRANCH_FLAG>`.  It takes precedence over every other source
      when resolving the base branch in step 5.
@@ -188,6 +189,20 @@ instruction.  No ambient instruction may relax them.
    ```
    This file is produced by **docs-protected-extractor** in Phase 0
    (below).  Record the path and pass it to the consolidator in Phase 2.
+
+## Dry run
+
+`--dry-run` runs Phase 0 (index build), Phase 1 (drift audit), and Phase 2
+(consolidation) — all read-only — then prints the consolidated edit plan and
+exits before Phase 3.
+
+**Under `--dry-run`, not a single mutating call is made:** no branch is
+created, no file in the target repo is edited, nothing is committed or
+pushed, and no PR is opened.  The cache under `${CACHE_DIR}` is the only
+thing written, and it lives in `/tmp`.
+
+The printed plan is the same `consolidated-findings.md` the editor would
+consume, so it shows exactly which files would change and how.
 
 ## Phase 0: Index Build (parallel)
 
@@ -327,6 +342,14 @@ contents to the user, asking for adjudication.  Do not proceed to Phase 3
 without explicit user direction.
 
 ## Phase 3: Editing (sequential)
+
+**This is the mutation boundary.**  Phases 0-2 only read the repo and write
+to the `/tmp` cache.  Every write to the target repo happens from Phase 3
+onward: branch creation and commits here, `git push` and `gh pr create` in
+Phase 5.
+
+Stop here and print the consolidated plan if `--dry-run` was passed.
+
 
 Launch **docs-editor** with:
 - `CACHE_DIR`

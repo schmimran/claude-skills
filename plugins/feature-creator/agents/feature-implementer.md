@@ -91,7 +91,7 @@ Process features **sequentially**, one at a time. For each feature:
 ### 2a. Create Branch (flat-branch from `<INTEGRATION_BRANCH>`)
 
 **Never branch off another `feature/*` branch.** Every feature branch must be a
-flat branch rooted at `<INTEGRATION_BRANCH>`. This is not a judgment call — it
+flat branch based directly on `<INTEGRATION_BRANCH>`. This is not a judgment call — it
 is a hard-coded first action. Stacking feature branches caused silent conflicts
 on prior runs.
 

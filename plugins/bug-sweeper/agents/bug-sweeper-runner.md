@@ -90,7 +90,7 @@ node -e "console.log(JSON.stringify({test: !!(require('${PROJECT_ROOT}/package.j
   > /tmp/bug-sweeper-testcmd.json 2>/dev/null || echo '{"test":false}' > /tmp/bug-sweeper-testcmd.json
 ```
 
-Do not run `npm test`. Test failures are out of scope for the v0.1.0 sweep.
+Do not run `npm test`. Test failures are out of scope for the sweep.
 
 ## Step 4: Emit the Combined Signal Report
 

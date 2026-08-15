@@ -247,7 +247,7 @@ Risk rubric:
 
 ## Deduplication (current state)
 
-v0.1.0 does **not** fingerprint findings. Each daily run files fresh
+bug-sweeper does **not** fingerprint findings. Each daily run files fresh
 issues. The reconciler does cross-check against currently-open `bug`
 issues to avoid filing literal duplicates within a single run, but bugs
 filed on consecutive days that re-detect the same defect will produce
@@ -280,7 +280,7 @@ worktree creation and cleanup.
   A repo with no `package.json` anywhere halts.
 - Code review covers TypeScript/JavaScript, Swift, and Kotlin. Other stacks are
   not reviewed, though they do not block the Node-based signals.
-- Test failures (`npm test`) are not collected as a bug signal in v0.1.0.
+- Test failures (`npm test`) are not collected as a bug signal.
   Possible future signal — track via README issues.
 - No fingerprint-based dedup. Re-detection across runs produces duplicate
   issues. Track via README issues if this becomes a problem.

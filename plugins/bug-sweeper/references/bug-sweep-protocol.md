@@ -69,8 +69,8 @@ Every issue body filed by this plugin begins with the literal line:
 <!-- claude-bug-sweeper-v1 -->
 ```
 
-This marker is reserved for future deduplication and auto-close logic. v0.1.0
-does not implement those features but the marker is required so historical
+This marker is reserved for future deduplication and auto-close logic. Those
+features are not implemented yet, but the marker is required so historical
 issues remain compatible when those features ship.
 
 ## Boundary with feature-creator

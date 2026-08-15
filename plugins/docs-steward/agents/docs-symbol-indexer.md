@@ -41,7 +41,7 @@ awk -F. 'NF>1 {print $NF}' "${TRACKED_FILES_PATH}" | sort | uniq -c | sort -rn |
 
 From the top extensions, decide which language extractors to run.
 
-Supported languages (v0.1.0):
+Supported languages:
 
 | Extension(s) | Symbol kinds extracted |
 |---|---|

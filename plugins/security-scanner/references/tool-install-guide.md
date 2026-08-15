@@ -86,8 +86,8 @@ continue.
 
 semgrep rule configs are fetched at runtime from the semgrep registry.  They
 require internet access.  If the scan environment is air-gapped, these configs
-must be pre-downloaded and referenced by local path.  This is out of scope for
-v0.1 — flag it if the environment has no outbound internet.
+must be pre-downloaded and referenced by local path.  This is not supported —
+flag it if the environment has no outbound internet.
 
 ## Supabase auditing (optional)
 

@@ -57,6 +57,7 @@ plugins/
       tool-install-guide.md       # Tool installation and failure handling
       supabase-audit-guide.md     # Supabase detection, advisor API, static scan rules
       supabase-rule-catalog.md    # Catalog of Supabase rules with severity + remediation
+      repo-profile-spec.md        # `.claude/repo-profile.md` standard — project-root resolution (reads `project_roots.backend`)
     README.md                     # Plugin-specific documentation
   docs-steward/                   # Plugin: docs maintenance pipeline (indexes → audit → edit → PR)
     .claude-plugin/
@@ -114,6 +115,7 @@ plugins/
       severity-rubric.md          # HIGH/MEDIUM/LOW criteria for confirmed bugs
       bug-issue-template.md       # GitHub Issue body format with `<!-- claude-bug-sweeper-v1 -->` marker
       headless-mode.md            # What changes when `--headless` is passed (no plan mode, no AskUserQuestion)
+      repo-profile-spec.md        # `.claude/repo-profile.md` standard — project roots, surfaces, languages
     README.md                     # Plugin-specific documentation
   voice-forge/                    # Plugin: sent-mail voice analysis + personalized ghostwriting skill generator
     .claude-plugin/

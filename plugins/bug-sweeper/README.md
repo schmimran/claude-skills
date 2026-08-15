@@ -123,6 +123,40 @@ GitHub Issues filed with `bug`, `bug - ready for claude`, severity label
 | **Interactive** (default) | Enters plan mode at Phase 5 | User approves before filing | Manual run; human reviewing the bug list |
 | **Headless** (`--headless`) | Skips plan mode | Self-review replaces approval | Scheduled routine in permissions-bypass mode |
 
+## Monorepo and polyglot repos
+
+The Node.js manifest does not need to be at the repo root. The project root is
+resolved in this order:
+
+1. `--project-root <dir>`
+2. `project_roots.backend` in the repo's committed `.claude/repo-profile.md`
+3. Discovery via `git ls-files '*package.json'` (excluding `node_modules`) —
+   the sole manifest, or the shallowest one
+
+Several manifests at the same depth is ambiguous: the sweep stops and asks for
+`--project-root`. No manifest anywhere is the only hard failure.
+
+```yaml
+---
+project_roots:
+  backend: api
+  ios: iOS/MyApp
+  android: Android/app
+languages: [typescript, swift, kotlin]
+---
+```
+
+With that committed, a polyglot repo sweeps every surface with no flags. See
+[`references/repo-profile-spec.md`](references/repo-profile-spec.md).
+
+### Flags
+
+| Flag | Effect |
+|------|--------|
+| `--headless` | Skip the plan-mode approval gate; for scheduled runs. |
+| `--project-root <dir>` | Skip manifest discovery. |
+| `--languages <list>` | Restrict review, e.g. `typescript,kotlin`. |
+
 ## Coverage
 
 | Bug class | Detected by |
@@ -132,7 +166,14 @@ GitHub Issues filed with `bug`, `bug - ready for claude`, severity label
 | Missing awaits, silent error swallowing, async ordering | reviewer (API surface) |
 | State consistency, DOM cleanup, XSS, SSE/streaming error recovery | reviewer (web surface) |
 | End-to-end ordering / partial-commit / concurrency in a hot flow | tracer |
+| Force unwraps, retain cycles, main-thread violations, unhandled async throws | reviewer (iOS surface, Swift) |
+| `!!` assertions, coroutine scope leaks, main-dispatcher blocking, swallowed exceptions | reviewer (Android surface, Kotlin) |
 | Already-known bugs | reconciler (cross-checks open `bug` issues) |
+
+Reviewers cover TypeScript/JavaScript (`.ts .tsx .js .jsx .mjs .cjs`), Swift
+(`.swift`), and Kotlin (`.kt .kts`). Constrain them with `--languages`, or via
+`languages:` in `.claude/repo-profile.md`. Findings share one shape regardless
+of language — a `file:line` citation plus a concrete failure scenario.
 
 ## Severity → label
 
@@ -201,8 +242,12 @@ worktree creation and cleanup.
 
 ## Known Limitations
 
-- Node.js / TypeScript only. Repos using other stacks fall through repo-shape
-  discovery and the pipeline halts.
+- Build and dependency signals require a Node.js manifest. It need not be at
+  the repo root — the project root is resolved from `--project-root`,
+  `project_roots.backend` in `.claude/repo-profile.md`, or manifest discovery.
+  A repo with no `package.json` anywhere halts.
+- Code review covers TypeScript/JavaScript, Swift, and Kotlin. Other stacks are
+  not reviewed, though they do not block the Node-based signals.
 - Test failures (`npm test`) are not collected as a bug signal in v0.1.0.
   Possible future signal — track via README issues.
 - No fingerprint-based dedup. Re-detection across runs produces duplicate

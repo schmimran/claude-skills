@@ -19,7 +19,24 @@ collect signals and pass them through.
 ## Prerequisites
 
 Use the `OWNER/REPO` identifier from your prompt. The orchestrator has already
-verified `gh` authentication and label setup.
+verified `gh` authentication and label setup, and resolved `<PROJECT_ROOT>` —
+the directory containing the Node.js manifest. Use it verbatim; do not assume
+the repo root.
+
+## Step 0: Confirm the project root
+
+The orchestrator passes `<PROJECT_ROOT>` (see `references/repo-profile-spec.md`
+for how it is resolved). Every `npm` command below runs there, **not** at the
+repo root. In a monorepo the only manifest is often in a subdirectory such as
+`api/`.
+
+```bash
+PROJECT_ROOT="<PROJECT_ROOT>"
+if [ ! -f "${PROJECT_ROOT}/package.json" ]; then
+  echo "No package.json at '${PROJECT_ROOT}' — cannot run Node checks."
+  exit 1
+fi
+```
 
 ## Step 1: Verify Working Tree
 
@@ -46,17 +63,19 @@ Issue a single message containing **three Bash tool calls**:
      > /tmp/bug-sweeper-open-bugs.json
    ```
 
-2. Build (TypeScript / compile errors):
+2. Build (TypeScript / compile errors) — run in `<PROJECT_ROOT>`:
    ```
-   npm run build > /tmp/bug-sweeper-build.txt 2>&1
+   npm --prefix "${PROJECT_ROOT}" run build > /tmp/bug-sweeper-build.txt 2>&1
    echo "EXIT=$?" >> /tmp/bug-sweeper-build.txt
    ```
 
-3. Dependency CVE scan:
+3. Dependency CVE scan — run in `<PROJECT_ROOT>`:
    ```
-   npm audit --audit-level=moderate --json > /tmp/bug-sweeper-audit.json 2>/dev/null
+   (cd "${PROJECT_ROOT}" && npm audit --audit-level=moderate --json) > /tmp/bug-sweeper-audit.json 2>/dev/null
    echo "EXIT=$?" > /tmp/bug-sweeper-audit-exit.txt
    ```
+   `npm audit` resolves the lockfile relative to the working directory, so it
+   must be run with `cd` rather than `--prefix`.
 
 The build and audit commands must run even if they exit non-zero — failure is
 itself a signal. Do **not** halt the pipeline on a non-zero exit code; the
@@ -67,7 +86,7 @@ analyst decides whether the failure indicates a bug.
 For the analyst's reference, record whether `npm test` is configured:
 
 ```
-node -e "console.log(JSON.stringify({test: !!(require('./package.json').scripts || {}).test}))" \
+node -e "console.log(JSON.stringify({test: !!(require('${PROJECT_ROOT}/package.json').scripts || {}).test}))" \
   > /tmp/bug-sweeper-testcmd.json 2>/dev/null || echo '{"test":false}' > /tmp/bug-sweeper-testcmd.json
 ```
 
@@ -123,5 +142,11 @@ explaining the missing dependency and stop. The orchestrator gates Phase 2
 on the presence of valid signal data and will halt cleanly when it reads
 the error record.
 
-If `package.json` is missing, this repo is not a Node.js project — print an
-error and exit non-zero. bug-sweeper requires a Node.js / TypeScript repo.
+If no `package.json` exists anywhere in the repo, there is nothing for the
+Node checks to run against — print an error and exit non-zero. This is the
+only hard failure: a manifest in a subdirectory is normal and handled by
+`<PROJECT_ROOT>` resolution, not treated as a missing project.
+
+A repo with no Node manifest may still contain Swift or Kotlin sources worth
+reviewing. Report the absence as a signal and let the orchestrator decide
+whether the review phases can still run.

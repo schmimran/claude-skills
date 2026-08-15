@@ -29,8 +29,22 @@ and future archaeologists can understand the fix without opening the issue.>
 
 - <Tests added or updated>
 - <For bug fixes: name of the regression test and what it verifies>
-- <Build verification result>
 - <Manual verification steps, if any>
+
+### Verification by surface
+
+One row per surface the change touched. Every touched surface appears here,
+including any that could not be verified.
+
+| Surface | Command | Result |
+|---------|---------|--------|
+| <surface> | <command, or — if none> | <passed / failed / not verified — reason> |
+
+<!--
+If any surface says "not verified", state that plainly above this table —
+do not let an unqualified summary imply the change was tested. A reviewer
+must be able to see which surfaces were exercised and which were not.
+-->
 
 ## Related Issue
 

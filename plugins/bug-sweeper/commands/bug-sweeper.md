@@ -1,16 +1,19 @@
 ---
 name: bug-sweeper
-description: Bug-discovery sweep for Node.js repos — analyzes, filters false positives, and files confirmed bugs as GitHub Issues labeled `bug - ready for claude`. Args: [repo-owner/repo-name] [--headless]
-argument-hint: "[repo-owner/repo-name] [--headless]"
+description: Bug-discovery sweep for Node.js, Swift, and Kotlin repos — analyzes, filters false positives, and files confirmed bugs as GitHub Issues labeled `bug - ready for claude`. Args: [repo-owner/repo-name] [--headless] [--project-root <dir>] [--languages <list>]
+argument-hint: "[repo-owner/repo-name] [--headless] [--project-root <dir>] [--languages <list>]"
 disable-model-invocation: true
 ---
 
 # Bug Sweeper
 
 You are a bug-discovery pipeline orchestrator. You chain six agents to scan a
-Node.js / TypeScript repository, filter false positives, and file each
-confirmed bug as a GitHub Issue labeled `bug - ready for claude` for
-feature-creator to remediate.
+repository, filter false positives, and file each confirmed bug as a GitHub
+Issue labeled `bug - ready for claude` for feature-creator to remediate.
+
+Build and dependency-audit signals require a Node.js manifest, which may live
+in a subdirectory. Code review covers TypeScript/JavaScript, Swift, and
+Kotlin, so a polyglot repo is reviewed across all of its surfaces.
 
 **Pipeline**:
 1. **bug-sweeper-runner** — gh issue list + npm run build + npm audit (parallel Bash)
@@ -34,6 +37,12 @@ issues are filed.
   ```
   If neither works, stop and ask the user for the repository.
 - Check for the `--headless` flag. If present, set `HEADLESS=true`.
+- Check for `--project-root <dir>`. If present, set `PROJECT_ROOT_FLAG` — it
+  skips manifest discovery entirely in step 0e.
+- Check for `--languages <list>` (comma-separated, e.g.
+  `typescript,swift,kotlin`). If present, set `LANGUAGES` and review only
+  those. If absent, resolve from `languages:` in `.claude/repo-profile.md`,
+  and failing that review every language present in each scope directory.
 
 ### 0b. Mode-specific behavior
 
@@ -81,7 +90,60 @@ If any are missing, print the `gh label create` commands from this plugin's
 into an incomplete pipeline (where feature-creator would fail its own
 pre-flight check on the same labels later).
 
-### 0e. Discover surfaces
+### 0e. Resolve the project root
+
+The Node.js manifest is frequently **not** at the repo root — in a polyglot
+monorepo the only `package.json` may live in `api/` alongside `iOS/` and
+`Android/` trees. Resolve `PROJECT_ROOT` before any `npm` command runs:
+
+```bash
+# 1. Flag wins.
+PROJECT_ROOT="${PROJECT_ROOT_FLAG:-}"
+
+# 2. Otherwise `project_roots.backend` from the committed repo profile.
+if [ -z "$PROJECT_ROOT" ] && [ -f ".claude/repo-profile.md" ]; then
+  PROJECT_ROOT=$(awk '/^project_roots:/{f=1;next} /^[^ ]/{f=0} f&&/^  backend:/{sub(/^  backend: */,"");print;exit}' .claude/repo-profile.md \
+    | tr -d "\"' ")
+fi
+
+# 3. Otherwise discover manifests, excluding node_modules.
+if [ -z "$PROJECT_ROOT" ]; then
+  MANIFESTS=$(git ls-files '*package.json' | grep -v node_modules || true)
+  COUNT=$(printf '%s' "$MANIFESTS" | grep -c . || true)
+  if [ "$COUNT" -eq 0 ]; then
+    echo "bug-sweeper: no package.json anywhere in this repo."
+    echo "  This repo has no Node.js surface to build or audit."
+    exit 1
+  elif [ "$COUNT" -eq 1 ]; then
+    PROJECT_ROOT=$(dirname "$MANIFESTS")
+  else
+    # Prefer the shallowest manifest.
+    PROJECT_ROOT=$(printf '%s\n' "$MANIFESTS" \
+      | awk '{print gsub(/\//,"/"), $0}' | sort -n | head -1 | cut -d' ' -f2- | xargs dirname)
+    SHALLOWEST_COUNT=$(printf '%s\n' "$MANIFESTS" \
+      | awk '{print gsub(/\//,"/")}' | sort -n | head -1)
+    TIES=$(printf '%s\n' "$MANIFESTS" | awk -v d="$SHALLOWEST_COUNT" '{if (gsub(/\//,"/")==d) print}' | grep -c .)
+    if [ "$TIES" -gt 1 ]; then
+      echo "bug-sweeper: multiple candidate project roots at the same depth:"
+      printf '%s\n' "$MANIFESTS" | sed 's/^/  /'
+      echo "  Disambiguate with --project-root <dir>, or set project_roots.backend"
+      echo "  in .claude/repo-profile.md."
+      exit 1
+    fi
+  fi
+fi
+
+[ "$PROJECT_ROOT" = "." ] && PROJECT_ROOT="$(pwd)"
+echo "Project root: ${PROJECT_ROOT}"
+```
+
+`.` (a root manifest) is the common case and still works. Pass `PROJECT_ROOT`
+to the runner in Phase 1. See `references/repo-profile-spec.md`.
+
+**No manifest anywhere is the only hard failure.** A manifest in a
+subdirectory is normal, not an error.
+
+### 0e2. Discover surfaces
 
 Read `references/discovery-surface-guide.md`. Apply its heuristics to the
 target repo to derive:
@@ -92,6 +154,10 @@ target repo to derive:
   `src/client/`, `frontend/src/`)
 - `HOT_PATH_ENTRY` — a high-risk flow's entry point (e.g. an interval handler,
   cron job, queue consumer, webhook endpoint, SSE/WebSocket handler)
+
+Search relative to `PROJECT_ROOT` first, then the repo root. In a monorepo the
+API directory is typically `${PROJECT_ROOT}/src`, and `project_roots` in the
+repo profile may name the `ios` and `android` surfaces directly.
 
 If `API_DIR` or `HOT_PATH_ENTRY` cannot be discovered, the repo may not be
 shaped like a Node.js web app. Print what was found, what was missing, and
@@ -108,6 +174,8 @@ rm -f /tmp/bug-sweeper-*.json /tmp/bug-sweeper-*.txt /tmp/bug-issue-*.md
 Use the Agent tool to launch **bug-sweeper-runner** with this prompt:
 
 > You are the bug-sweeper-runner. Target repository: <OWNER/REPO>
+> Project root (run all npm commands here, not at the repo root):
+> <PROJECT_ROOT>
 > Run gh issue list, npm run build, and npm audit in parallel and write
 > /tmp/bug-sweeper-signals.json plus the supporting artifact files.
 
@@ -116,15 +184,15 @@ malformed, stop the pipeline.
 
 ## Phase 2: Code Review (parallel)
 
-Launch in a single message containing **three Agent tool calls** (one
-reviewer for the API surface, one reviewer for the web surface, one tracer
-on the hot path). If `WEB_DIR` was not discovered in Phase 0e, omit the web
-reviewer.
+Launch in a single message containing one Agent tool call per discovered
+surface (API, web, and any mobile surfaces), plus one tracer on the hot path.
+If `WEB_DIR` was not discovered in Phase 0e2, omit the web reviewer.
 
 bug-sweeper-reviewer (API):
 
 > You are the bug-sweeper-reviewer. Target repository: <OWNER/REPO>
 > Scope directory: <API_DIR>
+> Languages: <LANGUAGES>
 > Focus areas: missing awaits, silent error swallowing, async ordering, security vulnerabilities
 > Output path: /tmp/bug-sweeper-review-api.json
 
@@ -132,8 +200,27 @@ bug-sweeper-reviewer (web, only if WEB_DIR is set):
 
 > You are the bug-sweeper-reviewer. Target repository: <OWNER/REPO>
 > Scope directory: <WEB_DIR>
+> Languages: <LANGUAGES>
 > Focus areas: state consistency bugs, DOM cleanup gaps, XSS, error recovery in SSE/streaming flows
 > Output path: /tmp/bug-sweeper-review-web.json
+
+bug-sweeper-reviewer (iOS, only if `project_roots.ios` is set and `swift` is
+in scope):
+
+> You are the bug-sweeper-reviewer. Target repository: <OWNER/REPO>
+> Scope directory: <IOS_DIR>
+> Languages: swift
+> Focus areas: force unwraps on optional/network data, retain cycles in closures, main-thread violations on UI updates, unhandled async throws
+> Output path: /tmp/bug-sweeper-review-ios.json
+
+bug-sweeper-reviewer (Android, only if `project_roots.android` is set and
+`kotlin` is in scope):
+
+> You are the bug-sweeper-reviewer. Target repository: <OWNER/REPO>
+> Scope directory: <ANDROID_DIR>
+> Languages: kotlin
+> Focus areas: null-assertion (!!) on nullable data, coroutine scope leaks, blocking calls on the main dispatcher, swallowed exceptions in try/catch
+> Output path: /tmp/bug-sweeper-review-android.json
 
 bug-sweeper-tracer:
 
@@ -141,7 +228,8 @@ bug-sweeper-tracer:
 > Entry point: <HOT_PATH_ENTRY>
 > Output path: /tmp/bug-sweeper-trace.json
 
-Wait for all to complete.
+Wait for all to complete. Every reviewer emits the same finding shape
+regardless of language, so Phases 3–6 need no per-language handling.
 
 ## Phase 3: Issue Reconciliation
 

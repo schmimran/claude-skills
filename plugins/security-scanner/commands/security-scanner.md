@@ -51,6 +51,64 @@ re-detection, close resolved ones, and post expert advisory comments.
    - Extract mode: `full` or `quick`.  Default to `quick` if not specified.
    - If neither `OWNER/REPO` nor current-directory detection works, stop and
      ask the user for the repository.
+   - Check for `--project-root <dir>`.  If present, set `PROJECT_ROOT_FLAG` —
+     it skips manifest discovery in step 3.5.
+   - Check for `--install-tools`.  Absent (the default), scanners run
+     ephemerally via `npx --yes` and nothing is written to the target repo.
+     Present, they are installed as dev dependencies, which **modifies the
+     target repo's `package.json` and lockfile**.  See
+     `references/tool-install-guide.md`.
+   - Check for `--dry-run`.  See the **Dry run** section below.
+
+3.5. Resolve the project root.  The Node.js manifest is often **not** at the
+   repo root — in a polyglot monorepo the only `package.json` may live in
+   `api/`.  `npm audit` resolves its lockfile relative to the working
+   directory, so it must run there:
+
+   ```bash
+   # 1. Flag wins.
+   PROJECT_ROOT="${PROJECT_ROOT_FLAG:-}"
+
+   # 2. Otherwise `project_roots.backend` from the committed repo profile.
+   if [ -z "$PROJECT_ROOT" ] && [ -f ".claude/repo-profile.md" ]; then
+     PROJECT_ROOT=$(awk '/^project_roots:/{f=1;next} /^[^ ]/{f=0} f&&/^  backend:/{sub(/^  backend: */,"");print;exit}' .claude/repo-profile.md \
+       | tr -d "\"' ")
+   fi
+
+   # 3. Otherwise discover manifests, excluding node_modules.
+   if [ -z "$PROJECT_ROOT" ]; then
+     MANIFESTS=$(git ls-files '*package.json' | grep -v node_modules || true)
+     COUNT=$(printf '%s' "$MANIFESTS" | grep -c . || true)
+     if [ "$COUNT" -eq 0 ]; then
+       echo "security-scanner: no package.json anywhere in this repo."
+       echo "  Dependency auditing requires a Node.js manifest."
+       exit 1
+     elif [ "$COUNT" -eq 1 ]; then
+       PROJECT_ROOT=$(dirname "$MANIFESTS")
+     else
+       PROJECT_ROOT=$(printf '%s\n' "$MANIFESTS" \
+         | awk '{print gsub(/\//,"/"), $0}' | sort -n | head -1 | cut -d' ' -f2- | xargs dirname)
+       SHALLOWEST=$(printf '%s\n' "$MANIFESTS" | awk '{print gsub(/\//,"/")}' | sort -n | head -1)
+       TIES=$(printf '%s\n' "$MANIFESTS" | awk -v d="$SHALLOWEST" '{if (gsub(/\//,"/")==d) print}' | grep -c .)
+       if [ "$TIES" -gt 1 ]; then
+         echo "security-scanner: multiple candidate project roots at the same depth:"
+         printf '%s\n' "$MANIFESTS" | sed 's/^/  /'
+         echo "  Disambiguate with --project-root <dir>, or set project_roots.backend"
+         echo "  in .claude/repo-profile.md."
+         exit 1
+       fi
+     fi
+   fi
+
+   [ "$PROJECT_ROOT" = "." ] && PROJECT_ROOT="$(pwd)"
+   echo "Project root: ${PROJECT_ROOT}"
+   ```
+
+   **No manifest anywhere is the only hard failure.**  A manifest in a
+   subdirectory is normal.  Pass `PROJECT_ROOT` to the runner and the Supabase
+   auditor.  The static scanners (semgrep, nodejsscan) still scan the whole
+   repo from the root, so Swift and Kotlin sources remain in scope.  See
+   `references/repo-profile-spec.md`.
 
 4. Verify the required labels exist on the target repo:
    ```

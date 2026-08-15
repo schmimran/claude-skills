@@ -36,9 +36,24 @@ but defensive handling avoids the pipeline halting on minor layout drift.
 
 ## Step 1: Map the Scope
 
-Use `Glob` to enumerate source files under the scope directory. Filter to
-`*.ts`, `*.tsx`, `*.js`, `*.jsx`, `*.mjs`, `*.cjs`. Skip `node_modules/`,
-`dist/`, `build/`, `.next/`, `coverage/`.
+Use `Glob` to enumerate source files under the scope directory. Filter to the
+source extensions for the languages in scope:
+
+| Language | Extensions |
+|----------|------------|
+| TypeScript / JavaScript | `*.ts`, `*.tsx`, `*.js`, `*.jsx`, `*.mjs`, `*.cjs` |
+| Swift | `*.swift` |
+| Kotlin | `*.kt`, `*.kts` |
+
+If your prompt supplies a `<LANGUAGES>` list, review only those languages.
+Otherwise review every language present in the scope directory.
+
+Skip `node_modules/`, `dist/`, `build/`, `.next/`, `coverage/`, and — for the
+mobile surfaces — `.build/`, `DerivedData/`, `Pods/`, and `*/build/`.
+
+**Findings stay language-agnostic in shape.** Whatever the language, a finding
+is a `file:line` citation plus a concrete failure scenario. Do not add
+language-specific fields; the analyst and filer treat all findings uniformly.
 
 ## Step 2: Targeted Pattern Searches
 

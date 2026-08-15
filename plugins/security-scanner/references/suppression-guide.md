@@ -6,7 +6,7 @@ Suppression has two pathways:
    after triaging it.
 2. **Agent-applied suppression** — the `security-advisor` auto-suppresses a
    newly filed issue when three high-confidence false-positive signals are all
-   present.  A `feature - human review` label is applied so a human validates
+   present.  A `security - human review` label is applied so a human validates
    the suppression before it becomes permanent.
 
 ## How to Suppress a False Positive (Manual)
@@ -41,13 +41,13 @@ When all three signals match, the advisor:
 
 - Posts a rationale comment explaining the suppression.
 - Applies the `security - suppressed` label.
-- Applies the `feature - human review` label so a reviewer confirms the call.
-- Removes `feature - ready for claude` (no fix work should start).
+- Applies the `security - human review` label so a reviewer confirms the call.
+- Removes `security - ready for claude` (no fix work should start).
 - Closes the issue as `not planned`.
 
 If you disagree with an auto-suppression, remove the `security - suppressed`
 label.  The next scan will re-file the issue if it is still detected.  You
-may also want to remove `feature - human review` once you have decided.
+may also want to remove `security - human review` once you have decided.
 
 ## How Suppression Works
 

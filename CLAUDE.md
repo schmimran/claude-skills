@@ -29,6 +29,7 @@ plugins/
       bug-plan-template.md        # Bug-fix plan template (requires Reproduction Steps, Root Cause, regression test)
       consolidated-plan-template.md # Bucket-centric template for consolidated plan comments
       repo-analysis-guide.md      # What to look for in the target repo
+      repo-profile-spec.md        # `.claude/repo-profile.md` standard — branch policy, project roots, verification commands
       risk-criteria.md            # Feature risk rubric (HIGH/MEDIUM/LOW)
       bug-risk-criteria.md        # Bug-tuned risk rubric — different factors than features (some flip)
       review-checklist.md         # Review subagent checklist for feature plans
@@ -240,7 +241,7 @@ Agents declare tool access with the `tools:` field. Common tool sets:
 
 - **Naming**: Directory names are lowercase with hyphens (e.g., `feature-creator`)
 - **Issue interaction**: Plans are posted as comments, never by modifying the issue body
-- **Branching**: One branch per change rooted at `stage` — `feature/<number>-<slug>` for features, `fix/<number>-<slug>` for bug fixes — plus a single release branch (`release/<YYYY-MM-DD>`) after all branches are implemented
+- **Branching**: One branch per change, based on the integration branch — `feature/<number>-<slug>` for features, `fix/<number>-<slug>` for bug fixes — plus a single release branch (`release/<YYYY-MM-DD>`) after all branches are implemented. In *this* repo the integration branch is `stage`. In a *target* repo it is resolved from an explicit flag or that repo's committed `.claude/repo-profile.md` — **never** by parsing prose out of a CLAUDE.md. An earlier version of feature-creator scraped this very sentence with a regex; it broke on every repo that did not happen to contain the phrase. Do not reintroduce prose-derived branch names.
 - **Commits**: Conventional commit format, referencing the issue number. `feat: add widget (#42)` for features, `fix: prevent crash on logout (#21)` for bugs.
 - **Comment markers**: Used by downstream agents to locate content. Always include the correct marker — extraction will fail otherwise.
 
@@ -276,9 +277,17 @@ claude --plugin-dir /path/to/claude-skills/plugins/feature-creator
 |--------|-------------------|
 | feature-creator | Feature state machine: `feature - ready for claude`, `feature - planned`, `feature - human review`, `feature - in progress`, `feature - complete`. Bug state machine (shared with bug-sweeper): `bug`, `bug - ready for claude`, `bug - triaged`, `bug - planned`, `bug - human review`, `bug - in progress`, `bug - complete`, `bug - high`, `bug - medium`, `bug - low`. |
 | bug-sweeper | Files issues with `bug`, `bug - ready for claude`, and one of the severity labels (`bug - high|medium|low`) — all defined in feature-creator's set; bug-sweeper does not introduce its own labels |
-| security-scanner | `security`, `security - suppressed`, plus shared `feature - ready for claude` and `feature - human review` |
+| security-scanner | Security state machine (its own, shared with no other plugin): `security`, `security - ready for claude`, `security - suppressed`, `security - human review` |
 
-Where label names are shared across plugins (notably `feature - ready for claude`, `feature - human review`, and the entire `bug - *` set), the colors and descriptions in feature-creator's README are canonical — use those when creating labels.
+Where label names are shared across plugins (notably `feature - ready for claude` and the entire `bug - *` set), the colors and descriptions in feature-creator's README are canonical — use those when creating labels.
+
+### Security findings do not auto-route to an implementer
+
+security-scanner owns a separate label set and never files under `feature - ready for claude`. It runs unattended with no approval gate, so routing its output into feature-creator's pickup queue would take unreviewed findings straight through plan → branch → code → PR with no human in between.
+
+**A human sits between scan and implementation.** feature-creator's triager excludes any issue carrying the `security` label unless invoked with `--include-security`, and reports how many it excluded. Security findings reach an implementer only when a human has reviewed them and deliberately routed them there.
+
+When adding a new plugin that files issues, give it its own `<type> - ready for claude` label rather than borrowing another plugin's. Sharing a pickup label couples two pipelines' trigger conditions.
 
 ## Build & Test Commands
 

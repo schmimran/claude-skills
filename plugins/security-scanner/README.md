@@ -16,18 +16,22 @@ posts expert advisory comments with root-cause analysis on each acted issue.
      --color d73a4a \
      --description "Security vulnerability finding"
 
+   gh label create "security - ready for claude" \
+     --color 0E8A16 \
+     --description "Security finding reviewed by a human and cleared for remediation"
+
    gh label create "security - suppressed" \
      --color e4e669 \
      --description "Confirmed false positive — scanner will skip this finding"
 
-   gh label create "feature - ready for claude" \
-     --color 0E8A16 \
-     --description "Ready for a Claude fixing agent"
-
-   gh label create "feature - human review" \
+   gh label create "security - human review" \
      --color D93F0B \
      --description "Needs a human to review before proceeding"
    ```
+
+   **These labels are security-scanner's own.** The scanner deliberately does
+   not file under `feature - ready for claude` — see
+   [Handoff to remediation](#handoff-to-remediation).
 
 3. **Run a quick scan** (before feature work):
    ```bash
@@ -152,6 +156,32 @@ The triager checks fingerprints in this order:
 Re-detected closed issues are reopened rather than duplicated, preserving the
 history of prior fix attempts.  See `references/fingerprint-spec.md` for the
 full fingerprint specification.
+
+## Handoff to remediation
+
+security-scanner files findings under its own labels — `security` plus
+`security - ready for claude` — and **never** under
+`feature - ready for claude`.
+
+This matters because the scanner runs unattended and has no approval gate: it
+files, reopens, comments, and closes the moment it is invoked. Filing under
+`feature - ready for claude` would put unreviewed scanner output directly into
+[feature-creator](../feature-creator/README.md)'s pickup queue, where it would
+be planned, branched, coded, and opened as a PR with no human in between.
+
+**A human sits between scan and implementation.** The intended flow is:
+
+1. security-scanner files the finding and the advisor comments on it.
+2. A human triages it — confirms it is real, or suppresses it.
+3. If it should be fixed automatically, the human relabels it for whichever
+   pipeline should do the work.
+
+feature-creator ignores any issue carrying the `security` label unless it is
+invoked with `--include-security`, so a freshly filed security issue does not
+appear in its default queue.
+
+Severity is carried in the issue title (`[SEC-<SEVERITY>] …`), not in a
+separate label set.
 
 ## Suppression (False Positives)
 

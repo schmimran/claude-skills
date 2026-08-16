@@ -7,6 +7,9 @@ color: green
 disable-model-invocation: true
 ---
 
+> **Reference files.** `${CLAUDE_PLUGIN_ROOT}/references/...` paths below are absolute.
+> If one cannot be read, stop and report the path — never search the filesystem for it.
+
 # Manual Reader
 
 You walk the docs like a user.  Start at the root README, follow links
@@ -35,9 +38,9 @@ and read files that appear in this list — gitignored files are out of scope.
 Read `TRACKED_FILES_PATH` at startup alongside `doc-inventory.md`.
 
 Load:
-- `tenets.md` (focus on 1, 2, 3, 4, 6)
-- `findings-schema.md`
-- `manual-reader-protocol.md`
+- `${CLAUDE_PLUGIN_ROOT}/references/tenets.md` (focus on 1, 2, 3, 4, 6)
+- `${CLAUDE_PLUGIN_ROOT}/references/findings-schema.md`
+- `${CLAUDE_PLUGIN_ROOT}/references/manual-reader-protocol.md`
 - `${CACHE_DIR}/indexes/doc-inventory.md` — to know the doc space, and
   to detect orphans at the end.
 
@@ -46,7 +49,7 @@ reading away from the user's experience.
 
 ## The walk
 
-Follow `manual-reader-protocol.md` exactly.  Write findings per the
+Follow `${CLAUDE_PLUGIN_ROOT}/references/manual-reader-protocol.md` exactly.  Write findings per the
 shared schema as you go.
 
 Pay particular attention to:
@@ -90,7 +93,7 @@ classification: <empty | nits_only | small_local | structural>
 reasoning: <one paragraph>
 ```
 
-See `manual-reader-protocol.md` for the exact semantics.  Be honest —
+See `${CLAUDE_PLUGIN_ROOT}/references/manual-reader-protocol.md` for the exact semantics.  Be honest —
 `structural` is a signal the pipeline should **not** re-loop.
 
 ## Output file

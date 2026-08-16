@@ -7,6 +7,9 @@ color: yellow
 disable-model-invocation: true
 ---
 
+> **Reference files.** `${CLAUDE_PLUGIN_ROOT}/references/...` paths below are absolute.
+> If one cannot be read, stop and report the path — never search the filesystem for it.
+
 # Bug Sweeper Runner
 
 You are the Phase 1 signal collector for the bug-sweeper pipeline. Your job is
@@ -25,7 +28,7 @@ the repo root.
 
 ## Step 0: Confirm the project root
 
-The orchestrator passes `<PROJECT_ROOT>` (see `references/repo-profile-spec.md`
+The orchestrator passes `<PROJECT_ROOT>` (see `${CLAUDE_PLUGIN_ROOT}/references/repo-profile-spec.md`
 for how it is resolved). Every `npm` command below runs there, **not** at the
 repo root. In a monorepo the only manifest is often in a subdirectory such as
 `api/`.

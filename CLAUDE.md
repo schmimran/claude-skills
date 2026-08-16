@@ -184,6 +184,43 @@ Each plugin lives under `plugins/<name>/` and is independently installable. Plug
 - Agents must NOT reference files outside their plugin's directory
 - No shared code between plugins — each plugin is independently installable
 
+### Referencing bundled files — always use `${CLAUDE_PLUGIN_ROOT}`
+
+**In `commands/` and `agents/`, every path to a bundled file must be written
+`${CLAUDE_PLUGIN_ROOT}/references/<file>.md`. Never a bare relative path.**
+
+A bare `references/foo.md` resolves against the *session's* working directory — the
+target repo — not the plugin. The read misses and the model improvises a filesystem
+search; one such miss cost a 110-second scan of the entire disk, and depth-limited
+scans reached the working-tree clone before the installed copy.
+
+This applies to **every** mention, including a bare filename in a `Load:` list.
+The predicate is "any bundled `references/*.md` basename appearing in `commands/`
+or `agents/`", not "any string containing `references/`" — the narrower reading
+missed 69 sites on the first pass.
+
+Two corollaries:
+
+- **No locational prose.** "Sibling of this file", "in the `references/` directory of
+  this plugin" — these describe the repo tree, not a runtime path, and the different
+  phrasings disagreed about the assumed working directory.
+- **`commands/` and `agents/` only.** Links inside `references/` and in any `README.md`
+  stay relative — humans read those on GitHub, where the variable is meaningless.
+
+**Agents also carry this block verbatim, immediately after the frontmatter:**
+
+```markdown
+> **Reference files.** `${CLAUDE_PLUGIN_ROOT}/references/...` paths below are absolute.
+> If one cannot be read, stop and report the path — never search the filesystem for it.
+```
+
+Agents only. Agent-body substitution is confirmed by transcript inspection; command-body
+substitution is **not** — [issue #9354](https://github.com/anthropics/claude-code/issues/9354)
+reports it expanding to empty there. Commands use the variable but omit the block, so an
+unexpanded path degrades to a slow search rather than a dead orchestrator. If a command
+ever needs a reference at runtime, resolve the root from `installed_plugins.json` rather
+than adding the block. Never `find`.
+
 ### Adding a new plugin checklist
 
 1. Create `plugins/<name>/` with `.claude-plugin/plugin.json`, `commands/`, `agents/`, and `references/`
@@ -191,6 +228,7 @@ Each plugin lives under `plugins/<name>/` and is independently installable. Plug
 3. Add an entry to `.claude-plugin/marketplace.json`
 4. Update the root `README.md` plugin catalog table
 5. Update the Directory Structure section above if the layout pattern changes
+6. Verify every bundled-file mention uses `${CLAUDE_PLUGIN_ROOT}` (see Behavioral Rule 9)
 
 ## Command Authoring Reference
 
@@ -311,3 +349,19 @@ These apply to every Claude Code session in this repo.
 6. **New plugin completeness.** Do not create a new plugin directory without completing all 5 steps of the Adding a New Plugin checklist above.
 7. **Issue body immutability.** The issue body is never modified. All communication (plans, risk assessments, error reports) happens via comments.
 8. **Plan comment markers.** Always include the correct marker prefix (see Conventions above). Downstream agents will fail to locate comments if the marker is missing or wrong.
+9. **Bundled-file paths.** Every reference to a bundled file from `commands/` or `agents/` must be written `${CLAUDE_PLUGIN_ROOT}/references/<file>.md` — including bare filenames in `Load:` lists. Agents additionally carry the fail-loud block; commands do not. See *Referencing bundled files* above. This is mechanically checkable, so check it:
+
+   ```bash
+   # Prints every bundled-file mention that is missing the prefix. Must output nothing.
+   python3 - <<'EOF'
+   import glob, os, re
+   for d in sorted(glob.glob("plugins/*/")):
+       refs = {os.path.basename(f) for f in glob.glob(d + "references/*.md")}
+       for f in glob.glob(d + "commands/*.md") + glob.glob(d + "agents/*.md"):
+           for i, line in enumerate(open(f), 1):
+               for r in refs:
+                   if re.search(r'`(?<!/)' + re.escape(r) + r'`', line) \
+                      or re.search(r'(?<![/`])references/' + re.escape(r), line):
+                       print(f"{f}:{i}  {r}")
+   EOF
+   ```

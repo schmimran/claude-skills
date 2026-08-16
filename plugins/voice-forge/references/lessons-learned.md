@@ -79,13 +79,26 @@ If a user provides an unusually large archive (> 1 GB), remind them that parsing
 
 ---
 
-## Rule 7 — Run only in a Cowork/Claude Desktop session; resolve plugin paths from `/sessions`
+## Rule 7 — Resolve plugin paths from `${CLAUDE_PLUGIN_ROOT}`; never search for them
 
-`/analyze-writing-voice` depends on two things that only exist inside a Cowork or
-Claude Desktop session: the mounted plugin directory (so the bundled scripts and
-references are reachable) and an attached exports folder under `/sessions` (so
-there is mail to parse).
+`/analyze-writing-voice` needs a shell-resolvable path to the bundled scripts, and
+an attached exports folder under `/sessions` for mail to parse. Those are two
+separate needs — only the second requires a Cowork or Claude Desktop session.
 
-- Resolve both paths by finding the plugin root once (`find /sessions -type d -name voice-forge | head -1`), then deriving `SCRIPTS_DIR="$ROOT/scripts"` and `PLUGIN_REFS_DIR="$ROOT/references"`. Do not use `find .` — that resolves against the agent's working directory, which is not the mounted plugin dir in the sandbox.
-- **Fast-fail**: if either path is empty or its sentinel file (`parse_mbox.py`, `lessons-learned.md`) is missing, stop immediately with a clear message that the command requires a Cowork/Claude Desktop session. Do not fall back to scanning the whole filesystem.
-- Pass both `SCRIPTS_DIR` and `PLUGIN_REFS_DIR` explicitly to every agent. Inside agent Bash/Read calls, use `$SCRIPTS_DIR` / `$PLUGIN_REFS_DIR`. Instruction prose may still refer to `references/...` by name — that prose is injected from the mounted plugin dir at invocation time.
+- **Reference files: use `${CLAUDE_PLUGIN_ROOT}/references/<file>.md` directly.** The
+  variable expands to the plugin's installation directory and is substituted in
+  agent and skill content. This is verified behavior, not an assumption — a live
+  run confirmed patched references resolve on the first read with no search,
+  while unpatched ones triggered filesystem scans of up to 110 seconds.
+- **Scripts: resolve `$_VF_ROOT` once**, preferring `${CLAUDE_PLUGIN_ROOT}` and falling
+  back to `find /sessions -maxdepth 6 -type d -name voice-forge` only when the
+  variable is unset. Derive `SCRIPTS_DIR="$_VF_ROOT/scripts"` from it. The fallback
+  exists because plugin path behavior in Cowork/Desktop mounts is undocumented.
+- **Never widen the search.** Not `find /`, not `find .` — the working directory is
+  the user's project, not the plugin. If the resolved path has no `parse_mbox.py`,
+  stop and report every path tried. A missing plugin directory is a setup error,
+  not a lookup problem, and a filesystem scan is never the remedy.
+- `SCRIPTS_DIR` is still passed to every agent that shells out to a bundled script;
+  a shell needs a real path, and command-body substitution is unverified. There is no
+  `PLUGIN_REFS_DIR` — agents address reference files through `${CLAUDE_PLUGIN_ROOT}`
+  directly, so no references path is passed down.

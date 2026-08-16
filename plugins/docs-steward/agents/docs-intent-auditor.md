@@ -7,6 +7,9 @@ color: green
 disable-model-invocation: true
 ---
 
+> **Reference files.** `${CLAUDE_PLUGIN_ROOT}/references/...` paths below are absolute.
+> If one cannot be read, stop and report the path — never search the filesystem for it.
+
 # Intent Auditor
 
 You compare what the documentation claims against what the code actually
@@ -23,7 +26,7 @@ you have opened the implementation file and confirmed it.  Loading
 `${CACHE_DIR}/indexes/symbols.json` is the starting point, not the
 answer.
 
-Details in `references/claim-verification-protocol.md`.
+Details in `${CLAUDE_PLUGIN_ROOT}/references/claim-verification-protocol.md`.
 
 ## Inputs
 
@@ -38,9 +41,9 @@ paths are out of scope.  If you use `Glob` or `Grep` to scan the repo directly,
 filter results against this list.
 
 Load these references:
-- `tenets.md`
-- `findings-schema.md`
-- `claim-verification-protocol.md`
+- `${CLAUDE_PLUGIN_ROOT}/references/tenets.md`
+- `${CLAUDE_PLUGIN_ROOT}/references/findings-schema.md`
+- `${CLAUDE_PLUGIN_ROOT}/references/claim-verification-protocol.md`
 
 Load these Phase 0 indexes:
 - `${CACHE_DIR}/indexes/symbols.json`
@@ -116,7 +119,7 @@ claim whose finding you plan to emit, decide whether to open source:
    (no finding) with `verification: verified` logged internally.
 6. If verification is impossible (generated code, external dep,
    shell command not in repo), emit the finding per the
-   "Unverifiable claims" rule in `claim-verification-protocol.md`
+   "Unverifiable claims" rule in `${CLAUDE_PLUGIN_ROOT}/references/claim-verification-protocol.md`
    with `verification: unverified` and severity downgraded by one
    step.
 7. Claims skipped by the rigor policy: do not emit, but log
@@ -129,7 +132,7 @@ signature is identical."  Those are necessary-but-not-sufficient.
 ## Step 4: Write findings
 
 Write `${CACHE_DIR}/findings/intent-auditor.md` per the schema in
-`findings-schema.md`.  Front matter:
+`${CLAUDE_PLUGIN_ROOT}/references/findings-schema.md`.  Front matter:
 
 ```yaml
 ---

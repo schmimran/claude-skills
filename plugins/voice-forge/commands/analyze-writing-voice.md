@@ -6,11 +6,11 @@ disable-model-invocation: true
 
 Analyze the user's sent-mail archive to produce a data-driven written voice profile.
 
-> **This command runs only in a Cowork or Claude Desktop session.** It relies on
-> the mounted plugin directory and an attached folder under `/sessions`. It will
-> not work in a plain terminal session — there is no `/sessions` mount to scan.
+> **This command runs only in a Cowork or Claude Desktop session.** It needs an
+> attached exports folder under `/sessions`; a plain terminal session has no such
+> mount, so there is nothing to parse.
 
-Read `references/lessons-learned.md` before starting. Every guardrail in that file applies to this workflow.
+Read `${CLAUDE_PLUGIN_ROOT}/references/lessons-learned.md` before starting. Every guardrail in that file applies to this workflow.
 
 ---
 
@@ -18,31 +18,34 @@ Read `references/lessons-learned.md` before starting. Every guardrail in that fi
 
 ### Step 0a — Resolve plugin paths (fast-fail)
 
-Resolve the scripts and references directories from the mounted plugin under
-`/sessions`. Both lookups must succeed before anything else runs:
+Resolve the scripts and references directories. `${CLAUDE_PLUGIN_ROOT}` is the
+plugin's installation directory and is the authoritative source; the `/sessions`
+scan exists only as a fallback for mount layouts where it is unset. Both lookups
+must succeed before anything else runs:
 
 ```bash
-_VF_ROOT="$(find /sessions -type d -name voice-forge 2>/dev/null | head -1)"
-SCRIPTS_DIR="$_VF_ROOT/scripts"
-PLUGIN_REFS_DIR="$_VF_ROOT/references"
+_VF_ROOT="${CLAUDE_PLUGIN_ROOT:-}"
 
-if [ -z "$_VF_ROOT" ] || [ ! -f "$SCRIPTS_DIR/parse_mbox.py" ]; then
-  echo "ERROR: could not locate voice-forge scripts under /sessions."
-  echo "This command runs only in a Cowork or Claude Desktop session where the"
-  echo "voice-forge plugin is mounted. Aborting."
-  exit 1
+# Fallback: Cowork/Desktop mounts where the variable is not populated.
+# Scoped to /sessions on purpose — never widen this to /.
+if [ ! -f "$_VF_ROOT/scripts/parse_mbox.py" ]; then
+  _VF_ROOT="$(find /sessions -maxdepth 6 -type d -name voice-forge 2>/dev/null | head -1)"
 fi
-if [ -z "$PLUGIN_REFS_DIR" ] || [ ! -f "$PLUGIN_REFS_DIR/lessons-learned.md" ]; then
-  echo "ERROR: could not locate voice-forge references under /sessions. Aborting."
+
+SCRIPTS_DIR="$_VF_ROOT/scripts"
+
+if [ ! -f "$SCRIPTS_DIR/parse_mbox.py" ]; then
+  echo "ERROR: could not locate voice-forge scripts."
+  echo "Looked at: \${CLAUDE_PLUGIN_ROOT}=${CLAUDE_PLUGIN_ROOT:-<unset>}, then /sessions."
+  echo "Aborting."
   exit 1
 fi
 echo "SCRIPTS_DIR=$SCRIPTS_DIR"
-echo "PLUGIN_REFS_DIR=$PLUGIN_REFS_DIR"
 ```
 
-If either guard fires, stop and tell the user this command must run inside a
-Cowork or Claude Desktop session. Do not fall back to scanning the whole
-filesystem.
+If the guard fires, stop and report the paths that were tried. Do not widen the
+search — never scan `/`, and never scan outside `/sessions`. A missing plugin
+directory is a setup error, not a lookup problem.
 
 ### Step 0b — Opening message
 
@@ -56,7 +59,7 @@ Show the user this message before scanning (do not ask a questionnaire):
 > If you haven't exported yet, tell me which mail client you use and I'll walk
 > you through it. Only export **sent** mail — received mail is not your voice."
 
-If the user needs export guidance, reference `references/export-guide.md` for
+If the user needs export guidance, reference `${CLAUDE_PLUGIN_ROOT}/references/export-guide.md` for
 step-by-step instructions per client.
 
 ### Step 0c — Pre-parse scan
@@ -83,7 +86,7 @@ ls -la "$ATTACHED_DIR"
 ```
 
 If no archive is found, stop and ask the user to attach a folder containing
-their exports (point them at `references/export-guide.md` if they haven't
+their exports (point them at `${CLAUDE_PLUGIN_ROOT}/references/export-guide.md` if they haven't
 exported yet). Do not proceed.
 
 Derive the candidate owner email addresses by sampling the senders of the
@@ -140,7 +143,6 @@ Launch the `voice-parser` agent with:
 - `OWNER_EMAILS` — comma-separated list of the user's addresses (confirmed above)
 - `WORK_DIR` — `$ATTACHED_DIR/voice-forge-work`
 - `SCRIPTS_DIR` — the resolved scripts directory path
-- `PLUGIN_REFS_DIR` — the resolved references directory path
 
 **After the agent returns**, read `$WORK_DIR/voice-parser-output.json`. If the file is absent or `row_count` is 0: **STOP**. Tell the user that parsing produced no data, suggest re-checking the attached exports folder, and do not continue to Phase 2.
 
@@ -152,7 +154,6 @@ Launch the `voice-analyst` agent with:
 - `DATASET_PATH` = `$WORK_DIR/email_dataset.json`
 - `WORK_DIR`
 - `SCRIPTS_DIR`
-- `PLUGIN_REFS_DIR`
 
 ---
 
@@ -162,7 +163,6 @@ Launch the `voice-example-reader` agent with:
 - `DATASET_PATH` = `$WORK_DIR/email_dataset.json`
 - `WORK_DIR`
 - `SCRIPTS_DIR`
-- `PLUGIN_REFS_DIR`
 
 **After the agent returns**, read `$WORK_DIR/voice-example-reader-status.json`. If `verify_gate_passed` is false: **STOP**. Report how many quotes failed verification and why, and tell the user that no findings doc will be written until all quotes are verified.
 
@@ -179,7 +179,6 @@ SAVE_PATH="$WORK_DIR/voice-findings.md"
 Launch the `voice-findings-writer` agent with:
 - `WORK_DIR`
 - `SAVE_PATH` = `$WORK_DIR/voice-findings.md`
-- `PLUGIN_REFS_DIR`
 
 ---
 

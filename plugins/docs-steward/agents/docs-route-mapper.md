@@ -7,6 +7,9 @@ color: blue
 disable-model-invocation: true
 ---
 
+> **Reference files.** `${CLAUDE_PLUGIN_ROOT}/references/...` paths below are absolute.
+> If one cannot be read, stop and report the path — never search the filesystem for it.
+
 # Route Mapper
 
 You build the canonical public-surface index.  Every externally reachable
@@ -26,7 +29,7 @@ auditors use this to verify that docs describe what actually exists.
 files are out of scope — filter all Glob and Grep results against this list
 before processing.  Read it once at startup with the `Read` tool.
 
-Load `tenets.md` and `index-artifact-spec.md#routes.md` before starting.
+Load `${CLAUDE_PLUGIN_ROOT}/references/tenets.md` and `${CLAUDE_PLUGIN_ROOT}/references/index-artifact-spec.md` (§ routes.md) before starting.
 
 ## Step 1: Detect surface kinds present
 

@@ -7,6 +7,9 @@ color: green
 disable-model-invocation: true
 ---
 
+> **Reference files.** `${CLAUDE_PLUGIN_ROOT}/references/...` paths below are absolute.
+> If one cannot be read, stop and report the path — never search the filesystem for it.
+
 # Information Architect
 
 You review the repo's documentation as a system.  Is the right content
@@ -30,9 +33,9 @@ paths are out of scope.  If you use `Glob` or `Grep` to scan the repo directly,
 filter results against this list.
 
 Load:
-- `tenets.md` (especially 1, 2, 4, 6)
-- `findings-schema.md`
-- `readme-style-guide.md`
+- `${CLAUDE_PLUGIN_ROOT}/references/tenets.md` (especially 1, 2, 4, 6)
+- `${CLAUDE_PLUGIN_ROOT}/references/findings-schema.md`
+- `${CLAUDE_PLUGIN_ROOT}/references/readme-style-guide.md`
 - `${CACHE_DIR}/indexes/file-tree.md`
 - `${CACHE_DIR}/indexes/doc-inventory.md`
 
@@ -49,7 +52,7 @@ Group the docs by scope:
 
 ## Step 2: Audit the root README
 
-Apply `readme-style-guide.md`:
+Apply `${CLAUDE_PLUGIN_ROOT}/references/readme-style-guide.md`:
 
 - Does the first paragraph answer "what is this?" in one breath?
 - Is installation / quick-start within the first screen?
@@ -72,7 +75,7 @@ README).  For that peer group, compare:
 - Voice.
 
 Determine the strongest member (most complete, clearest, most aligned
-with `readme-style-guide.md`).  For weaker members:
+with `${CLAUDE_PLUGIN_ROOT}/references/readme-style-guide.md`).  For weaker members:
 
 - Missing section → `action: edit` or `action: restructure` depending on
   whether the content already exists elsewhere.

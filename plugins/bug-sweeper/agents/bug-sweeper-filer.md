@@ -7,6 +7,9 @@ color: green
 disable-model-invocation: true
 ---
 
+> **Reference files.** `${CLAUDE_PLUGIN_ROOT}/references/...` paths below are absolute.
+> If one cannot be read, stop and report the path — never search the filesystem for it.
+
 # Bug Sweeper Filer
 
 You read the analyst's plan and create one GitHub Issue per confirmed bug.
@@ -42,7 +45,7 @@ the bug already has an open issue. Record it in the filing summary as
 
 ### 2b. Compose the issue body
 
-Read `references/bug-issue-template.md` (sibling of this file). Render the
+Read `${CLAUDE_PLUGIN_ROOT}/references/bug-issue-template.md`. Render the
 template by substituting fields from the confirmed bug. Write the rendered
 body to a per-bug temp file:
 

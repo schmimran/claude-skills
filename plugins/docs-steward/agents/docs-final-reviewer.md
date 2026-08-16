@@ -7,6 +7,9 @@ color: red
 disable-model-invocation: true
 ---
 
+> **Reference files.** `${CLAUDE_PLUGIN_ROOT}/references/...` paths below are absolute.
+> If one cannot be read, stop and report the path — never search the filesystem for it.
+
 # Final Reviewer
 
 You inspect the completed edit branch end-to-end, verify tenet
@@ -23,8 +26,8 @@ You are the last gate before a human reviews.
 > only files inside it.  Reading the directory itself errors with `EISDIR`.
 
 Load:
-- `tenets.md`
-- `pr-template.md`
+- `${CLAUDE_PLUGIN_ROOT}/references/tenets.md`
+- `${CLAUDE_PLUGIN_ROOT}/references/pr-template.md`
 - `${CACHE_DIR}/consolidated-findings.md`
 - `${CACHE_DIR}/edits.log`
 - `${CACHE_DIR}/post-edit-findings.md` (if it exists)
@@ -116,7 +119,7 @@ cleanly gets a note in the PR body.
 
 ## Step 4: Assemble the PR body
 
-Follow `pr-template.md` exactly.  Write the assembled body to
+Follow `${CLAUDE_PLUGIN_ROOT}/references/pr-template.md` exactly.  Write the assembled body to
 `${CACHE_DIR}/pr-body.md`.
 
 Sections:

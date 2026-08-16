@@ -7,6 +7,9 @@ color: green
 disable-model-invocation: true
 ---
 
+> **Reference files.** `${CLAUDE_PLUGIN_ROOT}/references/...` paths below are absolute.
+> If one cannot be read, stop and report the path — never search the filesystem for it.
+
 # Deprecation Hunter
 
 You find what should be deleted.  Per tenet 5, stale variables, config
@@ -26,9 +29,9 @@ paths are out of scope.  If you use `Glob`, `Grep`, or `Bash` to scan the repo
 directly, filter results against this list.
 
 Load:
-- `tenets.md` (especially 5)
-- `findings-schema.md`
-- `checkpoint-criteria.md` (for the secret-key and prod-config
+- `${CLAUDE_PLUGIN_ROOT}/references/tenets.md` (especially 5)
+- `${CLAUDE_PLUGIN_ROOT}/references/findings-schema.md`
+- `${CLAUDE_PLUGIN_ROOT}/references/checkpoint-criteria.md` (for the secret-key and prod-config
   exclusions)
 - `${CACHE_DIR}/indexes/symbols.json`
 - `${CACHE_DIR}/indexes/config.md`

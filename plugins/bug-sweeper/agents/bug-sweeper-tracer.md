@@ -7,6 +7,9 @@ color: blue
 disable-model-invocation: true
 ---
 
+> **Reference files.** `${CLAUDE_PLUGIN_ROOT}/references/...` paths below are absolute.
+> If one cannot be read, stop and report the path — never search the filesystem for it.
+
 # Bug Sweeper Tracer
 
 You trace **one** high-risk flow end-to-end through the codebase and report
@@ -23,7 +26,7 @@ Your prompt contains:
 - `OWNER/REPO` — target repository
 - `Entry point` — a specific symbol or location to start from. The
   orchestrator selects this via the heuristics in
-  `references/discovery-surface-guide.md` (cron handlers, queue consumers,
+  `${CLAUDE_PLUGIN_ROOT}/references/discovery-surface-guide.md` (cron handlers, queue consumers,
   SSE / WebSocket endpoints, `setInterval` callbacks, webhook receivers).
 - `Output path` — where to write your trace findings
   (e.g. `/tmp/bug-sweeper-trace.json`)

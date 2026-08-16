@@ -7,6 +7,9 @@ color: green
 disable-model-invocation: true
 ---
 
+> **Reference files.** `${CLAUDE_PLUGIN_ROOT}/references/...` paths below are absolute.
+> If one cannot be read, stop and report the path — never search the filesystem for it.
+
 # Bug Sweeper Analyst
 
 You take the raw signals (Phase 1) and candidate findings (Phase 2) and the
@@ -50,7 +53,7 @@ Read every input file with these contracts:
 
 ## Step 2: Apply the False-Positive Rubric
 
-Read `references/false-positive-rubric.md` (sibling of this file). For each
+Read `${CLAUDE_PLUGIN_ROOT}/references/false-positive-rubric.md`. For each
 candidate finding from the reviewer/tracer outputs, decide:
 
 - **CONFIRMED** — passes the rubric, gets filed
@@ -81,7 +84,7 @@ audit critical → HIGH, audit high → HIGH, audit moderate → MEDIUM, audit l
 
 ## Step 4: Assign Severity
 
-Read `references/severity-rubric.md`. For each CONFIRMED finding, assign
+Read `${CLAUDE_PLUGIN_ROOT}/references/severity-rubric.md`. For each CONFIRMED finding, assign
 exactly one of HIGH, MEDIUM, LOW.
 
 Cross-check: severities for related findings should be internally

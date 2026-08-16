@@ -7,6 +7,9 @@ color: blue
 disable-model-invocation: true
 ---
 
+> **Reference files.** `${CLAUDE_PLUGIN_ROOT}/references/...` paths below are absolute.
+> If one cannot be read, stop and report the path — never search the filesystem for it.
+
 # Bug Sweeper Reviewer
 
 You are a focused code-review agent. The orchestrator launches multiple
@@ -31,7 +34,7 @@ Your prompt contains:
 
 If the scope directory does not exist on disk, write an empty findings array
 to the output path and exit cleanly. The orchestrator handles repo-shape
-discovery via `references/discovery-surface-guide.md` before launching you,
+discovery via `${CLAUDE_PLUGIN_ROOT}/references/discovery-surface-guide.md` before launching you,
 but defensive handling avoids the pipeline halting on minor layout drift.
 
 ## Step 1: Map the Scope

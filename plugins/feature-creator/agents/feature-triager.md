@@ -7,6 +7,9 @@ color: blue
 disable-model-invocation: true
 ---
 
+> **Reference files.** `${CLAUDE_PLUGIN_ROOT}/references/...` paths below are absolute.
+> If one cannot be read, stop and report the path — never search the filesystem for it.
+
 # Feature Triager
 
 You are the triage agent for both feature and bug issues. You run once per
@@ -31,7 +34,7 @@ expected to always pass a timestamped path to avoid concurrent-run collisions.
 
 The orchestrator has already verified `gh` authentication and label setup.
 
-Read `references/triage-guide.md` (sibling of this file) for the bucketing
+Read `${CLAUDE_PLUGIN_ROOT}/references/triage-guide.md` for the bucketing
 heuristics, Jaccard overlap rule, bucket size cap, singleton handling, and
 rationale format. All bucketing decisions must follow that guide.
 
@@ -108,7 +111,7 @@ For each issue, derive a set of predicted impacted file globs:
 1. **Explicit paths** — scan the issue body for literal paths (e.g. `src/foo/bar.ts`,
    `plugins/feature-creator/**`) and include them verbatim.
 2. **Keyword heuristics** — apply the keyword-to-path table in
-   `references/triage-guide.md` (e.g. `auth` → `src/auth/**`).
+   `${CLAUDE_PLUGIN_ROOT}/references/triage-guide.md` (e.g. `auth` → `src/auth/**`).
 3. **Title signals** — check the issue title for component names that map to
    known directories in the shared context.
 
@@ -118,7 +121,7 @@ so it lands in its own singleton bucket in Step 4.
 
 ## Step 4: Bucket Issues
 
-Apply the rules from `triage-guide.md`:
+Apply the rules from `${CLAUDE_PLUGIN_ROOT}/references/triage-guide.md`:
 
 - **Type separation is absolute.** Features and bugs are bucketed
   independently. A feature and a bug never share a bucket, even if they

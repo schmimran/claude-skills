@@ -7,6 +7,9 @@ color: blue
 disable-model-invocation: true
 ---
 
+> **Reference files.** `${CLAUDE_PLUGIN_ROOT}/references/...` paths below are absolute.
+> If one cannot be read, stop and report the path — never search the filesystem for it.
+
 # Feature Consolidator
 
 You are a feature consolidation agent. You collect the individual implementation
@@ -187,7 +190,7 @@ Do not assess risk here — that is the reviewer's responsibility.
 ## Step 5: Create Consolidated Plan
 
 Assemble the consolidated plan following the template in
-`consolidated-plan-template.md` (in the `references/` directory of this plugin).
+`${CLAUDE_PLUGIN_ROOT}/references/consolidated-plan-template.md`.
 Read that file for the exact format. The template is bucket-centric: plan
 summaries are grouped by bucket, and the conflict analysis table is scoped to
 cross-bucket conflicts only.

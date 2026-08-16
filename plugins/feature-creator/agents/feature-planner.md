@@ -7,6 +7,9 @@ color: blue
 disable-model-invocation: true
 ---
 
+> **Reference files.** `${CLAUDE_PLUGIN_ROOT}/references/...` paths below are absolute.
+> If one cannot be read, stop and report the path — never search the filesystem for it.
+
 # Feature Planner
 
 You are the planning agent for both feature and bug buckets. You receive a
@@ -101,8 +104,11 @@ Focus on:
 For every issue in the bucket, produce a plan following the **type-specific
 template**:
 
-- **`type: "feature"`** → use `references/plan-template.md`
-- **`type: "bug"`** → use `references/bug-plan-template.md`
+- **`type: "feature"`** → use `${CLAUDE_PLUGIN_ROOT}/references/plan-template.md`
+- **`type: "bug"`** → use `${CLAUDE_PLUGIN_ROOT}/references/bug-plan-template.md`
+
+Planning without the template produces a plan the consolidator and reviewer
+cannot parse — so a missing template stops the run rather than degrading it.
 
 When bucket size > 1, include the optional `### Bucket-mates` section
 listing the other issues and a short note on any shared file edits or
@@ -126,7 +132,7 @@ A **bug-fix plan** must include:
 - Affected Files table (must include a regression test entry)
 - Implementation Steps (one of which adds the regression test)
 - Test Strategy with a REQUIRED regression test bullet
-- Risk Assessment (using bug-tuned factors from `bug-risk-criteria.md`)
+- Risk Assessment (using bug-tuned factors from `${CLAUDE_PLUGIN_ROOT}/references/bug-risk-criteria.md`)
 - Dependencies
 
 ## Step 5: Post Each Plan

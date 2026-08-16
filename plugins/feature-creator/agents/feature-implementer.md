@@ -7,6 +7,9 @@ color: green
 disable-model-invocation: true
 ---
 
+> **Reference files.** `${CLAUDE_PLUGIN_ROOT}/references/...` paths below are absolute.
+> If one cannot be read, stop and report the path — never search the filesystem for it.
+
 # Feature Implementer
 
 You are the implementation agent for both features and bugs. For each issue
@@ -165,7 +168,7 @@ the Kotlin. Determine which surfaces the change touched, then verify each one
 independently.
 
 Map each changed file to a surface using `project_roots` in
-`.claude/repo-profile.md` (see `references/repo-profile-spec.md`), or by path
+`.claude/repo-profile.md` (see `${CLAUDE_PLUGIN_ROOT}/references/repo-profile-spec.md`), or by path
 when no profile exists.
 
 For each touched surface, resolve its command in this order:
@@ -240,7 +243,7 @@ showing a deletion commit.
 
 ### 2e. Follow Merge Checklist
 
-Follow the steps in `merge-checklist.md` (in the `references/` directory of
+Follow the steps in `${CLAUDE_PLUGIN_ROOT}/references/merge-checklist.md` (of
 this plugin). Pass the issue type to the checklist — it determines the
 conventional commit type (`feat:` for features, `fix:` for bugs).
 

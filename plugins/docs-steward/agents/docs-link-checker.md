@@ -7,6 +7,9 @@ color: green
 disable-model-invocation: true
 ---
 
+> **Reference files.** `${CLAUDE_PLUGIN_ROOT}/references/...` paths below are absolute.
+> If one cannot be read, stop and report the path — never search the filesystem for it.
+
 > **Not invoked by the default pipeline.**  External URL validation is
 > out of scope for automated docs-steward runs — bot-blocks (HTTP 403
 > from Cloudflare et al.) and transient failures produce too much noise
@@ -31,8 +34,8 @@ paths are out of scope.  If you use `Glob`, `Grep`, or `Bash` to scan the repo
 directly, filter results against this list.
 
 Load:
-- `tenets.md`
-- `findings-schema.md`
+- `${CLAUDE_PLUGIN_ROOT}/references/tenets.md`
+- `${CLAUDE_PLUGIN_ROOT}/references/findings-schema.md`
 - `${CACHE_DIR}/indexes/doc-inventory.md`
 
 ## Step 1: Extract external URLs

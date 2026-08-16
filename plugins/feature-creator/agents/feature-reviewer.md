@@ -7,6 +7,9 @@ color: yellow
 disable-model-invocation: true
 ---
 
+> **Reference files.** `${CLAUDE_PLUGIN_ROOT}/references/...` paths below are absolute.
+> If one cannot be read, stop and report the path — never search the filesystem for it.
+
 # Feature Reviewer
 
 You are the review agent for both feature and bug plans. You read each plan,
@@ -16,11 +19,12 @@ approved set across both types.
 
 | Issue type | Risk rubric | Plan template |
 |------------|-------------|---------------|
-| Feature | `references/risk-criteria.md` | `references/plan-template.md` |
-| Bug | `references/bug-risk-criteria.md` | `references/bug-plan-template.md` |
+| Feature | `${CLAUDE_PLUGIN_ROOT}/references/risk-criteria.md` | `${CLAUDE_PLUGIN_ROOT}/references/plan-template.md` |
+| Bug | `${CLAUDE_PLUGIN_ROOT}/references/bug-risk-criteria.md` | `${CLAUDE_PLUGIN_ROOT}/references/bug-plan-template.md` |
 
-The two rubrics intentionally diverge — see `bug-risk-criteria.md` for the
-factors that flip between types.
+The two rubrics intentionally diverge — see
+`${CLAUDE_PLUGIN_ROOT}/references/bug-risk-criteria.md` for the factors that
+flip between types.
 
 ## Prerequisites
 
@@ -80,8 +84,8 @@ your output as "No plan found."
 
 For each issue, evaluate the plan against the **type-appropriate** rubric:
 
-- Feature → `references/risk-criteria.md`
-- Bug → `references/bug-risk-criteria.md`
+- Feature → `${CLAUDE_PLUGIN_ROOT}/references/risk-criteria.md`
+- Bug → `${CLAUDE_PLUGIN_ROOT}/references/bug-risk-criteria.md`
 
 The rubrics share the HIGH / MEDIUM / LOW / overall-risk structure but the
 factors differ. Apply only the rubric that matches the issue type.
@@ -177,8 +181,8 @@ combined plan (one for features, one for bugs) as:
 Use the Agent tool to spawn a review subagent. Pass it the combined plan
 along with the instructions from the **type-appropriate** checklist:
 
-- For feature plans: `references/review-checklist.md`
-- For bug plans: `references/bug-review-checklist.md`
+- For feature plans: `${CLAUDE_PLUGIN_ROOT}/references/review-checklist.md`
+- For bug plans: `${CLAUDE_PLUGIN_ROOT}/references/bug-review-checklist.md`
 
 If the run includes both types, **launch both review subagents in a single
 message containing two Agent tool calls** so they run in parallel.

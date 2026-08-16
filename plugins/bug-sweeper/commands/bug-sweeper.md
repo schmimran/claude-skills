@@ -55,7 +55,7 @@ issues are filed.
   in plan mode — present the analyst's plan and call `ExitPlanMode` to ask
   for approval.
 - **Headless mode** (`HEADLESS == true`): read
-  `references/headless-mode.md`. Skip plan mode. Do not call
+  `${CLAUDE_PLUGIN_ROOT}/references/headless-mode.md`. Skip plan mode. Do not call
   `AskUserQuestion`. Run all phases end-to-end. The Phase 5 self-review (in
   the analyst) replaces human approval. This mode is intended for invocation
   from a `/schedule` routine running in permissions-bypass mode.
@@ -164,14 +164,14 @@ echo "Project root: ${PROJECT_ROOT}"
 ```
 
 `.` (a root manifest) is the common case and still works. Pass `PROJECT_ROOT`
-to the runner in Phase 1. See `references/repo-profile-spec.md`.
+to the runner in Phase 1. See `${CLAUDE_PLUGIN_ROOT}/references/repo-profile-spec.md`.
 
 **No manifest anywhere is the only hard failure.** A manifest in a
 subdirectory is normal, not an error.
 
 ### 0e2. Discover surfaces
 
-Read `references/discovery-surface-guide.md`. Apply its heuristics to the
+Read `${CLAUDE_PLUGIN_ROOT}/references/discovery-surface-guide.md`. Apply its heuristics to the
 target repo to derive:
 
 - `API_DIR` — the primary API/backend source directory (e.g. `apps/api/src/`,

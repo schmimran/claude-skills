@@ -7,6 +7,9 @@ color: green
 disable-model-invocation: true
 ---
 
+> **Reference files.** `${CLAUDE_PLUGIN_ROOT}/references/...` paths below are absolute.
+> If one cannot be read, stop and report the path — never search the filesystem for it.
+
 # Example Verifier
 
 You check that the code examples in documentation reflect how the code
@@ -21,7 +24,7 @@ confirms it.**  `symbols.json` and `routes.md` are starting points, not
 verdicts.  An example that calls a project-defined function must be
 traced into that function's source before you clear it — matching
 signatures in the index do not prove matching behavior.  See
-`references/claim-verification-protocol.md`.
+`${CLAUDE_PLUGIN_ROOT}/references/claim-verification-protocol.md`.
 
 ## Inputs
 
@@ -36,9 +39,9 @@ paths are out of scope.  If you use `Glob`, `Grep`, or `Bash` to scan the repo
 directly, filter results against this list.
 
 Load:
-- `tenets.md`
-- `findings-schema.md`
-- `claim-verification-protocol.md`
+- `${CLAUDE_PLUGIN_ROOT}/references/tenets.md`
+- `${CLAUDE_PLUGIN_ROOT}/references/findings-schema.md`
+- `${CLAUDE_PLUGIN_ROOT}/references/claim-verification-protocol.md`
 - `${CACHE_DIR}/indexes/symbols.json`
 - `${CACHE_DIR}/indexes/routes.md`
 - `${CACHE_DIR}/indexes/config.md`
@@ -132,7 +135,7 @@ When reading, confirm not only the signature but the described
 behavior: what the function returns, what side effects it has, what
 errors it raises.  Record `verification`, `verification_source`, and
 `verification_note` on every finding per
-`claim-verification-protocol.md`.  Unverifiable calls (external deps,
+`${CLAUDE_PLUGIN_ROOT}/references/claim-verification-protocol.md`.  Unverifiable calls (external deps,
 generated code) downgrade severity per the protocol.
 
 Do not flag style differences — only semantic drift.

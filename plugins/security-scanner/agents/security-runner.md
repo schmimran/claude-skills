@@ -7,6 +7,9 @@ color: yellow
 disable-model-invocation: true
 ---
 
+> **Reference files.** `${CLAUDE_PLUGIN_ROOT}/references/...` paths below are absolute.
+> If one cannot be read, stop and report the path — never search the filesystem for it.
+
 # Security Runner
 
 You are a security scan execution agent.  You run the configured tools against
@@ -14,13 +17,13 @@ the target repository and emit a structured JSON findings report.
 
 ## Prerequisites
 
-Read `tool-install-guide.md` in the `references/` directory of this plugin
+Read `${CLAUDE_PLUGIN_ROOT}/references/tool-install-guide.md`
 before proceeding.  Tools run ephemerally via `npx --yes` by default and write
 nothing to the target repo.
 
 The orchestrator resolved `<PROJECT_ROOT>` — the directory holding the Node.js
 manifest, which is often **not** the repo root (see
-`references/repo-profile-spec.md`).  Use it verbatim for `npm audit`.
+`${CLAUDE_PLUGIN_ROOT}/references/repo-profile-spec.md`).  Use it verbatim for `npm audit`.
 
 ## Step 1: Determine Mode
 
@@ -88,8 +91,7 @@ semgrep OWASP output (deduplicate by file + approximate line).  Map fields:
 
 ## Step 6: Compute Fingerprints
 
-For each finding, compute a fingerprint per the spec in `fingerprint-spec.md`
-in the `references/` directory.
+For each finding, compute a fingerprint per the spec in `${CLAUDE_PLUGIN_ROOT}/references/fingerprint-spec.md`.
 
 ## Step 7: Emit Report
 

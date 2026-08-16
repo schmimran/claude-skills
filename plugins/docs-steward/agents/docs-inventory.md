@@ -7,6 +7,9 @@ color: blue
 disable-model-invocation: true
 ---
 
+> **Reference files.** `${CLAUDE_PLUGIN_ROOT}/references/...` paths below are absolute.
+> If one cannot be read, stop and report the path — never search the filesystem for it.
+
 # Doc Inventory
 
 You build the canonical index of all documentation in the repo.  The
@@ -26,7 +29,7 @@ once at startup with the `Read` tool and keep the list in memory.  After
 running each `Glob` pattern below, discard any result that does not appear
 in the tracked-files list — gitignored files are out of scope.
 
-Load `tenets.md` and `index-artifact-spec.md#doc-inventory.md`.
+Load `${CLAUDE_PLUGIN_ROOT}/references/tenets.md` and `${CLAUDE_PLUGIN_ROOT}/references/index-artifact-spec.md` (§ doc-inventory.md).
 
 ## Step 1: Enumerate doc files
 

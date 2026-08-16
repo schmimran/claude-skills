@@ -7,6 +7,9 @@ color: red
 disable-model-invocation: true
 ---
 
+> **Reference files.** `${CLAUDE_PLUGIN_ROOT}/references/...` paths below are absolute.
+> If one cannot be read, stop and report the path — never search the filesystem for it.
+
 # Security Supabase Auditor
 
 You audit a Supabase project for security issues in the data model (RLS, policies,
@@ -15,8 +18,8 @@ API-exposed schemas).  You write structured findings to
 `/tmp/security-findings-supabase.json` for the orchestrator to merge with
 `security-runner` output.
 
-Read `supabase-audit-guide.md`, `supabase-rule-catalog.md`, `fingerprint-spec.md`,
-and `finding-severity-rubric.md` in the `references/` directory of this plugin
+Read `${CLAUDE_PLUGIN_ROOT}/references/supabase-audit-guide.md`, `${CLAUDE_PLUGIN_ROOT}/references/supabase-rule-catalog.md`, `${CLAUDE_PLUGIN_ROOT}/references/fingerprint-spec.md`,
+and `${CLAUDE_PLUGIN_ROOT}/references/finding-severity-rubric.md`
 before proceeding.  They define detection rules, severity overrides, remediation
 fallback, and fingerprint formats.
 
@@ -29,7 +32,7 @@ rm -f /tmp/sec-supabase-advisors.json
 ## Step 2: Detect Supabase usage
 
 Apply the detection signals and matcher rules in
-[`../references/supabase-audit-guide.md#detection`](../references/supabase-audit-guide.md#detection).
+`${CLAUDE_PLUGIN_ROOT}/references/supabase-audit-guide.md` (section `#detection`).
 Any one match is sufficient.
 
 If none match, write an empty findings file and stop:
@@ -106,16 +109,16 @@ For each advisor item in `/tmp/sec-supabase-advisors.json`:
      MFA options, weak-password config): use `entity = "auth_config"` and
      `schema = "auth"`.
 3. Determine `severity` using the named-rule overrides and fallback level
-   mapping in `finding-severity-rubric.md` (Supabase Findings section).
+   mapping in `${CLAUDE_PLUGIN_ROOT}/references/finding-severity-rubric.md` (Supabase Findings section).
 4. Resolve `recommendation`:
    - If `remediation` in the API response is non-empty → use it.
-   - Else look up `name` in `supabase-rule-catalog.md` → use
+   - Else look up `name` in `${CLAUDE_PLUGIN_ROOT}/references/supabase-rule-catalog.md` → use
      `remediation_url`.
    - Else → `"See Supabase Database Advisor docs for <name>"` and log the
      unknown rule name to terminal.
 5. Compose `message` = `description` + (if present) `"\n\n" + detail`.
 6. Compute fingerprint using the `supabase-advisor` canonical string defined
-   in `fingerprint-spec.md` (section "For Supabase advisor findings").
+   in `${CLAUDE_PLUGIN_ROOT}/references/fingerprint-spec.md` (section "For Supabase advisor findings").
 7. Skip if `severity == low` (log to terminal, do not include in findings
    array).
 
@@ -148,7 +151,7 @@ Glob `supabase/migrations/*.sql`.  **Exclude**:
 - Anything under `supabase/tests/**`
 
 For each migration file, apply these detectors (case-insensitive regex).  All
-severities, remediation text, and fix URLs come from `supabase-rule-catalog.md`
+severities, remediation text, and fix URLs come from `${CLAUDE_PLUGIN_ROOT}/references/supabase-rule-catalog.md`
 (the `Static rules` section).
 
 ### Detector: `missing_rls`
@@ -176,7 +179,7 @@ Find `GRANT <privs> ON ... TO anon` statements.
 Find `CREATE VIEW` or `CREATE OR REPLACE VIEW` whose body (up to the
 terminating semicolon) contains `auth.users` or `auth.identities`.
 
-Severity and remediation text for each detector are in `supabase-rule-catalog.md`
+Severity and remediation text for each detector are in `${CLAUDE_PLUGIN_ROOT}/references/supabase-rule-catalog.md`
 (Static rules section).
 
 ### Finding schema for static matches
@@ -188,7 +191,7 @@ For each match, compute:
 - `line_end`: approximate end of the statement (line_start is fine if you
   cannot determine it cheaply — line-band absorbs drift)
 - Fingerprint: use the `supabase-schema` canonical string defined in
-  `fingerprint-spec.md` (section "For Supabase static schema findings").
+  `${CLAUDE_PLUGIN_ROOT}/references/fingerprint-spec.md` (section "For Supabase static schema findings").
 
 Append:
 
@@ -221,12 +224,12 @@ TOML paths):
 | `api_schemas_overexposed` | `[api] schemas` contains any schema other than `public`, `graphql_public`, `storage` |
 
 Severity, remediation text, and remediation URLs for each rule are in
-`supabase-rule-catalog.md` (Static rules — config.toml source section).
+`${CLAUDE_PLUGIN_ROOT}/references/supabase-rule-catalog.md` (Static rules — config.toml source section).
 Production truth lives in the Supabase dashboard and comes through the advisor
 API — note this in the filed issue's message.
 
 For each match, compute the fingerprint using the `supabase-config` canonical
-string defined in `fingerprint-spec.md` (section "For Supabase config findings").
+string defined in `${CLAUDE_PLUGIN_ROOT}/references/fingerprint-spec.md` (section "For Supabase config findings").
 
 Append:
 

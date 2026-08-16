@@ -34,7 +34,7 @@ All intermediate files go under `$WORK_DIR/`. Never use bare `/tmp/` paths.
 1. Look for `.claude/fullstack-mobile-feature/project-fit.md` in the current working directory (the target repo).
 
    - **If found:** Read it. Confirm the stored paths still exist on disk (spot-check 3–4 key paths with `ls`). If any are stale, note them and re-discover those surfaces. Load the stored conventions and project memory — they inform every subsequent phase.
-   - **If absent:** Run the discovery procedure from `references/discovery-surface-guide.md`. Locate:
+   - **If absent:** Run the discovery procedure from `${CLAUDE_PLUGIN_ROOT}/references/discovery-surface-guide.md`. Locate:
      - iOS app root and main `App` entry file
      - Android package root and main `Application` class
      - Backend root, module/route layout, and typecheck command (from `package.json` scripts)
@@ -44,7 +44,7 @@ All intermediate files go under `$WORK_DIR/`. Never use bare `/tmp/` paths.
 
 2. Present a **Discovery Summary** to the user — the paths and conventions you found.
 
-3. **Fit file offer** (only when absent or stale): follow the consent rule and format in `references/project-fit-spec.md`.
+3. **Fit file offer** (only when absent or stale): follow the consent rule and format in `${CLAUDE_PLUGIN_ROOT}/references/project-fit-spec.md`.
 
 Save discovery results to `$WORK_DIR/discovery.md` for use in later phases.
 
@@ -87,7 +87,7 @@ All subsequent work — backend, iOS, Android — lands on this single branch.
 
 ### 2b. Write the master plan
 
-Using `references/master-plan-template.md`, write the master plan to `$WORK_DIR/master-plan.md`. Include:
+Using `${CLAUDE_PLUGIN_ROOT}/references/master-plan-template.md`, write the master plan to `$WORK_DIR/master-plan.md`. Include:
 
 1. Feature summary
 2. Data model (new/changed entities, fields, types)
@@ -114,7 +114,7 @@ If no backend changes are needed, record that in `$WORK_DIR/master-plan.md` and 
 
 **Goal:** Derive a self-contained, actionable brief for each platform developer.
 
-Using `references/platform-brief-template.md`, write two briefs:
+Using `${CLAUDE_PLUGIN_ROOT}/references/platform-brief-template.md`, write two briefs:
 
 - `$WORK_DIR/ios-brief.md` — iOS brief (Swift/SwiftUI/MVVM idiom; real iOS paths from discovery)
 - `$WORK_DIR/android-brief.md` — Android brief (Kotlin/Compose/Hilt idiom; real Android paths from discovery)
@@ -148,7 +148,7 @@ IOS BRIEF:
 DISCOVERY:
 [contents of $WORK_DIR/discovery.md]
 
-Implement the feature per the brief. Return your completion report in the format from references/completion-report-template.md.
+Implement the feature per the brief. Return your completion report in the format from ${CLAUDE_PLUGIN_ROOT}/references/completion-report-template.md.
 ```
 
 Save each agent's completion report:
@@ -199,7 +199,7 @@ state appearance, empty state design, and error state presentation. The two apps
 feel like visual siblings — a user switching between them should never feel jarred by
 inconsistent aesthetics, even where the parity registry is silent.
 
-Return your two-part review per references/peer-review-template.md:
+Return your two-part review per ${CLAUDE_PLUGIN_ROOT}/references/peer-review-template.md:
 Part A: feedback for the Android developer (include an Aesthetic Parity section)
 Part B: your self-reflection and convergence verdict for your own code
 ```
@@ -218,7 +218,7 @@ Save reviews:
 
 Read all four documents: `ios-report.md`, `android-report.md`, `ios-review.md`, `android-review.md`.
 
-Apply `references/reconciliation-rubric.md`. For each open issue (parity gap, contract mismatch, bug, convergence proposal):
+Apply `${CLAUDE_PLUGIN_ROOT}/references/reconciliation-rubric.md`. For each open issue (parity gap, contract mismatch, bug, convergence proposal):
 
 1. Classify by priority: Correctness → UX consistency → API contract fidelity → Code quality → (never sunk cost)
 2. Decide: adopt selectively | partial refactor | full redo | no change
@@ -226,7 +226,7 @@ Apply `references/reconciliation-rubric.md`. For each open issue (parity gap, co
 
 When dispatching reconciliation tasks, be precise: name the exact files and behaviors to change. Do not re-implement — send focused instructions.
 
-**Iteration rule:** Apply the iteration rule from `references/reconciliation-rubric.md` — continue until clean or escalate to the user.
+**Iteration rule:** Apply the iteration rule from `${CLAUDE_PLUGIN_ROOT}/references/reconciliation-rubric.md` — continue until clean or escalate to the user.
 
 Save the reconciliation decision log to `$WORK_DIR/reconciliation.md`.
 
@@ -281,7 +281,7 @@ git commit -m "feat: ${SLUG} — iOS, Android, and backend"
 Offer to append a dated project-memory entry to the fit file:
 > "Would you like me to append what we learned this run to the project-fit file? (yes/no)"
 
-Only append on explicit "yes". Follow `references/project-fit-spec.md` — append only, never overwrite existing entries.
+Only append on explicit "yes". Follow `${CLAUDE_PLUGIN_ROOT}/references/project-fit-spec.md` — append only, never overwrite existing entries.
 
 ### 7e. Summary
 
@@ -302,4 +302,4 @@ Print a final summary:
 - **Agent returns malformed report**: Ask the agent to retry with the correct template before proceeding to Phase 5.
 - **Typecheck fails**: Fix errors. Do not commit broken backend code.
 - **Reconciliation stalemate** (3 rounds, issues remain): Surface unresolved items to the user. Do not commit until resolved or user explicitly accepts the known gaps.
-- **No parity registry found**: Apply the fallback rule from `references/parity-guardrails.md` Rule 3. Note this in the master plan.
+- **No parity registry found**: Apply the fallback rule from `${CLAUDE_PLUGIN_ROOT}/references/parity-guardrails.md` Rule 3. Note this in the master plan.

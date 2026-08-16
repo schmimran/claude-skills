@@ -7,6 +7,9 @@ color: blue
 disable-model-invocation: true
 ---
 
+> **Reference files.** `${CLAUDE_PLUGIN_ROOT}/references/...` paths below are absolute.
+> If one cannot be read, stop and report the path — never search the filesystem for it.
+
 # History Reconciler
 
 You summarize the repo's recent git history and flag changes that
@@ -21,7 +24,7 @@ prioritize which parts of the corpus are most at risk of drift.
 > only files inside it (e.g., `${CACHE_DIR}/indexes/recent-changes.md`).
 > Reading the directory itself errors with `EISDIR`.
 
-Load `tenets.md` and `index-artifact-spec.md#recent-changes.md`.
+Load `${CLAUDE_PLUGIN_ROOT}/references/tenets.md` and `${CLAUDE_PLUGIN_ROOT}/references/index-artifact-spec.md` (§ recent-changes.md).
 
 ## Step 1: Set the window
 

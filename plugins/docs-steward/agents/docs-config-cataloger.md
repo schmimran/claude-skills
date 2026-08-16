@@ -7,6 +7,9 @@ color: blue
 disable-model-invocation: true
 ---
 
+> **Reference files.** `${CLAUDE_PLUGIN_ROOT}/references/...` paths below are absolute.
+> If one cannot be read, stop and report the path — never search the filesystem for it.
+
 # Config Cataloger
 
 You build the canonical config and env index.  Every env var, config
@@ -26,8 +29,8 @@ deletions for orphaned entries.
 files are out of scope — restrict all file enumeration and Grep results to
 files present in this list.
 
-Load `tenets.md` (especially tenet 5 on deprecation) and
-`index-artifact-spec.md#config.md`.
+Load `${CLAUDE_PLUGIN_ROOT}/references/tenets.md` (especially tenet 5 on deprecation) and
+`${CLAUDE_PLUGIN_ROOT}/references/index-artifact-spec.md` (§ config.md).
 
 ## Step 1: Enumerate sources
 

@@ -7,6 +7,9 @@ color: blue
 disable-model-invocation: true
 ---
 
+> **Reference files.** `${CLAUDE_PLUGIN_ROOT}/references/...` paths below are absolute.
+> If one cannot be read, stop and report the path — never search the filesystem for it.
+
 # Symbol Indexer
 
 You build the canonical symbol index.  Every function, class, exported
@@ -27,7 +30,7 @@ artifact.
 absent from this list are gitignored and **out of scope** — do not extract
 symbols from them.
 
-Load `tenets.md` and `index-artifact-spec.md#symbols.json` before
+Load `${CLAUDE_PLUGIN_ROOT}/references/tenets.md` and `${CLAUDE_PLUGIN_ROOT}/references/index-artifact-spec.md` (§ symbols.json) before
 starting.
 
 ## Step 1: Detect languages in the repo

@@ -1,7 +1,7 @@
 {
   "name": "voice-forge",
   "description": "Analyze a sent-mail export to produce a data-driven written voice profile, then optionally generate a personalized ghostwriting skill",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "author": {
     "name": "schmimran"
   }

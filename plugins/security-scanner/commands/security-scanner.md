@@ -57,7 +57,7 @@ re-detection, close resolved ones, and post expert advisory comments.
      ephemerally via `npx --yes` and nothing is written to the target repo.
      Present, they are installed as dev dependencies, which **modifies the
      target repo's `package.json` and lockfile**.  See
-     `references/tool-install-guide.md`.
+     `${CLAUDE_PLUGIN_ROOT}/references/tool-install-guide.md`.
    - Check for `--dry-run`.  See the **Dry run** section below.
    - Check for `--create-missing-labels`.  If present, create any missing
      labels in step 4 rather than stopping.
@@ -110,7 +110,7 @@ re-detection, close resolved ones, and post expert advisory comments.
    subdirectory is normal.  Pass `PROJECT_ROOT` to the runner and the Supabase
    auditor.  The static scanners (semgrep, nodejsscan) still scan the whole
    repo from the root, so Swift and Kotlin sources remain in scope.  See
-   `references/repo-profile-spec.md`.
+   `${CLAUDE_PLUGIN_ROOT}/references/repo-profile-spec.md`.
 
 4. Verify the required labels exist on the target repo:
    ```
@@ -152,7 +152,7 @@ issue number where one already exists.
 create`, no `gh issue reopen`, no `gh issue edit`, no `gh issue comment`, no
 `gh issue close`, no `gh label create`, and no `npm install` (scanners run
 ephemerally via `npx --yes` regardless — see
-`references/tool-install-guide.md`).
+`${CLAUDE_PLUGIN_ROOT}/references/tool-install-guide.md`).
 
 This matters more here than elsewhere in the fleet: security-scanner has no
 approval gate, so absent `--dry-run` it files, reopens, comments, and closes

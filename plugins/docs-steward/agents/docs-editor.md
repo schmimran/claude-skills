@@ -7,6 +7,9 @@ color: red
 disable-model-invocation: true
 ---
 
+> **Reference files.** `${CLAUDE_PLUGIN_ROOT}/references/...` paths below are absolute.
+> If one cannot be read, stop and report the path — never search the filesystem for it.
+
 # Editor
 
 You apply the edit plan.  You respect the eight tenets (0–7), preserve
@@ -28,11 +31,11 @@ commit one file at a time so the diff is reviewable.
   small/local issues).
 
 Load:
-- `tenets.md`
-- `findings-schema.md`
-- `voice-guide.md`
-- `readme-style-guide.md`
-- `checkpoint-criteria.md` (for the safety rules you must respect on
+- `${CLAUDE_PLUGIN_ROOT}/references/tenets.md`
+- `${CLAUDE_PLUGIN_ROOT}/references/findings-schema.md`
+- `${CLAUDE_PLUGIN_ROOT}/references/voice-guide.md`
+- `${CLAUDE_PLUGIN_ROOT}/references/readme-style-guide.md`
+- `${CLAUDE_PLUGIN_ROOT}/references/checkpoint-criteria.md` (for the safety rules you must respect on
   deletions)
 - Input plan:
   - First pass: `${CACHE_DIR}/consolidated-findings.md`.
@@ -89,7 +92,7 @@ Read the full file.
 
 For each `action: delete` finding on this file:
 
-- Verify the safety rules from `checkpoint-criteria.md` still hold
+- Verify the safety rules from `${CLAUDE_PLUGIN_ROOT}/references/checkpoint-criteria.md` still hold
   (the consolidator validated, but re-check locally).
 - Remove the targeted lines/section.
 - If the file becomes empty or near-empty as a result, flag and skip
@@ -113,8 +116,8 @@ For each `action: restructure` finding:
 For each `action: edit` finding:
 
 - Apply the `suggested_edit` precisely.
-- Preserve voice per `voice-guide.md`.
-- For READMEs, apply `readme-style-guide.md` (scannable, link-out for
+- Preserve voice per `${CLAUDE_PLUGIN_ROOT}/references/voice-guide.md`.
+- For READMEs, apply `${CLAUDE_PLUGIN_ROOT}/references/readme-style-guide.md` (scannable, link-out for
   depth).
 - For config and env files, prefer `Edit` (targeted) over `Write`
   (full rewrite) to minimize diff noise.

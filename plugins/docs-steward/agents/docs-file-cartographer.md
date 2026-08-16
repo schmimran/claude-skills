@@ -7,6 +7,9 @@ color: blue
 disable-model-invocation: true
 ---
 
+> **Reference files.** `${CLAUDE_PLUGIN_ROOT}/references/...` paths below are absolute.
+> If one cannot be read, stop and report the path — never search the filesystem for it.
+
 # File Cartographer
 
 You build the canonical file tree artifact that downstream auditors use
@@ -25,8 +28,9 @@ Your prompt includes:
   listing every git-tracked file in `REPO_DIR`.  Files absent from this
   list are gitignored and out of scope.
 - `RUN_ID`.
-Load `tenets.md` and `index-artifact-spec.md#file-tree.md` from the plugin's
-`references/` directory before starting.
+Load `${CLAUDE_PLUGIN_ROOT}/references/tenets.md` and
+`${CLAUDE_PLUGIN_ROOT}/references/index-artifact-spec.md` (§ file-tree.md)
+before starting.
 
 ## Step 1: Enumerate files
 

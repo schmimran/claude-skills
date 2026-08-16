@@ -7,6 +7,9 @@ color: yellow
 disable-model-invocation: true
 ---
 
+> **Reference files.** `${CLAUDE_PLUGIN_ROOT}/references/...` paths below are absolute.
+> If one cannot be read, stop and report the path — never search the filesystem for it.
+
 # Consolidator
 
 You merge the Phase 1 findings into a single coherent edit plan.  You
@@ -22,9 +25,9 @@ can adjudicate.
 > only files inside it.  Reading the directory itself errors with `EISDIR`.
 
 Load:
-- `tenets.md`
-- `findings-schema.md`
-- `checkpoint-criteria.md`
+- `${CLAUDE_PLUGIN_ROOT}/references/tenets.md`
+- `${CLAUDE_PLUGIN_ROOT}/references/findings-schema.md`
+- `${CLAUDE_PLUGIN_ROOT}/references/checkpoint-criteria.md`
 - All six findings files in `${CACHE_DIR}/findings/`.
 - `${PROTECTED_PATH}` (`${CACHE_DIR}/indexes/protected-files.md`) — the
   list of globs/paths the target repo's `CLAUDE.md` marks as requiring
@@ -35,7 +38,7 @@ Load:
 Open each findings file.  For each record:
 
 1. Check schema compliance (required fields, value constraints per
-   `findings-schema.md`).
+   `${CLAUDE_PLUGIN_ROOT}/references/findings-schema.md`).
 2. If invalid, move to a rejection list — do not merge.
 3. If valid, add to the unified finding pool.
 
@@ -79,7 +82,7 @@ Unresolvable conflicts count toward the checkpoint density trigger
 For each set of findings where multiple `docs-info-architect` records
 describe the same content appearing in multiple places:
 
-1. Select the canonical home using the `readme-style-guide.md`
+1. Select the canonical home using the `${CLAUDE_PLUGIN_ROOT}/references/readme-style-guide.md`
    guidance: deepest user-facing doc wins for section-specific content;
    root README wins for repo-wide content.
 2. Emit one finding (`action: restructure`, severity `major`) on the
@@ -133,7 +136,7 @@ Files themselves are ordered:
 
 ## Step 6: Checkpoint evaluation
 
-Apply the triggers from `checkpoint-criteria.md`:
+Apply the triggers from `${CLAUDE_PLUGIN_ROOT}/references/checkpoint-criteria.md`:
 
 - Conflict density > 20%.
 - Structural incoherence.
@@ -142,7 +145,7 @@ Apply the triggers from `checkpoint-criteria.md`:
 - Large-scale deletion (> 50 deletions, or any file reduced > 80%).
 
 If any trigger fires, write `${CACHE_DIR}/checkpoint-required.md` per
-the template in `checkpoint-criteria.md` and **stop**.  Do not write
+the template in `${CLAUDE_PLUGIN_ROOT}/references/checkpoint-criteria.md` and **stop**.  Do not write
 `consolidated-findings.md`.
 
 ## Step 7: Write the consolidated plan

@@ -14,7 +14,7 @@ This command is **fire and forget** (SPEC §0). Imran runs it once and gets fini
 - **Log every judgment call** in the calls JSON.
 - **End with the §11 report.** Every run, including a stop.
 
-Done means: a published review page, project docs, an IG Posts row per post (the day's carousel, plus one per Update companion and per second-Reel deep post), and a short report.
+Done means: a published review page with a one-tap bundle download (a zip built in the viewer) per post, project docs, an IG Posts row per post (the day's carousel, plus one per Update companion and per second-Reel deep post), and a short report.
 
 ## Arguments
 
@@ -54,7 +54,7 @@ Run this block once, as is:
 
 ```bash
 # --- dead-air setup: identical in all three commands (a test checks) ---
-DEAD_AIR_VERSION=0.3.1
+DEAD_AIR_VERSION=0.4.0
 export PYTHONDONTWRITEBYTECODE=1
 DA_WS="$PWD/dead-air"; DA_DAY="$(date +%F)"
 DA_REPO="${DEAD_AIR_REPO:-https://github.com/schmimran/claude-skills.git}"
@@ -207,9 +207,10 @@ Launch `dead-air-qa` (`subagent_type: "dead-air:dead-air-qa"`) for each post, co
 ## Phase 8 — Deliver
 
 For each review page, in this order:
-1. **Review page:** follow `${CLAUDE_PLUGIN_ROOT}/references/review-page.md`. Run `python3 -B <DA_ROOT>/scripts/review_page.py` for the day's post with one `--companion <update.json> <update-calls.json>` per Update companion: they share the day's page. For a deep post, use `--title "Dead Air: <Slug>" --h1 "Dead Air · <The subject>" --name dead-air-<slug>` (its own page; on a no-carousel day the companions go on it). Publish each page as a **new** artifact with the media of every post on it. If the artifact can't be published, follow `${CLAUDE_PLUGIN_ROOT}/references/render-guide.md` §6 and skip steps 2–3.
-2. **Project docs:** for each post, upload the post JSON, the calls JSON and `<name>.md` from `<DA_WS>/posts/` to project `dead-air/posts/` with `project_write` and **absolute** `local_path`s. New files only. The `.md` holds the review link, the IG Posts row ID (added after step 3), the slots, the stories, the dashboard corrections and the Reel sources. Nothing from `work/` or `out/` is uploaded.
-3. **IG Posts rows** (skip with `--dry-run`): per `${CLAUDE_PLUGIN_ROOT}/references/airtable-guide.md`, **one row per post**, Status Ready: the day's carousel, each companion (Format `update`, the same review link) and any deep post. Then update each `.md` with its row ID.
+1. **Bundle folders:** for every post, companions included, stage its hand-off folder with `python3 -B <DA_ROOT>/scripts/bundle_stage.py <post.json> <DA_WS>/out/<name> <calls.json> <folder>`, where `<folder>` is its `<date>_<format><NN>` name. It prints the files to publish and records `bundle` and `bundle_files` in the calls JSON itself. `${CLAUDE_PLUGIN_ROOT}/references/render-guide.md` §7 has the naming convention, how NN is counted, and what to do when it refuses.
+2. **Review page:** follow `${CLAUDE_PLUGIN_ROOT}/references/review-page.md`. Run `python3 -B <DA_ROOT>/scripts/review_page.py` for the day's post with one `--companion <update.json> <update-calls.json>` per Update companion: they share the day's page. For a deep post, use `--title "Dead Air: <Slug>" --h1 "Dead Air · <The subject>" --name dead-air-<slug>` (its own page; on a no-carousel day the companions go on it). Publish each page as a **new** artifact with the media of every post on it and each post's bundle files, declaring `capabilities: {"downloads": true}` (see the review-page reference). If the artifact can't be published, follow `${CLAUDE_PLUGIN_ROOT}/references/render-guide.md` §6 and skip steps 3–4.
+3. **Project docs:** for each post, upload the post JSON, the calls JSON and `<name>.md` from `<DA_WS>/posts/` to project `dead-air/posts/` with `project_write` and **absolute** `local_path`s. New files only. The `.md` holds the review link, the bundle folder name, the IG Posts row ID (added after step 4), the slots, the stories, the dashboard corrections and the Reel sources. Nothing from `work/` or `out/` is uploaded.
+4. **IG Posts rows** (skip with `--dry-run`): per `${CLAUDE_PLUGIN_ROOT}/references/airtable-guide.md`, **one row per post**, Status Ready: the day's carousel, each companion (Format `update`, the same review link) and any deep post. Then update each `.md` with its row ID.
 
 **Never write the Stories table. Never email. Never post to Instagram.**
 

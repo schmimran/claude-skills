@@ -175,8 +175,8 @@ plugins/
       editorial-rules.md          # Four-story day post, eligibility/ranking/fillers (Still dark), Flash, grid, count line, captions, Reel content, voice
       post-schema.md              # Post JSON, story object, deep block, calls JSON — field by field
       reel-spec.md                # Reel structure, timing, ad-hoc mode, families slide
-      render-guide.md             # DA_ROOT resolution (install → repo tag → project cache), workspace + project layout, script flags, checks, fix loop
-      review-page.md              # What the review page shows (download links, zip); title/h1/name rules; publishing
+      render-guide.md             # DA_ROOT resolution (install → repo tag → project cache), workspace + project layout, script flags, checks, fix loop, the bundle naming convention (§7)
+      review-page.md              # What the review page shows (download links, bundle zip, slides zip); title/h1/name rules; publishing
       airtable-guide.md           # IG Posts fields by NAME only + quirks; never write Stories; IDs come from settings/config.md
       coverage-guide.md           # Outlet domains, search-tool quirks, robots blocks, verdict rules
       report-format.md            # The §11 run report + clean-stop wording
@@ -184,11 +184,13 @@ plugins/
     scripts/
       render.py                   # Post JSON + design system → carousel PNGs, Reel MP4, cover, checks.json (Playwright + ffmpeg)
       review_page.py              # Post JSON + calls JSON (+ Update companions) → review-page HTML
+      bundle_stage.py             # Post JSON + render folder + calls JSON → staged <date>_<format><NN>/ (slides, video, captions) and its file list; enforces the naming convention; --check <dir> (stdlib)
       plan_day.py                 # IG Posts + Stories rows → the day's plan: posted/queued, the four stories, slots, asks, Updates, corrections (stdlib)
       cache_manifest.py           # Writes the project cache's VERSION doc (version, commit, date, sha256 per file) (stdlib)
     tests/
       run-fixture.sh              # Runs the fixture tests (needs a Python with Playwright, ffmpeg, npm)
-      check_fixtures.py           # SPEC §13 tests 1–7a + mode: adhoc + addendum v2.1 §F + addendum v2.2 §E (setup, cache, versions), stdlib only
+      check_fixtures.py           # SPEC §13 tests 1–7a + mode: adhoc + addendum v2.1 §F + addendum v2.2 §E (setup, cache, versions) + 0.4.0 bundle (layout, refusals, review-page button, real-browser downloads)
+      check_page_downloads.py     # Real-Chromium run of the review page's download JavaScript with a stubbed `downloads` capability (cap / declined / no capability); run by check_fixtures.py (Playwright)
       fixtures/                   # Two approved Oct 31 posts, the Nov 5 Update companion, their calls, and an offline design-system snapshot (tests only)
     README.md                     # Plugin-specific documentation
 ```

@@ -281,11 +281,16 @@ MON_D = re.compile(r"(" + "|".join(MONTHS) + r") (\d{1,2})")
 def mon_date(mon, day, year): return Date(int(year), MONTHS.index(mon) + 1, int(day))
 
 def md_date(s, ref):
-    """'Nov 1' -> the latest such date on or before `ref` (pickup dates carry no year)."""
+    """'Nov 1' -> (date, rolled): the latest such date on or before `ref` (pickup dates carry no year).
+    `rolled` says the year was taken back one, which is right across New Year and wrong for a typo'd future date."""
     m = MON_D.fullmatch((s or "").strip())
-    if not m: return None
+    if not m: return None, False
     d = mon_date(m[1], m[2], ref.year)
-    return d if d <= ref else d.replace(year=ref.year - 1)
+    return (d, False) if d <= ref else (d.replace(year=ref.year - 1), True)
+
+def iso(s):
+    try: return Date.fromisoformat(s)
+    except (TypeError, ValueError): return None
 
 def first_count(s):
     """The first number in a sentence, as digits or a word ('Eight of the 11 still haven't' -> 8)."""
@@ -294,47 +299,65 @@ def first_count(s):
     w = m[1].lower()
     return int(w) if w.isdigit() else 0 if w == "none" else NUMWORDS.index(w)
 
+THEN_KEYS = ("topic", "claim", "dateline", "abroad", "us", "confidence", "days_dark")
+
 def update_errors(post):
-    """Addendum v2.1 §B copy checks, plus §C: a pickup on or before our post is a correction, not an Update."""
+    """Addendum v2.1 §B copy checks, plus §C: a pickup on or before our post is a correction, not an Update.
+    Malformed input is reported here as a copy error, never left to raise later."""
     up = post.get("update")
     if not isinstance(up, dict): return ["update posts need an `update` block (post-schema §1)"]
     errs = [f"update.{k} is missing" for k in ("of_post", "posted", "topic_line", "then_story", "then_grid",
                                                "pickups", "added", "still_dark") if not up.get(k)]
-    if errs: return errs
+    if errs or len(post.get("stories") or []) != 1: return errs
+    ts, picks_in = up["then_story"], up["pickups"]
+    if not isinstance(ts, dict): return ["update.then_story must be the story object as posted"]
+    if not isinstance(picks_in, list) or not all(isinstance(p, dict) for p in picks_in):
+        return ["update.pickups must be a list of {outlet, date, note}"]
+    errs += [f"update.then_story.{k} is missing (copy it from of_post)" for k in THEN_KEYS if k not in ts]
+    run, posted = iso(post.get("date")), iso(up["posted"])
+    if run is None: errs.append(f"date {post.get('date')!r} must be YYYY-MM-DD")
+    if posted is None: errs.append(f"update.posted {up['posted']!r} must be YYYY-MM-DD")
     if not re.fullmatch(r"[a-z0-9]+(-[a-z0-9]+)*", post.get("slug") or ""):
         errs.append("update posts need `slug` (lowercase words joined by hyphens): it keeps two Updates' files apart")
     if post.get("flash"): errs.append("an Update cover is never Flash")
     st, tg = post["stories"][0], up["then_grid"]
     if len(tg) != 11 or set(tg) - STATES: errs.append(f"update.then_grid must be 11 of {STATES}")
     elif "ran" in tg: errs.append("update.then_grid can't have a 'ran' square: it is the grid as we posted it")
-    if up["then_story"].get("grid") not in (None, tg): errs.append("update.then_story.grid differs from update.then_grid")
+    if ts.get("grid") not in (None, tg): errs.append("update.then_story.grid differs from update.then_grid")
     if not 2 <= len(up["added"]) <= 3: errs.append(f"update.added needs 2-3 lines, got {len(up['added'])}")
-    g = st["grid"]
-    if len(g) != 11 or set(g) - STATES: return errs   # reported by the story checks
-    run, posted = Date.fromisoformat(post["date"]), Date.fromisoformat(up["posted"])
-    picks = {}
-    for p in up["pickups"]:
-        o, d = p.get("outlet"), md_date(p.get("date"), run)
+    g = st.get("grid") or []
+    if len(g) != 11 or set(g) - STATES or run is None or posted is None: return errs   # grid reported by the story checks
+    picks, prev = {}, None
+    for p in picks_in:
+        o, (d, rolled) = p.get("outlet"), md_date(p.get("date"), run)
         if o not in OUTLETS: errs.append(f"pickup outlet {o!r} must be one of {OUTLETS}"); continue
         if d is None: errs.append(f"pickup {o}: date {p.get('date')!r} must read 'Mon D'"); continue
+        if o in picks: errs.append(f"pickup {o} is listed twice; one entry per outlet"); continue
+        if rolled and d <= posted:
+            errs.append(f"pickup {o} {p['date']} is after the run date ({post['date']}); check the date"); continue
         if d <= posted:
             errs.append(f"pickup {o} {p['date']} is on or before our post ({up['posted']}): that's a correction to report, not an Update")
-        picks[o] = d
+        if prev and d < prev: errs.append(f"pickups must be oldest first: {o} {p['date']} comes after a later date")
+        picks[o], prev = d, d
     ran = [OUTLETS[i] for i, s in enumerate(g) if s == "ran"]
     if not ran: errs.append("an Update needs at least one 'ran' square")
     errs += [f"{o} is 'ran' in the grid but has no dated pickup" for o in ran if o not in picks]
     errs += [f"pickup {o} has no 'ran' square in the grid" for o in picks if o not in ran]
     sil, said = g.count("silent"), first_count(up["still_dark"])
     if said != sil: errs.append(f"update.still_dark says {said if said is not None else 'no number'}; the grid has {sil} silent")
-    m = UPDATE_HEAD.fullmatch(st["headline"])
+    # "N days late" counts from the hatched US breaker. Under the breaker rule the dateline names the foreign
+    # originator a day or more earlier, so `update.breaker_date` (YYYY-MM-DD) overrides the dateline's date.
+    m = UPDATE_HEAD.fullmatch(st.get("headline", ""))
     b = re.search(MON_D.pattern + r", (\d{4})", st.get("dateline", ""))
-    if not m: errs.append("update headline must read 'Update: <outlet> ran it <N> days late.'")
-    elif not b: errs.append("the story's dateline must carry the breaker's date as 'Mon D, YYYY'")
+    broke = iso(up["breaker_date"]) if up.get("breaker_date") else (mon_date(b[1], b[2], b[3]) if b else None)
+    if up.get("breaker_date") and broke is None: errs.append(f"update.breaker_date {up['breaker_date']!r} must be YYYY-MM-DD")
+    elif not m: errs.append("update headline must read 'Update: <outlet> ran it <N> days late.'")
+    elif broke is None: errs.append("the story's dateline must carry the breaker's date as 'Mon D, YYYY' (or set update.breaker_date)")
     else:
         o = next((o for o in picks if m[1].lower() in (n.lower() for n in OUTLET_NAMES[o])), None)
         if o is None: errs.append(f"headline outlet {m[1]!r} isn't one of the pickups")
         else:
-            late = (picks[o] - mon_date(b[1], b[2], b[3])).days
+            late = (picks[o] - broke).days
             if int(m[2]) != late: errs.append(f"headline says {m[2]} days late; {o} ran it {late} days after it broke")
     return errs
 
@@ -354,7 +377,7 @@ def check_copy(post):
     if f == "update":
         errs += update_errors(post)
         up = post.get("update") or {}
-        if isinstance(up.get("then_story"), dict) and up.get("then_grid"):
+        if isinstance(up.get("then_story"), dict) and up.get("then_grid") and all(k in up["then_story"] for k in THEN_KEYS):
             items.append(("then story", dict(up["then_story"], grid=up["then_grid"]), "then"))
     elif f != "deep":
         if "reel" not in post: errs.append("every post needs `reel` {story, deep}: the lead story as a deep dive")

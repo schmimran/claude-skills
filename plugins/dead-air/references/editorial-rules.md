@@ -19,7 +19,7 @@ Read the IG Posts table newest first by Post date. For the day's post, take the 
 1. **Override.** A Flagged row reached Verified with all 11 outlets checked and silent since the last post → **SINGLE**, with that story.
 2. **Weekly.** It's a Sunday and no weekly ran in the last 6 days → **WEEKLY** bundle of the week's three highest-confidence rows. Repeats are allowed. Hook: "This week's dead air."
 3. **Alternate.** Do the opposite of the last day's post: after a single or deep → **BUNDLE**; after a bundle or weekly → **SINGLE**. Update rows are skipped here: they are never "the last post" for alternation.
-4. **Fallback.** Fewer than three eligible rows for a bundle → **SINGLE**. Note the fallback in the calls.
+4. **Fallback.** Fewer than three eligible rows for a bundle or weekly → **SINGLE**, even over `--format`. Note the fallback in the calls.
 
 `--format` on the command overrides this; log the override. The day's post always gets its normal Reel.
 
@@ -47,7 +47,7 @@ Nov 5 example: the day's post is a SINGLE on the FT oil-majors story (rule 1: it
 **Eligible:** Status = Flagged, and Confirmation = Verified or Probable. Provisional never posts **(rejected)**. "Posted" below means §0.
 
 **Not eligible:**
-- any story in a post from the last 7 days (the weekly is the only exception) **(planned)**;
+- any story in a post from the last 7 days (the weekly is the only exception: it may repeat this week's stories) **(planned)**;
 - any story already in two posts within the last 14 days **(planned)**;
 - any row whose Notes or Absence evidence leave a counting question open: wire copy unresolved, originator status unconfirmed, a "Covered?" ruling pending. This is a judgment; pass it to `plan_day.py` as the row's `hold`. Name every skipped row and the reason in the calls and the report.
 
@@ -140,7 +140,7 @@ The carousel caption, in this order, with a blank line between each part:
 - Story-slide kicker: "Dead Air" (single) or "Dead Air · n of 3" (bundle).
 - Deep-dive kickers: "Deep dive · 01 What happened", "02 Both sides", "03 Who ran it". A families slide is "Deep dive · 04 <place>" when it closes and "Deep dive · <place>" when it opens. A deep dive's story slide drops the topic from its kicker.
 - Update kickers: "Update · <Mon D YYYY>" (cover), "Update · 01 What we posted <Mon D>", "Update · 02 Who ran it since".
-- Update headline: "Update: <outlet short> ran it <N> days late." **(rejected** otherwise**)**. N is the pickup date minus the breaker's date in the story's `dateline` **(rejected** if wrong**)**. hook-l, 3 lines max, about 6–8 words.
+- Update headline: "Update: <outlet short> ran it <N> days late." **(rejected** otherwise**)**. N is the pickup date minus the hatched US breaker's date: the story's `dateline` date, or `update.breaker_date` when the breaker rule makes them differ **(rejected** if wrong**)**. hook-l, 3 lines max, about 6–8 words.
 - Update topic line: what "it" is, one sentence, 2 lines max **(rejected** if missing or longer**)**: "Trump's envoys pitched Kyiv on reopening Russian gas transit."
 - Update still-dark line: how many are still dark, with the date of the scan's latest pass: "Eight of the 11 still haven't, as of Nov 2." Its number equals the now-grid's silent count **(rejected)**.
 - Update cover meta: "<breaker> <Mon D> · <outlet> <Mon D> · …".

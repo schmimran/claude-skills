@@ -349,6 +349,51 @@ record("A an earlier Update row is skipped for alternation and never repeats",
        pl["companions"] == [] and pl["day"]["format"] == "single" and "last post was a bundle" in pl["day"]["rule"],
        json.dumps(pl)[:300])
 
+# ---------- code-review fixes (PR #59) ----------
+def copy_errs(mut):
+    p = copy.deepcopy(UPDATE); mut(p)
+    try: return render_mod.check_copy(p)
+    except Exception as e: return [f"CRASH {type(e).__name__}: {e}"]
+
+for name, mut, needle in (
+    ("non-ISO posted reported, not raised", lambda p: p["update"].__setitem__("posted", "Oct 22"), "update.posted 'Oct 22' must be YYYY-MM-DD"),
+    ("empty stories reported, not raised", lambda p: p.__setitem__("stories", []), "update needs 1 stories, got 0"),
+    ("then_story not an object reported", lambda p: p["update"].__setitem__("then_story", "x"), "then_story must be the story object"),
+    ("then_story without days_dark reported", lambda p: p["update"]["then_story"].pop("days_dark"), "then_story.days_dark is missing"),
+    ("pickups not objects reported", lambda p: p["update"].__setitem__("pickups", ["WSJ"]), "pickups must be a list of"),
+    ("duplicate pickup outlet rejected", lambda p: p["update"]["pickups"].append(dict(p["update"]["pickups"][0])), "listed twice"),
+    ("pickups out of date order rejected", lambda p: p["update"]["pickups"].reverse(), "must be oldest first"),
+    ("future pickup date is a typo, not a correction", lambda p: p["update"]["pickups"][1].__setitem__("date", "Nov 15"), "is after the run date"),
+    ("breaker_date overrides the dateline for N days late", lambda p: p["update"].__setitem__("breaker_date", "2026-10-18"),
+     "headline says 15 days late; WSJ ran it 14 days"),
+):
+    e = copy_errs(mut)
+    record(f"review-fix {name}", any(needle in x for x in e) and not any(x.startswith("CRASH") for x in e), f"{e}")
+e = copy_errs(lambda p: (p["update"].__setitem__("breaker_date", "2026-10-18"),
+                         p["stories"][0].__setitem__("headline", "Update: WSJ ran it 14 days late.")))
+record("review-fix breaker_date: a headline counted from it passes", e == [], f"{e}")
+
+# plan_day: the weekly may repeat this week's stories (Sunday Nov 8).
+SUN = {"run_date": "2026-11-08", "now": "2026-11-08T06:00:00-05:00"}
+wk_rows = [row("rowNov3", "2026-11-03", "single", ["w1"]), row("rowNov5", "2026-11-05", "bundle", ["w2", "w3", "w4"])]
+pl = plan(dict(SUN, ig_posts=wk_rows, stories=[story(f"w{i}") for i in range(1, 5)]))
+record("review-fix weekly may repeat this week's stories",
+       pl["day"]["format"] == "weekly" and len(pl["day"]["eligible"]) == 4 and not pl["day"]["skipped"], json.dumps(pl["day"])[:300])
+pl = plan(dict(NOV5, ig_posts=wk_rows[:1], stories=[story("w1"), story("w2")]))
+record("review-fix non-weekly still skips this week's stories",
+       {s["id"]: s["reason"] for s in pl["day"]["skipped"]} == {"w1": "posted in the last 7 days"}, json.dumps(pl["day"])[:300])
+
+# plan_day: Airtable's UTC 'Z' timestamps parse; a slot without an offset is a clean error.
+pl = plan(dict(NOV5, ig_posts=[row("rowNov2z", "2026-11-02", "single", ["s7"], slot="2026-11-02T13:00:00.000Z")], stories=[story("s7"), story("s8")]))
+record("review-fix Airtable 'Z' slot parses and counts as posted", pl.get("assumed_posted") == ["rowNov2z"], json.dumps(pl)[:300])
+pl = plan(dict(NOV5, ig_posts=[row("rowNaive", "2026-11-02", "single", ["s7"], slot="2026-11-02T08:00")], stories=[story("s7")]))
+record("review-fix slot without offset is a clean error", "has no UTC offset" in pl.get("error", ""), str(pl)[:300])
+
+# plan_day: --format bundle that can't be met says the flag was overridden.
+pl = plan(dict(NOV5, format_override="bundle", ig_posts=[], stories=[story("s7"), story("s8")]))
+record("review-fix --format bundle fallback names the override",
+       pl["day"]["format"] == "single" and pl["day"]["rule"].startswith("--format bundle overridden by rule 5"), pl["day"]["rule"])
+
 # ---------- summary ----------
 failed = [r for r in results if not r[1]]
 print(f"\n{len(results) - len(failed)}/{len(results)} passed")

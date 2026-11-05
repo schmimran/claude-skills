@@ -61,7 +61,7 @@ python3 plan_day.py <plan-input.json>
 - caption: line 1 ≤ 125 characters, no hashtag or date in line 1, the method sentence, `#DeadAir #SchmimKnews` + 1–3 subject tags, the same ask as the Closer
 - both captions end with `\n\nSources\n` + `sources`; neither is over 2,200 characters
 - alt count equals slide count (skipped with `--only reel`)
-- **update posts:** the `update` block is complete; `slug` is set; not Flash; `then_grid` has no `ran`; every `ran` square has a dated pickup and every pickup a `ran` square; no pickup on or before `posted` (that's a correction); the `still_dark` number equals the silent count; the headline reads "Update: <outlet> ran it <N> days late." with N = pickup date minus the `dateline` date; `then_story` passes the story checks
+- **update posts:** the `update` block is complete; `slug` is set; not Flash; `then_grid` has no `ran`; every `ran` square has a dated pickup and every pickup a `ran` square; pickups one per outlet, oldest first, none after the run date; no pickup on or before `posted` (that's a correction); `then_story` has every story key; the `still_dark` number equals the silent count; the headline reads "Update: <outlet> ran it <N> days late." with N = pickup date minus the `dateline` date (or `update.breaker_date`); `then_story` passes the story checks
 
 **Render checks (after layout):** content taller than the canvas; the footer pushed past its line; any `data-maxlines` element over its cap (hook-l 3, hook-m 4, stat 2, lede 4, bundle titles 2, bundle counts 1, `us` 3, Update topic line 2, Update `added` and still-dark lines 2 each).
 

@@ -87,13 +87,14 @@ Addendum v2.1 §B. Everything the Then and Now slides need that the story object
 | `of_post` | Project path of the post we're updating: `dead-air/posts/<date>-<format>.json`, or `dead-air/bundle-<date>.json` for pre-v2 posts. |
 | `posted` | That post's date, `YYYY-MM-DD`. Every pickup must be **after** it; one on or before it is a correction, not an Update (rejected). |
 | `topic_line` | What "it" is, one sentence, under the cover headline in `lede`. 2 lines max (rejected if missing or longer). |
-| `then_story` | The story object **copied from `of_post`**, as posted: `topic`, `claim`, `dateline`, `abroad`, `us` (the count as we said it then), `confidence`, `days_dark`. Not in the addendum's sample: `render.py` can't read project files, and the Then slide is that story slide. A `grid` here must equal `then_grid`. It passes the same story checks as any other (except the stat). |
+| `then_story` | The story object **copied from `of_post`**, as posted: `topic`, `claim`, `dateline`, `abroad`, `us` (the count as we said it then), `confidence`, `days_dark` (each required; rejected if missing). Not in the addendum's sample: `render.py` can't read project files, and the Then slide is that story slide. A `grid` here must equal `then_grid`. It passes the same story checks as any other (except the stat). |
 | `then_grid` | The grid as it stood on our post date. No `ran` squares (rejected). |
-| `pickups` | One `{outlet, date, note}` per late pickup, oldest first. `outlet` is the grid's short name (`WSJ`, `Reuters`); `date` reads `Mon D`. Every `ran` square in the now-grid has exactly one pickup, and every pickup has a `ran` square (rejected otherwise). `note` is for the calls and the caption, not the slides. |
+| `pickups` | One `{outlet, date, note}` per late pickup, oldest first (rejected otherwise), one entry per outlet (rejected if repeated). `outlet` is the grid's short name (`WSJ`, `Reuters`); `date` reads `Mon D` and is never after the run date. Every `ran` square in the now-grid has exactly one pickup, and every pickup has a `ran` square (rejected otherwise). `note` is for the calls and the caption, not the slides. |
 | `added` | 2–3 short lines: what the late coverage added or changed, from its own text. Carousel only; the Reel leaves them out. |
+| `breaker_date` | Optional, `YYYY-MM-DD`: the hatched US breaker's date, when it differs from the date in the story's `dateline` (the breaker rule: FT Sep 16 in the dateline, Reuters Sep 17 hatched). "N days late" counts from it. |
 | `still_dark` | How many are still dark, with the date of the scan's latest pass. Its first number (digits or a word) equals the now-grid's silent count (rejected otherwise). |
 
-The story object (`stories[0]`) needs no `stat`. Its `dateline` must carry the breaker's date as `Mon D, YYYY`, which the "N days late" check uses. Its `meta` reads `<breaker> <Mon D> · <outlet> <Mon D> · …`.
+The story object (`stories[0]`) needs no `stat`. Its `dateline` must carry a date as `Mon D, YYYY`, which the "N days late" check uses unless `update.breaker_date` is set. Its `meta` reads `<breaker> <Mon D> · <outlet> <Mon D> · …`.
 
 ### Slides per format
 
@@ -136,7 +137,7 @@ The story object (`stories[0]`) needs no `stat`. Its `dateline` must carry the b
               "silent": 10, "override": false, "hold": null, "first_pickup": null}]}
 ```
 
-- `ig_posts`: every IG Posts row. `carousel_slot` is an ISO datetime with its offset.
+- `ig_posts`: every IG Posts row. `carousel_slot` is an ISO datetime with its offset; Airtable's UTC form (`2026-10-31T14:00:00.000Z`) is fine as is. A slot without an offset stops the script.
 - `stories`: every Flagged row, plus every row that a post from the last 30 days carried (they may now be Covered).
 - `override`: your call on [editorial-rules.md](editorial-rules.md) §1 rule 1 for that row. `hold`: the counting question that makes it ineligible, or `null`. `first_pickup`: for a Covered row, `{"outlet", "date": "YYYY-MM-DD"}` of the first domestic Tier-A pickup; `null` otherwise.
 

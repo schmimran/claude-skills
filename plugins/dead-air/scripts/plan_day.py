@@ -22,13 +22,20 @@ DAY_FORMATS = ("single", "bundle", "weekly", "deep")
 
 def d(s): return date.fromisoformat(s[:10])
 
+def dt(s, field):
+    """ISO datetime with an offset. Accepts Airtable's UTC form ('…Z'), which fromisoformat rejects before 3.11."""
+    try: v = datetime.fromisoformat(s[:-1] + "+00:00" if s.endswith("Z") else s)
+    except ValueError: sys.exit(f"{field}: {s!r} is not an ISO datetime")
+    if v.tzinfo is None: sys.exit(f"{field}: {s!r} has no UTC offset (write e.g. -05:00 or Z)")
+    return v
+
 def plan(inp):
-    run, now = d(inp["run_date"]), datetime.fromisoformat(inp["now"])
+    run, now = d(inp["run_date"]), dt(inp["now"], "now")
     rows = [r for r in inp["ig_posts"] if r.get("status") != "Skipped"]
     # §D: Imran rarely flips Status to Posted, so a Ready row whose slot has passed counts as posted.
     posted, assumed, stale = [], [], []
     for r in rows:
-        slot = datetime.fromisoformat(r["carousel_slot"]) if r.get("carousel_slot") else None
+        slot = dt(r["carousel_slot"], f"{r['id']} carousel_slot") if r.get("carousel_slot") else None
         if r["status"] == "Posted": posted.append(r)
         elif r["status"] == "Ready" and slot and slot < now:
             posted.append(r); assumed.append(r["id"])
@@ -36,32 +43,40 @@ def plan(inp):
     posted.sort(key=lambda r: r["post_date"], reverse=True)
     within = lambda r, n: run - d(r["post_date"]) < timedelta(days=n)
 
-    # Eligibility (§8.2) and ranking.
+    # Eligibility (§8.2) and ranking. The 7-day no-repeat rule is kept apart: the weekly is its one exception.
     stories = {s["id"]: s for s in inp["stories"]}
     ever = {sid for r in posted for sid in r["stories"]}
-    eligible, skipped = [], []
+    pool, recent, skipped = [], set(), []
     for s in inp["stories"]:
         if s["status"] != "Flagged": continue
         n14 = sum(s["id"] in r["stories"] for r in posted if within(r, 14))
         reason = (None if s.get("confirmation") in CONF else f"confirmation {s.get('confirmation')} never posts")
         reason = reason or (f"held: {s['hold']}" if s.get("hold") else None)
-        reason = reason or ("posted in the last 7 days" if any(s["id"] in r["stories"] for r in posted if within(r, 7)) else None)
         reason = reason or ("already in two posts in the last 14 days" if n14 >= 2 else None)
-        (skipped.append({"id": s["id"], "reason": reason}) if reason else eligible.append(s))
-    eligible.sort(key=lambda s: (CONF[s["confirmation"]], s["id"] in ever, -s.get("days_dark", 0), -s.get("silent", 0)))
+        if reason: skipped.append({"id": s["id"], "reason": reason}); continue
+        pool.append(s)
+        if any(s["id"] in r["stories"] for r in posted if within(r, 7)): recent.add(s["id"])
+    pool.sort(key=lambda s: (CONF[s["confirmation"]], s["id"] in ever, -s.get("days_dark", 0), -s.get("silent", 0)))
+    fresh = [s for s in pool if s["id"] not in recent]
 
     # The day's format, §8.1 rules 2-5, as if no Update were due (§A.1). Update rows never count as "the last post".
     day_rows = [r for r in posted if r["format"] in DAY_FORMATS]
     last = day_rows[0]["format"] if day_rows else None
-    if inp.get("format_override"): fmt, why = inp["format_override"], "--format override"
-    elif any(s.get("override") for s in eligible): fmt, why = "single", "rule 2: override (Verified, all 11 checked and silent since the last post)"
+    override = inp.get("format_override")
+    if override: fmt, why = override, "--format override"
+    elif any(s.get("override") for s in fresh): fmt, why = "single", "rule 2: override (Verified, all 11 checked and silent since the last post)"
     elif run.weekday() == 6 and not any(r["format"] == "weekly" and within(r, 7) for r in rows): fmt, why = "weekly", "rule 3: Sunday, no weekly in the last 6 days"
     elif last in ("bundle", "weekly"): fmt, why = "single", f"rule 4: alternate (last post was a {last})"
     elif last in ("single", "deep"): fmt, why = "bundle", f"rule 4: alternate (last post was a {last})"
     else: fmt, why = "single", "rule 4: no earlier post to alternate from"
-    if fmt == "bundle" and len(eligible) < 3: fmt, why = "single", f"rule 5: fallback ({len(eligible)} eligible, a bundle needs 3)"
+    eligible = pool if fmt == "weekly" else fresh   # the weekly may repeat this week's stories
+    if fmt in ("bundle", "weekly") and len(eligible) < 3:
+        why = (f"--format {fmt} overridden by " if override else "") + f"rule 5: fallback ({len(eligible)} eligible, a {fmt} needs 3)"
+        fmt, eligible = "single", fresh
+    if fmt != "weekly":
+        skipped += [{"id": s["id"], "reason": "posted in the last 7 days"} for s in pool if s["id"] in recent]
     if fmt == "single" and any(s.get("override") for s in eligible):
-        eligible.sort(key=lambda s: not s.get("override"))   # the override story leads
+        eligible = sorted(eligible, key=lambda s: not s.get("override"))   # the override story leads
     day = ({"format": fmt, "rule": why, "eligible": [s["id"] for s in eligible], "skipped": skipped} if eligible
            else {"format": None, "rule": "no eligible story", "eligible": [], "skipped": skipped})
 

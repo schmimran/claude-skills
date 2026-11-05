@@ -1,0 +1,12 @@
+{"reel_length": "44 s",
+ "facts": [["Format", "Bundle"], ["Flash", "No (Oct 22 deep dive was Flash)"], ["Carousel", "Sat Oct 31, 10:00am ET"], ["Reel", "12:00–2:00pm ET"], ["Ask", "Save this. Check back in a week."]],
+ "calls": [
+  ["Corrected: no order value.", "The dashboard says Powerus's first order was about $22.3 million. Reuters, Al Jazeera, ThePrint and Quwa all say the value was not disclosed, so it is off every slide. The dashboard row still has the figure."],
+  ["Corrected: the merger has closed.", "Powerus and Aureus Greenway completed the merger Oct 1; it trades as PUSA. Slides say \"backed by a fund of Trump's sons\", not \"set to merge\"."],
+  ["Reel sources.", "Reuters via Arab News (Sep 17), Al Jazeera (Sep 23), ThePrint (Sep 18), Quwa, and the Oct 1 merger notice. Every timeline line and statement traces to one of them."],
+  ["ABC is unchecked on all three.", "The scan never verified ABC on any of them; each count leaves ABC out and the slides say so."],
+  ["Last full check was Oct 26.", "Slides say \"Checked Oct 12–26\". An Oct 31 search found no US Tier-A pickup on any of the three, but that was not a full 11-outlet pass."],
+  ["Powerus: Reuters is treated as the breaker.", "The FT ran it first (Sep 16); the dashboard counts Reuters (Sep 17) as the US originator, so the grid hatches Reuters."],
+  ["Forbidden Stories: one coordinated release abroad.", "It qualifies under the method; it is the weakest of the three on that count."],
+  ["Held for the next single:", "the Economist peace-plan terms (Verified, freshest). Skipped: Lukoil waiver (Reuters wire copy still unresolved)."]
+ ]}

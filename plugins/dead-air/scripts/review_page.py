@@ -1,6 +1,8 @@
 """Build the dated review page for a post:
 python3 review_page.py <post.json> <out_dir> <calls.json> [--title "Dead Air: Hannibal"] [--h1 "Dead Air · The Hannibal order"] [--name dead-air-hannibal]
-Defaults: title "Dead Air <Mon D>", h1 "Dead Air · <weekday, Mon D>", file dead-air-<date>.html."""
+Defaults: title "Dead Air <Mon D>", h1 "Dead Air · <weekday, Mon D>", file dead-air-<date>.html.
+The Reel panel and Reel caption appear only when calls.json has a `reel_length` (no Reel was rendered otherwise,
+e.g. update posts and carousel-only runs)."""
 import json, html, sys
 from pathlib import Path
 def _opt(flag):
@@ -13,15 +15,24 @@ stem = f"schmimknews-{date}-{fmt}"
 y, m, d = (int(x) for x in date.split("-"))
 MON = "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split()[m-1]
 nice = f"{MON} {d} {y}"
-labels = {"bundle": ["Cover"] + [f"Story {i} of 3" for i in (1, 2, 3)] + ["Closer"],
+labels = {"update": ["Cover"], "bundle": ["Cover"] + [f"Story {i} of 3" for i in (1, 2, 3)] + ["Closer"],
           "weekly": ["Cover"] + [f"Story {i} of 3" for i in (1, 2, 3)] + ["Closer"],
           "single": ["Cover", "The story", "Closer"],
           "deep": (["Cover", "The families", "What happened", "Both sides", "Who ran it", "Closer"] if ((post.get("deep") or {}).get("family") or {}).get("open") else ["Cover", "What happened", "Both sides", "Who ran it"] + (["The families"] if (post.get("deep") or {}).get("family") else []) + ["Closer"])}[fmt]
-slides = "".join(f'<figure class="slide"><img src="{stem}-{i+1:02d}.png" alt="{e(a)}" width="1080" height="1350" loading="lazy"><figcaption><span class="n">{i+1:02d} · {labels[i]}</span><span class="alt">{e(a)}</span></figcaption></figure>' for i, a in enumerate(post["alt"]))
-rows = "".join(f'<tr><td class="num">{i+1:02d}</td><td><b>{e(s.get("title") or s["headline"])}</b><br><span class="mono">{s["record_id"]}</span></td><td>{e(s["dateline"])}</td><td class="mono">{e(s.get("count") or s["stat"])}</td><td>{s["confidence"]}</td></tr>' for i, s in enumerate(post["stories"]))
+alts = post.get("alt") or [""] * len(labels[fmt])  # update posts may carry no alt text
+slides = "".join(f'<figure class="slide"><img src="{stem}-{i+1:02d}.png" alt="{e(a)}" width="1080" height="1350" loading="lazy"><figcaption><span class="n">{i+1:02d} · {labels[i]}</span><span class="alt">{e(a)}</span></figcaption></figure>' for i, a in enumerate(alts))
+rows = "".join(f'<tr><td class="num">{i+1:02d}</td><td><b>{e(s.get("title") or s["headline"])}</b><br><span class="mono">{s.get("record_id")}</span></td><td>{e(s.get("dateline", ""))}</td><td class="mono">{e(s.get("count") or s["stat"])}</td><td>{s["confidence"]}</td></tr>' for i, s in enumerate(post["stories"]))
 reel_story = (post.get("reel") or {}).get("story") or post["stories"][0]
 calls_html = "".join(f"<li><b>{e(c[0])}</b> {e(c[1])}</li>" for c in calls["calls"])
 facts = "".join(f"<span>{e(k)} <b>{e(v)}</b></span>" for k, v in calls["facts"])
+has_reel = fmt != "update" and bool(calls.get("reel_length"))
+reel_html = (f'''<section><h2>Reel · deep dive on the lead story · {e(calls.get("reel_length", ""))}, no audio</h2><div class="reel">
+<video src="{stem}-reel.mp4" poster="{stem}-reel-cover.png" controls muted playsinline></video>
+<div class="side"><span><b style="color:var(--ink)">{e(reel_story["headline"])}</b></span>
+<span>Hook, what happened, both sides, who ran it, closer. Each line appears on its own and holds long enough to read. The audio track is empty so you can lay in music.</span>
+<span>Cover image for the Reel is its first slide.</span></div></div></section>''' if has_reel else "")
+rcap_html = (f'''<div class="copy"><div class="bar"><h2 style="margin:0">Reel caption</h2><button type="button" data-copy="rcap">Copy</button></div><pre id="rcap">{e(post.get("reel_caption", ""))}</pre></div>'''
+             if has_reel and post.get("reel_caption") else "")
 page = f'''<title>Dead Air {MON} {d}</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -61,16 +72,12 @@ ul.calls{{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:8px;
 <main class="wrap">
 <header><div class="kicker"><i></i><b>Schmim Knews</b><span>Dead Air · Review</span></div><h1>Dead Air · {nice}</h1></header>
 <div class="facts">{facts}</div>
-<section><h2>Reel · deep dive on the lead story · {e(calls["reel_length"])}, no audio</h2><div class="reel">
-<video src="{stem}-reel.mp4" poster="{stem}-reel-cover.png" controls muted playsinline></video>
-<div class="side"><span><b style="color:var(--ink)">{e(reel_story["headline"])}</b></span>
-<span>Hook, what happened, both sides, who ran it, closer. Each line appears on its own and holds long enough to read. The audio track is empty so you can lay in music.</span>
-<span>Cover image for the Reel is its first slide.</span></div></div></section>
-<section><h2>Carousel · {len(post["alt"])} slides, in posting order</h2><div class="strip">{slides}</div>
+{reel_html}
+<section><h2>Carousel · {len(alts)} slide{"s" * (len(alts) != 1)}, in posting order</h2><div class="strip">{slides}</div>
 <p class="note">Scroll sideways. Long-press or right-click a slide to save it. Each caption is that slide's alt text.</p></section>
 <section class="cols">
-<div class="copy"><div class="bar"><h2 style="margin:0">Carousel caption</h2><button type="button" data-copy="cap">Copy</button></div><pre id="cap">{e(post["caption"])}</pre></div>
-<div class="copy"><div class="bar"><h2 style="margin:0">Reel caption</h2><button type="button" data-copy="rcap">Copy</button></div><pre id="rcap">{e(post["reel_caption"])}</pre></div>
+<div class="copy"><div class="bar"><h2 style="margin:0">Carousel caption</h2><button type="button" data-copy="cap">Copy</button></div><pre id="cap">{e(post.get("caption", ""))}</pre></div>
+{rcap_html}
 </section>
 <section><h2>Stories in this post</h2><div class="tbl"><table><thead><tr><th></th><th>Story · Airtable record</th><th>Broke</th><th>Count</th><th>Status</th></tr></thead><tbody>{rows}</tbody></table></div></section>
 <section><h2>Calls made on this post</h2><ul class="calls">{calls_html}</ul></section>

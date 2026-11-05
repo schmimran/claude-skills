@@ -347,7 +347,7 @@ def holds_for(words, budget, final=2.0):
 def _opt(a, flag):
     if flag not in a: return None
     i = a.index(flag)
-    if i + 1 >= len(a): raise SystemExit(f"{flag} needs a value")
+    if i + 1 >= len(a) or a[i + 1].startswith("--"): raise SystemExit(f"{flag} needs a value")
     return a[i + 1]
 
 def default_fonts():
@@ -389,10 +389,16 @@ def main():
     css = fonts_css(fdir) + tokens_css(tokens) + (ddir / "project/components/bundle.css").read_text() + "body{margin:0;background:#000}"
     out.mkdir(parents=True, exist_ok=True)
     slides, reels = build_slides(post), reel_slides(post)
+    if only == "reel" and not reels: raise SystemExit(f"--only reel: a {post['format']} post has no Reel")
     if only != "reel" and post["format"] != "update" and len(post.get("alt", [])) != len(slides):
         print(f"COPY CHECK FAILED:\n - alt needs {len(slides)} strings, one per slide"); sys.exit(1)
     stem = f"schmimknews-{post['date']}-{post['format']}"
     fdir_frames = out / ".reel-frames"; fdir_frames.mkdir(exist_ok=True)
+    # Clear what this run is about to write, so a re-render with fewer slides or steps leaves nothing stale behind.
+    stale = []
+    if only != "reel": stale += list(out.glob(f"{stem}-[0-9][0-9].png"))
+    if only != "carousel": stale += [out / f"{stem}-reel.mp4", out / f"{stem}-reel-cover.png"] + list(fdir_frames.glob("*"))
+    for f in stale: f.unlink(missing_ok=True)
     from playwright.sync_api import sync_playwright
     problems, files, frames = [], [], []
     with sync_playwright() as p:
@@ -431,12 +437,14 @@ def main():
         for fr, d in frames: lines += [f"file '{fr.resolve()}'", f"duration {d}"]
         lines.append(f"file '{frames[-1][0].resolve()}'")
         lst.write_text("\n".join(lines) + "\n")
+        exact = sum(d for _, d in frames)
+        # The repeated last entry is for ffmpeg versions that drop the final duration; others hold it twice.
+        # -t caps the output at the planned length either way.
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", str(lst),
                         "-vf", "fps=30,format=yuv420p", "-c:v", "libx264", "-preset", "veryfast", "-crf", "18",
-                        "-movflags", "+faststart", str(out / f"{stem}-reel.mp4")], check=True)
+                        "-t", f"{exact:.3f}", "-movflags", "+faststart", str(out / f"{stem}-reel.mp4")], check=True)
         files.append(f"{stem}-reel.mp4")
-        total = round(sum(d for _, d in frames), 1)
-        print(f"reel: {len(frames)} steps, {total} s")
+        print(f"reel: {len(frames)} steps, {round(exact, 1)} s")
     (out / "checks.json").write_text(json.dumps({"files": files, "problems": problems}, indent=2))
     if problems:
         print("RENDER CHECK FAILED (shorten copy, never shrink type):"); [print(" -", x) for x in problems]; sys.exit(1)

@@ -5,7 +5,10 @@ Defaults: title "Dead Air <Mon D>", h1 "Dead Air · <weekday, Mon D>", file dead
 A post's Reel panel and Reel caption appear only when its calls JSON has a `reel_length` (no Reel was rendered
 otherwise, e.g. carousel-only runs). Companions (addendum v2.1 §A) get their own section below the day's post:
 same date, a different ask, at most two. The page references every media file by bare filename; publish each
-post's PNGs, MP4 and cover from its own render folder."""
+post's PNGs, MP4 and cover from its own render folder.
+Downloads (addendum v2.2 §G): "Download video" under every Reel, "Download cover" for its cover, "Download all
+slides" under every carousel (zipped in the browser with JSZip from cdnjs) and a link under each slide. Every link
+carries the `download` attribute so iOS Safari saves the file instead of opening it."""
 import json, html, re, sys
 from pathlib import Path
 
@@ -23,6 +26,7 @@ def _companions():
 
 e = html.escape
 MONTHS = "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split()
+JSZIP = "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"   # pinned (§G)
 
 def stem_of(post):
     """Same file stem as render.py's post_stem."""
@@ -32,9 +36,11 @@ def stem_of(post):
 def labels_for(post):
     fmt, deep = post["format"], post.get("deep") or {}
     fam = deep.get("family") or {}
+    n = len(post["stories"])
+    story = ["Still dark" if s.get("still_dark") else f"Story {i} of {n}" for i, s in enumerate(post["stories"], 1)]
     return {"update": ["Cover", "Then", "Now", "Closer"],
-            "bundle": ["Cover"] + [f"Story {i} of 3" for i in (1, 2, 3)] + ["Closer"],
-            "weekly": ["Cover"] + [f"Story {i} of 3" for i in (1, 2, 3)] + ["Closer"],
+            "bundle": ["Cover"] + story + ["Closer"],
+            "weekly": ["Cover"] + story + ["Closer"],
             "single": ["Cover", "The story", "Closer"],
             "deep": (["Cover", "The families", "What happened", "Both sides", "Who ran it", "Closer"] if fam.get("open")
                      else ["Cover", "What happened", "Both sides", "Who ran it"] + (["The families"] if fam else []) + ["Closer"])}[fmt]
@@ -44,7 +50,11 @@ def post_blocks(post, calls, n):
     stem, labels, upd = stem_of(post), labels_for(post), post["format"] == "update"
     sfx = f"-{n}" if n else ""
     alts = post.get("alt") or [""] * len(labels)
-    slides = "".join(f'<figure class="slide"><img src="{stem}-{i+1:02d}.png" alt="{e(a)}" width="1080" height="1350" loading="lazy"><figcaption><span class="n">{i+1:02d} · {labels[i]}</span><span class="alt">{e(a)}</span></figcaption></figure>' for i, a in enumerate(alts))
+    pngs = [f"{stem}-{i+1:02d}.png" for i in range(len(alts))]
+    slides = "".join(f'<figure class="slide"><img src="{f}" alt="{e(a)}" width="1080" height="1350" loading="lazy"><figcaption><span class="n">{i+1:02d} · {labels[i]}</span>'
+                     f'<a class="dl-one" href="{f}" download="{f}">Download slide {i+1:02d}</a><span class="alt">{e(a)}</span></figcaption></figure>'
+                     for i, (f, a) in enumerate(zip(pngs, alts)))
+    zip_btn = (f'<button type="button" class="dl dl-zip" data-zip="{stem}-slides.zip" data-files="{e(" ".join(pngs))}">Download all slides</button>')
     rows = "".join(f'<tr><td class="num">{i+1:02d}</td><td><b>{e(s.get("title") or s["headline"])}</b><br><span class="mono">{s.get("record_id")}</span></td><td>{e(s.get("dateline", ""))}</td><td class="mono">{e(s.get("count") or s.get("stat") or "")}</td><td>{s["confidence"]}</td></tr>' for i, s in enumerate(post["stories"]))
     reel_story = (post.get("reel") or {}).get("story") or post["stories"][0]
     has_reel = bool(calls.get("reel_length"))
@@ -55,13 +65,16 @@ def post_blocks(post, calls, n):
 <video src="{stem}-reel.mp4" poster="{stem}-reel-cover.png" controls muted playsinline></video>
 <div class="side"><span><b style="color:var(--ink)">{e(reel_story["headline"])}</b></span>
 <span>{how} The audio track is empty so you can lay in music.</span>
-<span>Cover image for the Reel is {"carousel slide 1" if upd else "its first slide"}.</span></div></div></section>''' if has_reel else "")
+<span>Cover image for the Reel is {"carousel slide 1" if upd else "its first slide"}.</span>
+<a class="dl" href="{stem}-reel.mp4" download="{stem}-reel.mp4">Download video</a>
+<a class="dl dl-2" href="{stem}-reel-cover.png" download="{stem}-reel-cover.png">Download cover</a></div></div></section>''' if has_reel else "")
     rcap_html = (f'''<div class="copy"><div class="bar"><h2 style="margin:0">Reel caption</h2><button type="button" data-copy="rcap{sfx}">Copy</button></div><pre id="rcap{sfx}">{e(post.get("reel_caption", ""))}</pre></div>'''
                  if has_reel and post.get("reel_caption") else "")
     calls_html = "".join(f"<li><b>{e(c[0])}</b> {e(c[1])}</li>" for c in calls["calls"])
     return f'''{reel_html}
 <section><h2>Carousel · {len(alts)} slide{"s" * (len(alts) != 1)}, in posting order</h2><div class="strip">{slides}</div>
-<p class="note">Scroll sideways. Long-press or right-click a slide to save it. Each caption is that slide's alt text.</p></section>
+{zip_btn}
+<p class="note">Scroll sideways. "Download all slides" saves one zip; on a phone that can't open zips, use each slide's own link. Each caption is that slide's alt text.</p></section>
 <section class="cols">
 <div class="copy"><div class="bar"><h2 style="margin:0">Carousel caption</h2><button type="button" data-copy="cap{sfx}">Copy</button></div><pre id="cap{sfx}">{e(post.get("caption", ""))}</pre></div>
 {rcap_html}
@@ -118,7 +131,11 @@ h2{{font:600 13px/1.2 var(--mono);letter-spacing:3px;text-transform:uppercase;co
 .copy pre{{margin:0;white-space:pre-wrap;font:15px/1.55 var(--sans);color:var(--ink);max-width:68ch}}
 .copy .bar{{display:flex;justify-content:space-between;align-items:center;gap:12px}}
 button{{font:600 13px var(--mono);letter-spacing:2px;text-transform:uppercase;background:var(--signal);color:var(--ground);border:0;padding:10px 16px;cursor:pointer}}
-button:focus-visible{{outline:2px solid var(--ink);outline-offset:3px}}
+button:focus-visible,a:focus-visible{{outline:2px solid var(--ink);outline-offset:3px}}
+.dl{{display:flex;align-items:center;justify-content:center;width:100%;min-height:48px;box-sizing:border-box;margin-top:12px;font:600 14px var(--mono);letter-spacing:2px;text-transform:uppercase;background:var(--signal);color:var(--ground);text-decoration:none;border:0;padding:12px 16px;cursor:pointer}}
+.dl-2{{background:transparent;color:var(--signal);border:2px solid var(--signal)}}
+.dl-zip{{max-width:420px}} .dl[disabled]{{opacity:.6;cursor:progress}}
+.dl-one{{font:600 12px var(--mono);letter-spacing:1px;text-transform:uppercase;color:var(--signal);min-height:32px;display:inline-flex;align-items:center}}
 .cols{{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:24px}}
 .tbl{{overflow-x:auto}} table{{border-collapse:collapse;width:100%;min-width:680px;font-size:14px}}
 td,th{{text-align:left;vertical-align:top;padding:12px 12px 12px 0;border-top:1px solid var(--hair)}}
@@ -132,7 +149,21 @@ ul.calls{{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:8px;
 {post_blocks(post, calls, 0)}
 {comp_html}
 </main>
+<script src="{JSZIP}"></script>
 <script>
+document.querySelectorAll('[data-zip]').forEach(b=>b.addEventListener('click',async()=>{{
+ const label=b.textContent;
+ if(typeof JSZip==='undefined'){{b.textContent='Zip unavailable: use each slide link';return}}
+ b.disabled=true;b.textContent='Zipping…';
+ try{{
+  const z=new JSZip();
+  for(const f of b.dataset.files.split(' ')){{const r=await fetch(f);if(!r.ok)throw new Error(f);z.file(f,await r.blob())}}
+  const url=URL.createObjectURL(await z.generateAsync({{type:'blob'}}));
+  const a=document.createElement('a');a.href=url;a.download=b.dataset.zip;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),4000);b.textContent=label;
+ }}catch(err){{b.textContent='Zip failed: use each slide link'}}
+ b.disabled=false;
+}}));
 document.querySelectorAll('[data-copy]').forEach(b=>b.addEventListener('click',()=>{{
  const el=document.getElementById(b.dataset.copy);
  const done=()=>{{b.textContent='Copied';setTimeout(()=>b.textContent='Copy',1600)}};

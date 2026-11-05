@@ -42,3 +42,7 @@ NY Post is checked by the daily scan, but it isn't on the grid and never appears
 **Never infer silence from a blank or failed search.** A blank result from a search that returned HTTP 400, timed out, or couldn't be scoped to the outlet is `unchecked`, not `didn't`.
 
 `confidence` is `Probable` unless every outlet was checked. It is `Verified` only for a dashboard row that recorded Verified.
+
+## Counting a foreign outlet from its headline (addendum v2.2 §K)
+
+A foreign outlet counts toward "abroad" if **its own headline**, seen in search results or on its site, states the claim, even when the body is paywalled. (Nov 5: Haaretz counted on the Nathaniel post from its search headline.) **Nothing on the slides may come from text that wasn't read**: a headline-only outlet adds a chip, never a fact, a quote or a date beyond the headline's. Note every headline-only count in the calls: "Haaretz counted from its headline (paywalled; body not read)."

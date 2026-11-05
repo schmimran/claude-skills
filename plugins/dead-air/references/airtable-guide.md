@@ -1,6 +1,6 @@
 # Airtable guide
 
-SPEC §2 and §10.3, plus the quirks recorded in the project doc `dead-air/config.md`.
+SPEC §2 and §10.3, with addenda v2.1 §D and v2.2 §J, plus the quirks recorded in the project doc `dead-air/settings/config.md`.
 
 The **News Blind Spots** base has two tables this plugin touches. A separate daily scan owns the base.
 
@@ -9,7 +9,7 @@ The **News Blind Spots** base has two tables this plugin touches. A separate dai
 | **Stories** | **Read only. Never create, update or delete a Stories row**, even when the sources prove it wrong. Dashboard errors go in the calls and in the report as "dashboard corrections to make". |
 | **IG Posts** | Writes one new row per post. Never edits an old row, except to change Status or add to Notes when Imran asks. |
 
-**No IDs live in this repo.** The base ID, table IDs and every field ID come from `dead-air/config.md` at run time. This file describes fields **by name only**.
+**No IDs live in this repo.** The base ID, table IDs and every field ID come from `dead-air/settings/config.md` at run time (the plugin reads it and never writes it). This file describes fields **by name only**.
 
 ---
 
@@ -23,8 +23,9 @@ If config.md is missing an ID the run needs, stop before writing the row and rep
 
 ## Reading (phase 1 of `/dead-air`)
 
-- **IG Posts:** all rows, newest first by **Post date**, with **Status** and **Carousel slot**. Used for: the last post's format, Flash box and ask; stories posted in the last 7 and 14 days; the last weekly; posts from the last 30 days whose story is now Covered.
-- **Ready counts as posted once its slot has passed.** Imran posts by hand and rarely sets Status to Posted, so for every rule above a row counts as posted when Status is Posted, or Status is Ready and the Carousel slot is in the past ([editorial-rules.md](editorial-rules.md) §0). Skipped rows never count. Never change a row's Status yourself; the report lists Ready rows more than 7 days past their slot for Imran to mark.
+- **IG Posts:** all rows, newest first by **Post date**, with **Status**, **Format**, **Carousel slot**, **Flash**, **Caption** (for the ask) and **Stories**. Used for: Flash and ask rotation; stories posted in the last 7 and 14 days; the last weekly; the slots already taken; posts from the last 30 days whose story is now Covered.
+- **Ready counts as posted, whatever its slot.** Imran posts by hand and rarely sets Status to Posted, so for every rule above a row counts as posted when Status is Posted or Ready ([editorial-rules.md](editorial-rules.md) §0). A Ready row with a slot still ahead is **queued**: it holds its slot (the next post is scheduled after it), and its stories, Flash box and ask count. Skipped rows never count. Never change a row's Status yourself; the report lists Ready rows more than 7 days past their slot for Imran to mark.
+- **Old rows are never written.** A row missing Format or Carousel slot is reported under Open calls (`incomplete_rows`); a post in the project with no row at all is reported too. Backfilling either is a one-time job by hand, with Imran's OK.
 - **Stories:** rows where **Status** = Flagged, with every field config lists, plus every row a post from the last 30 days carried (it may now be Covered). Read **Notes** and **Absence evidence** in full: they decide eligibility ([editorial-rules.md](editorial-rules.md) §2). The grid, `confidence`, `days_dark` and the check window come from the row's recorded checks.
 
 ## Writing the IG Posts row (phase 8)
@@ -43,7 +44,7 @@ Write it only after the review page is published. When the row is written depend
 | **Post date** | the run date |
 | **Format** | single · bundle · weekly · deep · update |
 | **Flash** | checked if the cover is Flash |
-| **Carousel slot** | 7:30–8:30am ET on weekdays, 10am ET on weekends; the next open slot not already taken by an IG Posts row. An Update companion: the next open slot from 3:00pm ET the same day. |
+| **Carousel slot** | `plan_day.py`'s `next_slot`: 8:00am ET on weekdays (7:30–8:30am window), 10am ET on weekends, on a day no IG Posts row (queued ones included) already holds. An Update companion: the next open slot from 3:00pm ET the same day, after any queued row. |
 | **Caption** | the post's `caption` |
 | **Reel caption** | the post's `reel_caption` |
 | **Alt text** | the `alt` strings, one line per slide |
@@ -51,7 +52,7 @@ Write it only after the review page is published. When the row is written depend
 | **Review page** | the artifact link (a companion shares the day's post's link) |
 | **Stories** | the record IDs used (linked records); none for an ad-hoc post |
 | **Status** | Ready |
-| **Post JSON** | a pointer to the project doc, e.g. `dead-air/posts/2026-10-31-bundle.json` or `dead-air/posts/2026-11-05-update-gas-transit.json` |
+| **Post JSON** | a pointer to the project doc, e.g. `dead-air/posts/2026-11-06-bundle.json` or `dead-air/posts/2026-11-05-update-gas-transit.json` |
 | **Notes** | line 1: `Reel slot: <time range> ET` (2–4 hours after the carousel; for a companion, the next morning if that runs past 9:00pm ET). Then the dashboard corrections, the Reel sources, and anything skipped. A companion adds `Update of <of_post>`. |
 
 Record the new row's ID in the post's `.md`, and give it in the report.

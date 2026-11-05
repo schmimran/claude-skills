@@ -1,10 +1,12 @@
 # Schmim Knews · Dead Air — post generation spec (v3, 2026-10-31)
 
-> **Historical reference.** This is the v3 rule set used by hand in the claude.ai project on Oct 31. The plugin's contract is SPEC v2 (Nov 5), split into [editorial-rules.md](editorial-rules.md), [post-schema.md](post-schema.md), [reel-spec.md](reel-spec.md), [render-guide.md](render-guide.md), [review-page.md](review-page.md) and [airtable-guide.md](airtable-guide.md). Where this file and those disagree, they win. This copy has been reconciled to them (Nov 5): the renderer name, the deep-dive cap, the timeline length, the headline length, the Sources block and the calls rules.
+> **Historical reference.** This is the v3 rule set used by hand in the claude.ai project on Oct 31. The plugin's contract is SPEC v2 (Nov 5), split into [editorial-rules.md](editorial-rules.md), [post-schema.md](post-schema.md), [reel-spec.md](reel-spec.md), [render-guide.md](render-guide.md), [review-page.md](review-page.md) and [airtable-guide.md](airtable-guide.md). Where this file and those disagree, they win. This copy has been reconciled to them (Nov 5): the renderer name, the deep-dive cap, the timeline length, the headline length, the Sources block and the calls rules; and to addendum v2.2: the four-story bundle, the one-line hooks, the kickers, the config path and the script invocation.
 
-The rules the `dead-air` plugin follows. Brand on every slide is SCHMIM KNEWS; Dead Air is the segment. Visual contract: the "Schmim Knews" design system (URL in dead-air/config.md). Reasoning: "Schmim Knews — Instagram Playbook" (URL in dead-air/config.md). v2 changes the playbook in three places, on Imran's instruction of Oct 31: cadence (one run a day producing a carousel plus one or two deep-dive Reels; 3–8 carousels a week), delivery (dated review page + project doc, no email), and no repeats within a week. Everywhere else the playbook wins over this file.
+> **Superseded in part by spec addendum v2.2 (Nov 5, 2026).** Every daily carousel is a four-story bundle (BundleCover, four story slides, Closer); `/dead-air` never makes a single; there is no alternation and no single fallback: with fewer than four qualifying stories there is no carousel, and the lead's Reel runs as a standalone deep post. Stories 2–4 fill from new rows, rows passed over earlier and at most one Still-dark story. See [editorial-rules.md](editorial-rules.md) §1–2. Sections 1 and 2 below are kept as history.
 
-Renderer: `render.py`. Review page: `review_page.py` (both found as described in [render-guide.md](render-guide.md) §2). Every post: `dead-air/posts/<date>-<format>.json` (render input), `-calls.json` (review-page facts and calls) and `.md` (links and calls).
+The rules the `dead-air` plugin follows. Brand on every slide is SCHMIM KNEWS; Dead Air is the segment. Visual contract: the "Schmim Knews" design system (URL in dead-air/settings/config.md). Reasoning: "Schmim Knews — Instagram Playbook" (URL in dead-air/settings/config.md). v2 changes the playbook in three places, on Imran's instruction of Oct 31: cadence (one run a day producing a carousel plus one or two deep-dive Reels; 3–8 carousels a week), delivery (dated review page + project doc, no email), and no repeats within a week. Everywhere else the playbook wins over this file.
+
+Renderer: `render.py`. Review page: `review_page.py` (both under `DA_ROOT/scripts/`, found as described in [render-guide.md](render-guide.md) §2, run as `python3 -B`). Every post: `dead-air/posts/<date>-<format>.json` (render input), `-calls.json` (review-page facts and calls) and `.md` (links and calls).
 
 ## 0. What one daily run makes
 
@@ -17,7 +19,7 @@ Every Reel needs real reporting: read the source articles (WebFetch the foreign 
 
 ## 1. Choose the format (cadence-agnostic)
 
-Read the IG Posts table (IDs in the project doc `dead-air/config.md`), newest first by Post date.
+Read the IG Posts table (IDs in the project doc `dead-air/settings/config.md`), newest first by Post date.
 
 1. **Status change first.** If a story in any post from the last 30 days is now Covered on the dashboard (a Tier-A outlet ran it after we posted), the post is an UPDATE for that story. It outranks everything.
 2. **Override.** A Flagged row that reached Verified with all 11 checked and silent since the last post: SINGLE.
@@ -43,7 +45,7 @@ The cover is Flash for every deep dive, and on positions 3, 5 and 7 of each nine
 
 ## 4. Build the post JSON
 
-Bundle-level: `date` (YYYY-MM-DD), `format` (single | bundle | weekly | deep | update), `flash`, `ask` (rotate the three, never the same as the last post): "Follow for the next one." / "Send this to someone who reads the Times." / "Save this. Check back in a week.", `bundle_hook` for bundles (one of "3 US stories. 11 US outlets. Dead air.", "This week's dead air." (weekly), "3 things they ran abroad. 0 ran here." (only when all three are 0 of 11)), `caption`, `reel_caption`, `sources` (one line, see section 6), `alt` (one string per slide), `reel` {story, deep} for every single, bundle and weekly (the Reel's lead story as a full story object with a hook `headline`, plus its `deep` block), and for deep dives `deep` {timeline_lede, timeline[{d,e,key}], timeline_note, claims[{who,src,say}], unknown, us_small[{name,country}], optional family}.
+Bundle-level: `date` (YYYY-MM-DD), `format` (single | bundle | weekly | deep | update), `flash`, `ask` (rotate the three, never the same as the last post): "Follow for the next one." / "Send this to someone who reads the Times." / "Save this. Check back in a week.", `bundle_hook` for bundles (one line: one of "4 stories. Dead air.", "This week's dead air." (weekly), "4 abroad. 0 here." (only when no story has a domestic Tier-A pickup besides its breaker); the old three-story hooks only on a re-cut of a pre-0.3.0 bundle), `caption`, `reel_caption`, `sources` (one line, see section 6), `alt` (one string per slide), `reel` {story, deep} for every single, bundle and weekly (the Reel's lead story as a full story object with a hook `headline`, plus its `deep` block), and for deep dives `deep` {timeline_lede, timeline[{d,e,key}], timeline_note, claims[{who,src,say}], unknown, us_small[{name,country}], optional family}.
 
 Per story:
 - `record_id`: the Stories record.
@@ -64,9 +66,9 @@ Per story:
 
 ## 5. Render
 
-`python3 render.py <post.json> <design_dir> <out_dir>`. design_dir = the folder an Artifact `read` of the design system saved (it holds project/tokens.json and project/components/bundle.css; tokens.css is generated from tokens.json because the design system does not serve it). Fonts come from npm (@fontsource/big-shoulders-display, work-sans, ibm-plex-mono) because Google Fonts is blocked in the workspace; same faces.
+`python3 -B <DA_ROOT>/scripts/render.py <post.json> <design_dir> <out_dir> --fonts <dir>`. design_dir = the folder an Artifact `read` of the design system saved (it holds project/tokens.json and project/components/bundle.css; tokens.css is generated from tokens.json because the design system does not serve it). Fonts come from npm (@fontsource/big-shoulders-display, work-sans, ibm-plex-mono) because Google Fonts is blocked in the workspace; same faces.
 
-Slides: SINGLE = HookCover, Receipt, Closer. BUNDLE/WEEKLY = BundleCover, Receipt × 3, Closer. DEEP = HookCover (Flash), DeepTimeline, DeepClaims, Receipt, Closer. UPDATE = one HookCover ("Update: <outlet> ran it <Mon D>.", stat "<N> days late.", that outlet's square `ran`).
+Slides: SINGLE = HookCover, Receipt, Closer. BUNDLE/WEEKLY = BundleCover, Receipt × 4, Closer (× 3 only on a legacy re-cut). DEEP = HookCover (Flash), DeepTimeline, DeepClaims, Receipt, Closer. UPDATE = one HookCover ("Update: <outlet> ran it <Mon D>.", stat "<N> days late.", that outlet's square `ran`).
 
 Reel (Imran, Oct 31, modelled on the Oct 22 Board of Peace cut): the lead story as a deep dive, HookCover (Flash) → DeepTimeline → DeepClaims → story slide → Closer, at 1080×1350. Each line appears on its own and the slide holds when full. Time budget per slide: hook 5 s, timeline 12, claims 11, story slide 8, closer 6 (about 42–45 s). No audio track: Imran adds music. reel-cover.png is the finished hook slide. Substance first: the story fills four of the five slides, and the US check is one slide near the end.
 
@@ -88,11 +90,11 @@ fr, lowkey, no cap, it's giving, "the girls who", "not X doing Y", WAKE UP, "mai
 
 ## 8. Deliver
 
-1. Write `posts/<date>-<format>-calls.json` ({reel_length, facts[[label, value]], calls[[bold lead, text]]}), run `python3 review_page.py <post.json> <out_dir> <calls.json>`, and publish the HTML it writes as a new artifact with the PNGs, reel.mp4 and reel-cover.png as `files`. One review page per post.
+1. Write `posts/<date>-<format>-calls.json` ({reel_length, facts[[label, value]], calls[[bold lead, text]]}), run `python3 -B review_page.py <post.json> <out_dir> <calls.json>`, and publish the HTML it writes as a new artifact with the PNGs, reel.mp4 and reel-cover.png as `files`. One review page per post.
 2. Project docs: `dead-air/posts/<date>-<format>.json`, `-calls.json` and `.md` (review link, Airtable row ID, slots, stories, dashboard corrections, Reel sources).
 3. IG Posts row (written by field ID from config; see [airtable-guide.md](airtable-guide.md)): Post "Dead Air · <date> · <format>", Post date, Format, Flash, Carousel slot (7:30–8:30am ET weekdays, 10am ET weekends; next open slot), Caption, Reel caption, Alt text, Slide files, Review page, Stories, Status Ready, Post JSON (pointer to the project doc), Notes (Reel slot 2–4 hours after the carousel, plus the calls).
 4. No email.
 
 ## 9. Wording on anything the audience sees
 
-No "receipts" (Oct 31, Imran): no slide, cue, kicker, caption, alt text or Reel frame uses the word. Nothing that oversells: no "proof", "exposed", "they hid". The swipe cue is "Swipe →". Story slides' kicker reads "Dead Air" (single) or "Dead Air · n of 3" (bundle). The Reel ends on the Closer, whose headline is "Not censorship. Omission.". "Receipt" survives only as the internal name of the story-slide component in the design system.
+No "receipts" (Oct 31, Imran): no slide, cue, kicker, caption, alt text or Reel frame uses the word. Nothing that oversells: no "proof", "exposed", "they hid". The swipe cue is "Swipe →". Story slides' kicker reads "Dead Air" (single), "Dead Air · n of 4" (bundle), or "Dead Air · Still dark" on the Still-dark story. The Reel ends on the Closer, whose headline is "Not censorship. Omission.". "Receipt" survives only as the internal name of the story-slide component in the design system.

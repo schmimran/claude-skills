@@ -15,7 +15,8 @@ Usage:
                and for update Reels update_then update_square update_hold update_closer).
   --open-family  seconds for a family slide that opens the Reel, and its final hold. Default 13,5.5.
 
-Formats: single | bundle | weekly | deep | update.
+Formats: single | bundle | weekly | deep | update. A bundle or weekly carries 4 stories (addendum v2.2 §F);
+a 3-story bundle renders only as a re-cut of a pre-0.3.0 post (`recut_of` set) with one of the legacy hooks.
 Writes the carousel PNGs (1080x1350), reel.mp4 (1080x1350, no audio), reel-cover.png and checks.json.
 The Reel is the lead story as a deep dive, each line revealed in turn (about 44 s); an update's Reel
 is the Then slide, then each late pickup lighting its square, then the still-dark line (about 20 s).
@@ -34,7 +35,12 @@ OUTLET_NAMES = {  # names an `us` sentence may use for an unchecked outlet
 }
 STATES = {"silent", "broke", "ran", "unchecked"}
 ASKS = ["Follow for the next one.", "Send this to someone who reads the Times.", "Save this. Check back in a week."]
-BUNDLE_HOOKS = ["3 US stories. 11 US outlets. Dead air.", "This week's dead air.", "3 things they ran abroad. 0 ran here."]
+# Addendum v2.2 §F.7: one line only, so four stories fit. "4 abroad. 0 here." only when no story has a domestic Tier-A
+# outlet other than its breaker (no `ran` square on any grid).
+BUNDLE_HOOKS = ["4 stories. Dead air.", "This week's dead air.", "4 abroad. 0 here."]
+# Pre-0.3.0 three-story hooks: allowed only on a re-cut (`recut_of`) of a three-story bundle posted before 0.3.0.
+LEGACY_BUNDLE_HOOKS = ["3 US stories. 11 US outlets. Dead air.", "This week's dead air.", "3 things they ran abroad. 0 ran here."]
+STILL_DARK_KICKER = "Dead Air · Still dark"
 METHOD = ("Counts as reported abroad at 3+ major foreign outlets; counts as missing at home when none of the "
           "11 major US outlets ran it, not counting whoever broke it. Board: news.schmim.com")
 BANNED = [r"\bfr\b", r"\blowkey\b", r"\bno cap\b", r"it'?s giving", r"the girls who", r"\bnot \w+ doing\b",
@@ -137,13 +143,17 @@ def receipt_slide(st, segment="Dead Air", small=None, show_topic=True):
             f'<div class="status" data-r><span class="meter" aria-label="confidence {on} of 3">{meter}</span>'
             f'{esc(conf)} · {st["days_dark"]} days dark</div>{foot(right="news.schmim.com")}</section>')
 
+def bundle_kicker(post, i, s):
+    """Story-slide kicker in a bundle: 'Dead Air · n of 4', or 'Dead Air · Still dark' for a resurfaced story (§F.3c)."""
+    return STILL_DARK_KICKER if s.get("still_dark") else f"Dead Air · {i+1} of {len(post['stories'])}"
+
 def bundle_slide(post, flash):
     seg = (f"Dead Air · Week of {nice_date(post['date'], False)}" if post["format"] == "weekly"
            else f"Dead Air · {nice_date(post['date'])}")
     items = "".join(f'<li data-r><span class="num">{i+1:02d}</span><div><p class="t" data-maxlines="2">{esc(s["title"])}</p>'
                     f'<p class="meta m" data-maxlines="1">{esc(s["count"])}</p></div></li>' for i, s in enumerate(post["stories"]))
     return (f'<section class="slide{" slide--flash" if flash else ""}" data-kind="bundle">{kicker(seg)}'
-            f'<h1 class="hook hook--m" data-r data-maxlines="3">{esc(post["bundle_hook"])}</h1>'
+            f'<h1 class="hook hook--m" data-r data-maxlines="{3 if post.get("recut_of") else 1}">{esc(post["bundle_hook"])}</h1>'
             f'<ol class="stories">{items}</ol>{foot(cue="Swipe →")}</section>')
 
 def closer_slide(ask):
@@ -247,7 +257,7 @@ def build_slides(post):
     S = post["stories"]
     if f == "single": return [hook_slide(S[0], d, flash), receipt_slide(S[0]), closer_slide(post["ask"])]
     if f in ("bundle", "weekly"):
-        return ([bundle_slide(post, flash)] + [receipt_slide(s, f"Dead Air · {i+1} of {len(S)}") for i, s in enumerate(S)]
+        return ([bundle_slide(post, flash)] + [receipt_slide(s, bundle_kicker(post, i, s)) for i, s in enumerate(S)]
                 + [closer_slide(post["ask"])])
     if f == "deep":
         dd = post["deep"]
@@ -368,10 +378,24 @@ def check_copy(post):
     if mode not in ("dashboard", "adhoc"): errs.append(f"mode must be dashboard or adhoc, got {mode!r}")
     # `ran` squares: updates, and ad-hoc deep dives, which report what the coverage check found (SPEC §5.3).
     ran_allowed = f == "update" or (f == "deep" and mode == "adhoc")
-    n = {"single": 1, "deep": 1, "update": 1, "bundle": 3, "weekly": 3}[f]
-    if len(post["stories"]) != n: errs.append(f"{f} needs {n} stories, got {len(post['stories'])}")
-    if f in ("bundle", "weekly") and post.get("bundle_hook") not in BUNDLE_HOOKS:
-        errs.append(f"bundle_hook must be one of {BUNDLE_HOOKS}")
+    legacy = f in ("bundle", "weekly") and bool(post.get("recut_of")) and len(post["stories"]) == 3
+    n = {"single": 1, "deep": 1, "update": 1, "bundle": 4, "weekly": 4}[f]
+    if len(post["stories"]) != n and not legacy:
+        errs.append(f"{f} needs {n} stories, got {len(post['stories'])}"
+                    + (" (a 3-story bundle renders only as a re-cut of a pre-0.3.0 post: set `recut_of`)" if f in ("bundle", "weekly") else ""))
+    if f in ("bundle", "weekly"):
+        hooks = LEGACY_BUNDLE_HOOKS if legacy else BUNDLE_HOOKS
+        if post.get("bundle_hook") not in hooks: errs.append(f"bundle_hook must be one of {hooks}")
+        elif post["bundle_hook"] == "4 abroad. 0 here." and any("ran" in s.get("grid", []) for s in post["stories"]):
+            errs.append("'4 abroad. 0 here.' needs every story with no domestic Tier-A outlet besides its breaker")
+        dark = [s for s in post["stories"] if s.get("still_dark")]
+        if len(dark) > 1: errs.append(f"at most one Still-dark story per carousel, got {len(dark)}")
+        if post["stories"] and post["stories"][0].get("still_dark"): errs.append("story 1 is the lead; a Still-dark story only fills slots 2-4")
+        for s in dark:
+            want = f"Still dark: day {s.get('days_dark')}."
+            if s.get("count") != want: errs.append(f"Still-dark story count line must read {want!r}, got {s.get('count')!r}")
+    elif any(s.get("still_dark") for s in post["stories"]):
+        errs.append("still_dark is for bundle and weekly stories only")
     if post.get("ask") not in ASKS: errs.append(f"ask must be one of {ASKS}")
     items = [(f"story {i+1}", s, f) for i, s in enumerate(post["stories"])]
     if f == "update":

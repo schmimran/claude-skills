@@ -1,36 +1,50 @@
 # Review page
 
-SPEC §5.3 and §10.1, with addendum v2.1 §A. Every day's post gets its own dated review page: a **new** claude.ai artifact per post. Never republish over an earlier post's page. **Update companions are the exception:** they go on the day's page, not a page of their own.
+SPEC §5.3 and §10.1, with addendum v2.1 §A and v2.2 §G. Every day's post gets its own dated review page: a **new** claude.ai artifact per post. Never republish over an earlier post's page. **Update companions are the exception:** they go on the day's page, not a page of their own.
 
 ## What it shows
 
 `review_page.py` builds the page. In order, it shows:
 
 1. A header and facts strip: the calls JSON's `facts`.
-2. **The Reel first:** the MP4, with the cover as its poster, plus its headline.
-3. **The carousel strip:** every slide in posting order, each with its label and alt text.
+2. **The Reel first:** the MP4, with the cover as its poster, plus its headline, a **Download video** button and a **Download cover** link.
+3. **The carousel strip:** every slide in posting order, each with its label, its own download link and its alt text, then a **Download all slides** button.
 4. **Both captions,** each with a Copy button.
 5. **The stories in the post:** title or headline, record ID, dateline, count or stat, confidence.
 6. **The calls:** every judgment from the calls JSON.
 7. **Each Update companion** (if any), under an amber rule: its own facts strip, then 2–6 for the companion, with its own Copy buttons.
+
+## Downloads (addendum v2.2 §G)
+
+Imran, Nov 5: grabbing the video from a phone should be one tap.
+
+- **Download video**, under every Reel: `<a href="<stem>-reel.mp4" download="<stem>-reel.mp4">`, full-width, at least 48px tall.
+- **Download cover**, under it: the Reel cover, `<stem>-reel-cover.png`, same `download` attribute.
+- **Download all slides**, under every carousel strip: zips that post's PNGs in the browser with JSZip 3.10.1 from cdnjs (pinned) and saves `<stem>-slides.zip`. If JSZip didn't load or a fetch fails, the button says to use the slide links instead.
+- **Download slide NN**, under each slide: for phones that can't open zips.
+- Every link carries the `download` attribute, so iOS Safari saves the file instead of opening it.
+
+Update companions get the same set, in their own section. A carousel-only page has no Reel, so no video or cover link.
+
+## Look
 
 It is a single dark page in the feed's own look. It loads Google Fonts for its own type; that request is allowed on a published artifact, unlike in the render workspace.
 
 ## Building and publishing
 
 ```
-python3 review_page.py <post.json> <out_dir> <calls.json> [--companion <update.json> <update-calls.json>]... [--title …] [--h1 …] [--name …]
+python3 -B <DA_ROOT>/scripts/review_page.py <post.json> <out_dir> <calls.json> [--companion <update.json> <update-calls.json>]... [--title …] [--h1 …] [--name …]
 ```
 
 - Run it with `<out_dir>` set to the render folder, so the HTML and the media files sit side by side. It prints the path of the HTML it wrote.
 - **Dashboard posts:** no flags. The title is "Dead Air <Mon D>", the h1 is "Dead Air · <Mon D YYYY>", and the file is `dead-air-<date>.html`.
 - **Update companions:** pass each with `--companion`, oldest pickup first, at most two. The script refuses a companion dated differently from the day's post or using its ask.
 - **Standalone deep posts (`/dead-air-reel`):** `--title "Dead Air: <Slug>"`, `--h1 "Dead Air · <The subject>"`, `--name dead-air-<slug>`.
-- Every post renders into its own `dead-air/out/<name>/` folder, so a second post on the same day (the second Reel's deep post, or a `-v2` re-cut) never overwrites the first one's files.
+- Every post renders into its own `DA_WS/out/<name>/` folder, so a second post on the same day (the second Reel's deep post, or a `-v2` re-cut) never overwrites the first one's files.
 
 **Publish** with the Artifact tool:
 - Load the `artifact-design` skill before the first publish of a session.
-- `file_path` is the HTML. `files` maps every carousel PNG, the `-reel.mp4` and the `-reel-cover.png` to themselves by filename; the page references them by bare filename. With companions, `files` also maps each companion's PNGs, MP4 and cover from its own `dead-air/out/<date>-update-<slug>/` folder; the slug in their names keeps them apart. Don't publish `checks.json` or `.reel-frames/`.
+- `file_path` is the HTML. `files` maps every carousel PNG, the `-reel.mp4` and the `-reel-cover.png` to themselves by filename; the page references them by bare filename. With companions, `files` also maps each companion's PNGs, MP4 and cover from its own `DA_WS/out/<date>-update-<slug>/` folder; the slug in their names keeps them apart. Don't publish `checks.json` or `.reel-frames/`.
 - Each post is a new artifact with a new path; don't pass `url`.
 - Keep the returned link: it goes in the post's `.md`, the IG Posts row and the report. A companion's `.md` and IG Posts row carry the same link.
 

@@ -54,7 +54,7 @@ Run this block once, as is:
 
 ```bash
 # --- dead-air setup: identical in all three commands (a test checks) ---
-DEAD_AIR_VERSION=0.3.1
+DEAD_AIR_VERSION=0.4.0
 export PYTHONDONTWRITEBYTECODE=1
 DA_WS="$PWD/dead-air"; DA_DAY="$(date +%F)"
 DA_REPO="${DEAD_AIR_REPO:-https://github.com/schmimran/claude-skills.git}"
@@ -176,10 +176,11 @@ Launch `dead-air-qa` (`subagent_type: "dead-air:dead-air-qa"`) with `out_dir`, `
 
 ## Phase 7 — Deliver
 
-1. **Review page** per `${CLAUDE_PLUGIN_ROOT}/references/review-page.md`:
+1. **Bundle zip:** build it with `python3 -B <DA_ROOT>/scripts/bundle_zip.py <post.json> <DA_WS>/out/<date>-deep-<slug> <calls.json>` after setting the calls JSON's `bundle` to `<date>_deep<NN>`. `${CLAUDE_PLUGIN_ROOT}/references/render-guide.md` §7 has the naming convention, how NN is counted, and what to do when it refuses.
+2. **Review page** per `${CLAUDE_PLUGIN_ROOT}/references/review-page.md`:
    `python3 -B <DA_ROOT>/scripts/review_page.py <post.json> <DA_WS>/out/<name> <calls.json> --title "Dead Air: <Slug>" --h1 "Dead Air · <The subject>" --name dead-air-<slug>`
-   Publish it as a new artifact with its media. If it can't be published, follow `${CLAUDE_PLUGIN_ROOT}/references/render-guide.md` §6.
-2. **Project docs:** upload the post JSON, the calls JSON and `<date>-deep-<slug>.md` from `<DA_WS>/posts/` to project `dead-air/posts/` with `project_write` and absolute `local_path`s. New files only; nothing from `work/` or `out/`.
+   Publish it as a new artifact with its media and its bundle zip. If it can't be published, follow `${CLAUDE_PLUGIN_ROOT}/references/render-guide.md` §6.
+3. **Project docs:** upload the post JSON, the calls JSON and `<date>-deep-<slug>.md` from `<DA_WS>/posts/` to project `dead-air/posts/` with `project_write` and absolute `local_path`s. New files only; nothing from `work/` or `out/`. The `.md` records the bundle folder name.
 
 ## Phase 8 — IG Posts row
 

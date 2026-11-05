@@ -7,7 +7,7 @@ for the dead-air plugin, against the bundled fixtures.
 Stdlib only. Runs render.py and review_page.py as subprocesses on temp copies of the fixtures,
 so the fixtures themselves are never modified. Exits 1 if any test fails.
 """
-import argparse, copy, hashlib, json, os, re, shutil, subprocess, sys
+import argparse, copy, hashlib, json, os, re, shutil, subprocess, sys, zipfile
 from pathlib import Path
 
 sys.dont_write_bytecode = True   # addendum v2.2 §I: importing the scripts below must not leave __pycache__/
@@ -24,6 +24,7 @@ UPDATE = json.loads((FX / "2026-11-05-update.json").read_text())
 sys.path.insert(0, str(SCRIPTS))
 import render as render_mod   # stdlib-only at import time; playwright loads inside main()
 import review_page as review_mod   # main() is guarded; importing it only defines helpers
+import bundle_zip as bundle_mod    # same: main() is guarded
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--python", default=sys.executable)
@@ -503,6 +504,130 @@ sa = OUT / "F1-same-ask.json"; sa.write_text(json.dumps(same_ask, ensure_ascii=F
 code, _, log = review(OUT / "F1-day.json", d_day, calls_day, "--companion", str(sa), str(UPD_CALLS))
 record("F1 companion with the day's ask refused", code != 0 and "day's ask" in log, log.strip()[-200:])
 shutil.rmtree(d_day / "review", ignore_errors=True)
+
+# ================= 0.4.0 the bundle zip =================
+BZ_DAY, BZ_UPD = "2026-11-05_bundle01", "2026-11-05_update01"
+
+def bz(*args):
+    """bundle_zip.py <post.json> <out_dir> <calls.json>, or bz("--check", <zip>)."""
+    return subprocess.run([sys.executable, "-B", str(SCRIPTS / "bundle_zip.py"), *map(str, args)], capture_output=True, text=True)
+
+def bcalls(name, base, bundle, reel=True):
+    """A calls JSON copied from `base` with `bundle` set (None removes it) and, optionally, no reel_length."""
+    cj = json.loads(Path(base).read_text())
+    if bundle is None: cj.pop("bundle", None)
+    else: cj["bundle"] = bundle
+    if not reel: cj.pop("reel_length", None)
+    p = OUT / name; p.write_text(json.dumps(cj)); return p
+
+def zip_matches(zp, folder, d, stem, n_slides, post, with_reel):
+    """Names are exactly the convention, the zip is intact, media is byte for byte the render's, captions are the post's text + newline."""
+    z = zipfile.ZipFile(zp); names = z.namelist()
+    want = [f"{folder}/slide_{i:02d}.png" for i in range(1, n_slides + 1)] + [f"{folder}/caption_carousel.txt"] \
+           + ([f"{folder}/video.mp4", f"{folder}/caption_video.txt"] if with_reel else [])
+    ok = sorted(names) == sorted(want) and bundle_mod.layout_errors(names) == [] and z.testzip() is None
+    ok = ok and all(z.read(f"{folder}/slide_{i:02d}.png") == (d / f"{stem}-{i:02d}.png").read_bytes() for i in range(1, n_slides + 1))
+    ok = ok and z.read(f"{folder}/caption_carousel.txt") == post["caption"].encode("utf-8") + b"\n"
+    if with_reel:
+        ok = ok and z.read(f"{folder}/video.mp4") == (d / f"{stem}-reel.mp4").read_bytes()
+        ok = ok and z.read(f"{folder}/caption_video.txt") == post["reel_caption"].encode("utf-8") + b"\n"
+    return ok, names
+
+def check_zip(label, r, folder, d, stem, n_slides, post, with_reel, extra=True):
+    """Record whether bz()'s result `r` built <folder>.zip in `d` exactly as the convention says."""
+    zp = d / f"{folder}.zip"
+    ok, names = zip_matches(zp, folder, d, stem, n_slides, post, with_reel) if r.returncode == 0 and zp.is_file() else (False, [])
+    record(label, ok and extra, f"exit {r.returncode} {names} {(r.stdout + r.stderr).strip()[-200:]}")
+    return zp
+
+# the day's bundle: six slides, a Reel, both captions
+STEM_DAY = "schmimknews-2026-11-05-bundle"
+c_day = bcalls("bz-day-calls.json", calls_day, BZ_DAY)
+r = bz(OUT / "F1-day.json", d_day, c_day)
+zp = check_zip("0.4.0 bundle zip: bundle post -> 2026-11-05_bundle01/ with slide_01-06.png, video.mp4 and both captions, bytes intact",
+               r, BZ_DAY, d_day, STEM_DAY, 6, day, True, extra=not list(d_day.glob("*.part")))
+sha_a = sha(zp) if zp.is_file() else None
+zp.unlink(missing_ok=True); bz(OUT / "F1-day.json", d_day, c_day)
+record("0.4.0 bundle zip: same inputs, same bytes", sha_a is not None and sha_a == sha(zp))
+r = bz("--check", zp)
+record("0.4.0 bundle zip: --check accepts it", r.returncode == 0 and r.stdout.strip() == "ok", (r.stdout + r.stderr).strip()[-200:])
+bad_zip = OUT / "bz-stray.zip"
+shutil.copyfile(zp, bad_zip)
+with zipfile.ZipFile(bad_zip, "a") as zo: zo.writestr(f"{BZ_DAY}/notes.txt", "x")
+r = bz("--check", bad_zip)
+record("0.4.0 bundle zip: --check refuses a stray file", r.returncode == 1 and "notes.txt' is not an allowed file name" in r.stdout, r.stdout.strip()[-200:])
+
+# a carousel-only run (no Reel rendered, no reel_length): the day's render folder minus its MP4 and zip
+d_co = OUT / "bz-carousel-only"; shutil.rmtree(d_co, ignore_errors=True)
+shutil.copytree(d_day, d_co, ignore=shutil.ignore_patterns("*.zip", "review", ".reel-frames", "*.mp4"))
+r = bz(OUT / "F1-day.json", d_co, bcalls("bz-co-calls.json", calls_day, BZ_DAY, reel=False))
+check_zip("0.4.0 bundle zip: carousel-only run has no video.mp4 and no caption_video.txt", r, BZ_DAY, d_co, STEM_DAY, 6, day, False)
+
+# an Update companion
+c_u = bcalls("bz-upd-calls.json", UPD_CALLS, BZ_UPD)
+r = bz(FX / "2026-11-05-update.json", d_u, c_u)
+check_zip("0.4.0 bundle zip: Update companion -> 2026-11-05_update01/ with 4 slides", r, BZ_UPD, d_u, stem_u, 4, UPDATE, True)
+
+# refusals: no zip is written, the reason is named
+def refuse(name, post_json, src, calls, needle, mutate=None):
+    d = OUT / f"bz-{name}"; shutil.rmtree(d, ignore_errors=True)
+    shutil.copytree(src, d, ignore=shutil.ignore_patterns("*.zip", "review", ".reel-frames"))
+    if mutate: mutate(d)
+    r = bz(post_json, d, calls)
+    out_ = r.stdout + r.stderr
+    record(f"0.4.0 bundle zip refuses {name}", r.returncode == 1 and needle in out_ and not list(d.glob("*.zip*")), f"exit {r.returncode}: {out_.strip()[-200:]}")
+
+DAYJ = OUT / "F1-day.json"
+for name, bundle, needle in (("a capital letter", "2026-11-05_Bundle01", "must read <YYYY-MM-DD>_"),
+                             ("a hyphen before the format", "2026-11-05-bundle01", "must read <YYYY-MM-DD>_"),
+                             ("no counter", "2026-11-05_bundle", "must read <YYYY-MM-DD>_"),
+                             ("counter 00", "2026-11-05_bundle00", "counter must be 01 or higher"),
+                             ("another day's date", "2026-11-04_bundle01", "is not the post date 2026-11-05"),
+                             ("another format", "2026-11-05_deep01", "is not the post format bundle"),
+                             ("a missing bundle", None, "has no `bundle`")):
+    refuse(name, DAYJ, d_day, bcalls(f"bz-{name}-calls.json".replace(" ", "-"), calls_day, bundle), needle)
+refuse("a missing slide", DAYJ, d_day, c_day, "5 slide PNGs", lambda d: (d / "schmimknews-2026-11-05-bundle-03.png").unlink())
+refuse("a missing video", DAYJ, d_day, c_day, "video.mp4 source missing", lambda d: (d / "schmimknews-2026-11-05-bundle-reel.mp4").unlink())
+more_alt = OUT / "bz-more-alt.json"; more_alt.write_text(json.dumps(dict(day, alt=day["alt"] + ["one more"])))
+refuse("more alt strings than slides", more_alt, d_day, c_day, "the post has 7 alt strings")
+no_rcap = OUT / "bz-no-rcap.json"; no_rcap.write_text(json.dumps(dict(day, reel_caption="")))
+refuse("an empty Reel caption", no_rcap, d_day, c_day, "caption_video: the post has no text")
+
+# the layout check on bare name lists (what a hand-built or edited zip would look like)
+G = [f"{BZ_DAY}/slide_01.png", f"{BZ_DAY}/slide_02.png", f"{BZ_DAY}/caption_carousel.txt"]
+for name, names, needle in (("a stray cover file", G + [f"{BZ_DAY}/cover.png"], "not an allowed file name"),
+                            ("a gap in the numbering", [G[0], f"{BZ_DAY}/slide_03.png", G[2]], "no gaps"),
+                            ("numbering that doesn't start at 01", [f"{BZ_DAY}/slide_02.png", f"{BZ_DAY}/slide_03.png", G[2]], "no gaps"),
+                            ("two root folders", G + ["2026-11-05_deep01/slide_01.png"], "exactly one root folder"),
+                            ("a subfolder", G + [f"{BZ_DAY}/x/slide_09.png"], "not directly inside"),
+                            ("a capitalised slide name", [G[0].replace("slide", "Slide"), G[1], G[2]], "not an allowed file name"),
+                            ("slides named download1.png", [f"{BZ_DAY}/download1.png", f"{BZ_DAY}/download2.png", G[2]], "not an allowed file name"),
+                            ("a video without its caption", G + [f"{BZ_DAY}/video.mp4"], "go together"),
+                            ("no carousel caption", G[:2], "caption_carousel.txt is missing"),
+                            ("no root folder", ["slide_01.png", "caption_carousel.txt"], "exactly one root folder"),
+                            ("duplicate entries", G + [G[0]], "duplicate")):
+    errs = bundle_mod.layout_errors(names)
+    record(f"0.4.0 layout check flags {name}", any(needle in x for x in errs), f"{errs}")
+record("0.4.0 layout check passes the convention, with and without a Reel",
+       bundle_mod.layout_errors(G) == [] and bundle_mod.layout_errors(G + [f"{BZ_DAY}/video.mp4", f"{BZ_DAY}/caption_video.txt"]) == [])
+
+# the review page links each post's zip, and only when `bundle` is set
+def page(*args):
+    """Build the day's review page; return (exit code, its HTML, log), and clear the page folder."""
+    code, pages, log = review(DAYJ, d_day, *args)
+    html_ = pages[0].read_text() if pages else ""
+    shutil.rmtree(d_day / "review", ignore_errors=True)
+    return code, html_, log.strip()[-200:]
+
+code, html_, log = page(c_day)
+record("0.4.0 review page: 'Download bundle zip' links <bundle>.zip with a download attribute",
+       code == 0 and f'<a class="dl dl-bundle" href="{BZ_DAY}.zip" download="{BZ_DAY}.zip">Download bundle zip</a>' in html_ and html_.count("Download bundle zip") == 1, log)
+code, html_, log = page(c_day, "--companion", str(FX / "2026-11-05-update.json"), str(c_u))
+record("0.4.0 review page: the Update companion gets its own zip link",
+       code == 0 and f'href="{BZ_UPD}.zip"' in html_ and f'href="{BZ_DAY}.zip"' in html_ and html_.count(">Download bundle zip</a>") == 2, log)
+code, html_, log = page(calls_day)
+record("0.4.0 review page: no `bundle` in the calls, no zip button, the rest unchanged",
+       code == 0 and "bundle zip" not in html_.lower() and html_.count(">Download all slides</button>") == 1, log)
 
 # ---------- §E.1 / §C versions agree ----------
 pver = json.loads((PLUGIN / ".claude-plugin/plugin.json").read_text())["version"]

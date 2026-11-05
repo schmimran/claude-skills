@@ -8,7 +8,9 @@ same date, a different ask, at most two. The page references every media file by
 post's PNGs, MP4 and cover from its own render folder.
 Downloads (addendum v2.2 §G): "Download video" under every Reel, "Download cover" for its cover, "Download all
 slides" under every carousel (zipped in the browser with JSZip from cdnjs) and a link under each slide. Every link
-carries the `download` attribute so iOS Safari saves the file instead of opening it."""
+carries the `download` attribute so iOS Safari saves the file instead of opening it.
+Bundle zip (0.4.0): when a post's calls JSON has `bundle` (e.g. 2026-11-05_bundle01), "Download bundle zip" links
+<bundle>.zip, which bundle_zip.py wrote into that post's render folder. Without `bundle` the page is as before."""
 import json, html, re, sys
 from pathlib import Path
 
@@ -54,7 +56,9 @@ def post_blocks(post, calls, n):
     slides = "".join(f'<figure class="slide"><img src="{f}" alt="{e(a)}" width="1080" height="1350" loading="lazy"><figcaption><span class="n">{i+1:02d} · {labels[i]}</span>'
                      f'<a class="dl-one" href="{f}" download="{f}">Download slide {i+1:02d}</a><span class="alt">{e(a)}</span></figcaption></figure>'
                      for i, (f, a) in enumerate(zip(pngs, alts)))
-    zip_btn = (f'<button type="button" class="dl dl-zip" data-zip="{stem}-slides.zip" data-files="{e(" ".join(pngs))}">Download all slides</button>')
+    bundle = e(calls.get("bundle") or "")   # 0.4.0: the hand-off zip built by bundle_zip.py, published beside the media
+    bundle_btn = f'<a class="dl dl-bundle" href="{bundle}.zip" download="{bundle}.zip">Download bundle zip</a>' if bundle else ""
+    zip_btn = bundle_btn + f'<button type="button" class="dl dl-zip" data-zip="{stem}-slides.zip" data-files="{e(" ".join(pngs))}">Download all slides</button>'
     rows = "".join(f'<tr><td class="num">{i+1:02d}</td><td><b>{e(s.get("title") or s["headline"])}</b><br><span class="mono">{s.get("record_id")}</span></td><td>{e(s.get("dateline", ""))}</td><td class="mono">{e(s.get("count") or s.get("stat") or "")}</td><td>{s["confidence"]}</td></tr>' for i, s in enumerate(post["stories"]))
     reel_story = (post.get("reel") or {}).get("story") or post["stories"][0]
     has_reel = bool(calls.get("reel_length"))
@@ -134,7 +138,7 @@ button{{font:600 13px var(--mono);letter-spacing:2px;text-transform:uppercase;ba
 button:focus-visible,a:focus-visible{{outline:2px solid var(--ink);outline-offset:3px}}
 .dl{{display:flex;align-items:center;justify-content:center;width:100%;min-height:48px;box-sizing:border-box;margin-top:12px;font:600 14px var(--mono);letter-spacing:2px;text-transform:uppercase;background:var(--signal);color:var(--ground);text-decoration:none;border:0;padding:12px 16px;cursor:pointer}}
 .dl-2{{background:transparent;color:var(--signal);border:2px solid var(--signal)}}
-.dl-zip{{max-width:420px}} .dl[disabled]{{opacity:.6;cursor:progress}}
+.dl-zip,.dl-bundle{{max-width:420px}} .dl[disabled]{{opacity:.6;cursor:progress}}
 .dl-one{{font:600 12px var(--mono);letter-spacing:1px;text-transform:uppercase;color:var(--signal);min-height:32px;display:inline-flex;align-items:center}}
 .cols{{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:24px}}
 .tbl{{overflow-x:auto}} table{{border-collapse:collapse;width:100%;min-width:680px;font-size:14px}}

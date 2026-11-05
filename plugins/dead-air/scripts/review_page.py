@@ -8,7 +8,13 @@ same date, a different ask, at most two. The page references every media file by
 post's PNGs, MP4 and cover from its own render folder.
 Downloads (addendum v2.2 §G): "Download video" under every Reel, "Download cover" for its cover, "Download all
 slides" under every carousel (zipped in the browser with JSZip from cdnjs) and a link under each slide. Every link
-carries the `download` attribute so iOS Safari saves the file instead of opening it."""
+carries the `download` attribute so iOS Safari saves the file instead of opening it.
+Bundle zip (0.4.0): when a post's calls JSON has `bundle` (e.g. 2026-11-05_bundle01) and `bundle_files` (both set by
+bundle_stage.py after a verified build), "Download bundle zip" fetches <bundle>/<file> for each file, zips them in the
+browser (JSZip) and saves <bundle>.zip. A published artifact can't serve a .zip, and the claude.ai viewer blocks downloads a
+page starts itself, so every download here (links, both zips) is saved through the `downloads` capability when the page
+has it (the publish declares it), and falls back to a plain browser download otherwise. Without `bundle` the page has no
+bundle button."""
 import json, html, re, sys
 from pathlib import Path
 
@@ -54,7 +60,11 @@ def post_blocks(post, calls, n):
     slides = "".join(f'<figure class="slide"><img src="{f}" alt="{e(a)}" width="1080" height="1350" loading="lazy"><figcaption><span class="n">{i+1:02d} · {labels[i]}</span>'
                      f'<a class="dl-one" href="{f}" download="{f}">Download slide {i+1:02d}</a><span class="alt">{e(a)}</span></figcaption></figure>'
                      for i, (f, a) in enumerate(zip(pngs, alts)))
-    zip_btn = (f'<button type="button" class="dl dl-zip" data-zip="{stem}-slides.zip" data-files="{e(" ".join(pngs))}">Download all slides</button>')
+    bundle, bfiles = calls.get("bundle"), calls.get("bundle_files")   # 0.4.0: set by bundle_stage.py after a verified build
+    ok = (isinstance(bundle, str) and re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}_[a-z]+[0-9]{2}", bundle) and isinstance(bfiles, list) and bfiles
+          and all(isinstance(f, str) and re.fullmatch(r"[a-z0-9_]+\.[a-z0-9]+", f) for f in bfiles))   # nothing else reaches an attribute
+    bundle_btn = (f'<button type="button" class="dl dl-zip dl-bundle" data-zip="{bundle}.zip" data-files="{" ".join(f"{bundle}/{f}" for f in bfiles)}">Download bundle zip</button>' if ok else "")
+    zip_btn = bundle_btn + f'<button type="button" class="dl dl-zip" data-zip="{stem}-slides.zip" data-files="{e(" ".join(pngs))}">Download all slides</button>'
     rows = "".join(f'<tr><td class="num">{i+1:02d}</td><td><b>{e(s.get("title") or s["headline"])}</b><br><span class="mono">{s.get("record_id")}</span></td><td>{e(s.get("dateline", ""))}</td><td class="mono">{e(s.get("count") or s.get("stat") or "")}</td><td>{s["confidence"]}</td></tr>' for i, s in enumerate(post["stories"]))
     reel_story = (post.get("reel") or {}).get("story") or post["stories"][0]
     has_reel = bool(calls.get("reel_length"))
@@ -146,22 +156,45 @@ ul.calls{{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:8px;
 <main class="wrap">
 <header><div class="kicker"><i></i><b>Schmim Knews</b><span>Dead Air · Review</span></div><h1>Dead Air · {nice}</h1></header>
 {facts_html(calls)}
+<p id="dl-warn" class="note" hidden>Saving files is unavailable in this view: this page was published without the downloads capability, so its download buttons can't save. Open the files directly instead.</p>
 {post_blocks(post, calls, 0)}
 {comp_html}
 </main>
 <script src="{JSZIP}"></script>
 <script>
+// The claude.ai viewer blocks downloads a page starts itself: saving goes through the `downloads` capability (the viewer confirms).
+// Where there is no viewer (a plain browser, a local copy) the old link/blob download is the fallback. In a viewer, clicks wait for
+// the capability instead of falling through to a blocked download, and a missing capability is shown, not silent.
+const IN_VIEWER=!!(window.claude&&window.claude.use);
+const DLP=IN_VIEWER?Promise.resolve().then(()=>window.claude.use('downloads')).then(d=>d||null,()=>null):Promise.resolve(null);
+DLP.then(d=>{{if(IN_VIEWER&&!d){{const w=document.getElementById('dl-warn');if(w)w.hidden=false}}}});
+function saveFile(name,blob){{
+ return DLP.then(d=>{{
+  if(d)return d.save({{filename:name,data:blob}});
+  if(IN_VIEWER)throw {{code:'unavailable',message:'the downloads capability is missing'}};
+  const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),4000);return {{status:'saved'}};
+ }});
+}}
+const declined=err=>err&&err.code==='declined';
+document.querySelectorAll('a[download]').forEach(a=>a.addEventListener('click',ev=>{{
+ if(!IN_VIEWER)return;
+ ev.preventDefault();
+ const label=a.textContent,href=a.getAttribute('href');
+ fetch(href).then(r=>{{if(!r.ok)throw new Error(href);return r.blob()}})
+  .then(b=>saveFile(a.getAttribute('download'),b))
+  .catch(err=>{{if(!declined(err)){{a.textContent=err&&err.code==='unavailable'?'Saving unavailable here':'Save failed: open the file instead';setTimeout(()=>a.textContent=label,4000)}}}});
+}}));
 document.querySelectorAll('[data-zip]').forEach(b=>b.addEventListener('click',async()=>{{
  const label=b.textContent;
- if(typeof JSZip==='undefined'){{b.textContent='Zip unavailable: use each slide link';return}}
+ if(typeof JSZip==='undefined'){{b.textContent='Zip unavailable: use each file link';return}}
  b.disabled=true;b.textContent='Zipping…';
  try{{
   const z=new JSZip();
   for(const f of b.dataset.files.split(' ')){{const r=await fetch(f);if(!r.ok)throw new Error(f);z.file(f,await r.blob())}}
-  const url=URL.createObjectURL(await z.generateAsync({{type:'blob'}}));
-  const a=document.createElement('a');a.href=url;a.download=b.dataset.zip;document.body.appendChild(a);a.click();a.remove();
-  setTimeout(()=>URL.revokeObjectURL(url),4000);b.textContent=label;
- }}catch(err){{b.textContent='Zip failed: use each slide link'}}
+  await saveFile(b.dataset.zip,await z.generateAsync({{type:'blob'}}));
+  b.textContent=label;
+ }}catch(err){{b.textContent=declined(err)?label:err&&err.code==='unavailable'?'Saving unavailable here':'Zip failed: use each file link'}}
  b.disabled=false;
 }}));
 document.querySelectorAll('[data-copy]').forEach(b=>b.addEventListener('click',()=>{{

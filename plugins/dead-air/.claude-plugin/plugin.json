@@ -1,7 +1,7 @@
 {
   "name": "dead-air",
   "description": "Schmim Knews · Dead Air — turns News Blind Spots dashboard rows (or any topic) into Instagram carousels and reported deep-dive Reels, with a review page and an Airtable log",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "author": {
     "name": "schmimran"
   }

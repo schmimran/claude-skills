@@ -49,7 +49,7 @@ Run this block once, as is:
 
 ```bash
 # --- dead-air setup: identical in all three commands (a test checks) ---
-DEAD_AIR_VERSION=0.3.1
+DEAD_AIR_VERSION=0.4.0
 export PYTHONDONTWRITEBYTECODE=1
 DA_WS="$PWD/dead-air"; DA_DAY="$(date +%F)"
 DA_REPO="${DEAD_AIR_REPO:-https://github.com/schmimran/claude-skills.git}"
@@ -169,9 +169,10 @@ Launch `dead-air-qa` (`subagent_type: "dead-air:dead-air-qa"`) with `out_dir`, `
 
 ## Phase 8 — Deliver
 
-1. **Review page** per `${CLAUDE_PLUGIN_ROOT}/references/review-page.md`, built with `python3 -B <DA_ROOT>/scripts/review_page.py`. Use `--name dead-air-<date>-<format>-vN` for a re-cut. A carousel-only run has no MP4 or cover to attach, so publish the PNGs only. With no `reel_length` in the calls, `review_page.py` leaves out the Reel panel and the Reel caption.
-2. **Project docs:** upload the post JSON, the calls JSON and `<name>.md` from `<DA_WS>/posts/` to project `dead-air/posts/` with `project_write` and absolute `local_path`s. New files only; nothing from `work/` or `out/`.
-3. **IG Posts row**, only if the carousel is for posting:
+1. **Bundle folder:** stage it with `python3 -B <DA_ROOT>/scripts/bundle_stage.py <post.json> <DA_WS>/out/<name> <calls.json> <folder>`, where `<folder>` is its `<date>_<format><NN>` name (a re-cut gets the next NN; the script records `bundle` and `bundle_files` in the calls JSON itself and prints the files to publish). Without `--with-reel` the bundle holds the slides and `caption_carousel.txt` only. `${CLAUDE_PLUGIN_ROOT}/references/render-guide.md` §7 has the naming convention, how NN is counted, and what to do when it refuses.
+2. **Review page** per `${CLAUDE_PLUGIN_ROOT}/references/review-page.md`, built with `python3 -B <DA_ROOT>/scripts/review_page.py`. Use `--name dead-air-<date>-<format>-vN` for a re-cut. A carousel-only run has no MP4 or cover to attach, so publish the PNGs and the bundle files only, declaring `capabilities: {"downloads": true}`. With no `reel_length` in the calls, `review_page.py` leaves out the Reel panel and the Reel caption.
+3. **Project docs:** upload the post JSON, the calls JSON and `<name>.md` from `<DA_WS>/posts/` to project `dead-air/posts/` with `project_write` and absolute `local_path`s. New files only; nothing from `work/` or `out/`. The `.md` records the bundle folder name.
+4. **IG Posts row**, only if the carousel is for posting:
    - `--post` or an unattended run → write the row, Status Ready.
    - otherwise, interactive → this is the command's one question: "Is this carousel for posting? (writes an IG Posts row, Status Ready)". Ask it **after** everything else is delivered, so nothing waits on the answer. If there is no answer, write no row, and say so in the report.
 

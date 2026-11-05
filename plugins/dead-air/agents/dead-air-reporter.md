@@ -4,7 +4,7 @@ description: Reports one Dead Air story from primary and Tier-A sources — time
 tools: WebSearch, WebFetch, Read, TodoWrite
 model: sonnet
 color: blue
-disable-model-invocation: true
+disable-model-invocation: false
 ---
 
 > **Reference files.** `${CLAUDE_PLUGIN_ROOT}/references/...` paths below are absolute.

@@ -2,7 +2,7 @@
 name: dead-air-reel
 description: Build one reported Dead Air deep-dive Reel (plus its carousel) on any topic — a dashboard record, URLs, or a plain-language topic — with an honest 11-outlet coverage check.
 argument-hint: "<topic | record ID | URL…> [--families open|close] [--post] [--unattended]"
-disable-model-invocation: true
+disable-model-invocation: false
 ---
 
 Build one reported deep-dive Reel: $ARGUMENTS
@@ -54,7 +54,7 @@ Run this block once, as is:
 
 ```bash
 # --- dead-air setup: identical in all three commands (a test checks) ---
-DEAD_AIR_VERSION=0.3.0
+DEAD_AIR_VERSION=0.3.1
 export PYTHONDONTWRITEBYTECODE=1
 DA_WS="$PWD/dead-air"; DA_DAY="$(date +%F)"
 DA_REPO="${DEAD_AIR_REPO:-https://github.com/schmimran/claude-skills.git}"

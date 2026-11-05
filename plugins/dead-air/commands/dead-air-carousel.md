@@ -2,7 +2,7 @@
 name: dead-air-carousel
 description: Build or re-cut one Dead Air carousel from chosen Stories records or an existing post JSON — no story selection; optional Reel with --with-reel.
 argument-hint: "<record IDs…> [--format single|bundle|weekly|update] | --from <project path to post JSON> [--with-reel] [--post] [--unattended]"
-disable-model-invocation: true
+disable-model-invocation: false
 ---
 
 Build one Dead Air carousel: $ARGUMENTS
@@ -49,7 +49,7 @@ Run this block once, as is:
 
 ```bash
 # --- dead-air setup: identical in all three commands (a test checks) ---
-DEAD_AIR_VERSION=0.3.0
+DEAD_AIR_VERSION=0.3.1
 export PYTHONDONTWRITEBYTECODE=1
 DA_WS="$PWD/dead-air"; DA_DAY="$(date +%F)"
 DA_REPO="${DEAD_AIR_REPO:-https://github.com/schmimran/claude-skills.git}"

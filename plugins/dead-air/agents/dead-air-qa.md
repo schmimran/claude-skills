@@ -4,7 +4,7 @@ description: Looks at every rendered Dead Air slide and a frame sheet of the Ree
 tools: Bash, Read, TodoWrite
 model: sonnet
 color: red
-disable-model-invocation: true
+disable-model-invocation: false
 ---
 
 > **Reference files.** `${CLAUDE_PLUGIN_ROOT}/references/...` paths below are absolute.

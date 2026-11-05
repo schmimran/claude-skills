@@ -2,7 +2,7 @@
 name: dead-air
 description: Daily Dead Air editor for @schmimknews — reads the dashboard, builds the day's four-story carousel and its Reel plus any Update companions, publishes a review page, logs to Airtable.
 argument-hint: "[--date YYYY-MM-DD] [--reels 1|2] [--format bundle|weekly] [--dry-run] [--unattended]"
-disable-model-invocation: true
+disable-model-invocation: false
 ---
 
 Run today's Dead Air post from the News Blind Spots dashboard: $ARGUMENTS
@@ -54,7 +54,7 @@ Run this block once, as is:
 
 ```bash
 # --- dead-air setup: identical in all three commands (a test checks) ---
-DEAD_AIR_VERSION=0.3.0
+DEAD_AIR_VERSION=0.3.1
 export PYTHONDONTWRITEBYTECODE=1
 DA_WS="$PWD/dead-air"; DA_DAY="$(date +%F)"
 DA_REPO="${DEAD_AIR_REPO:-https://github.com/schmimran/claude-skills.git}"

@@ -4,7 +4,7 @@ description: Checks one Dead Air story's specific claim at each of the 11 major 
 tools: WebSearch, WebFetch, Read, TodoWrite
 model: sonnet
 color: yellow
-disable-model-invocation: true
+disable-model-invocation: false
 ---
 
 > **Reference files.** `${CLAUDE_PLUGIN_ROOT}/references/...` paths below are absolute.

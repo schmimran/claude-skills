@@ -232,8 +232,8 @@ def check_copy(post):
     f = post["format"]
     mode = post.get("mode", "dashboard")
     if mode not in ("dashboard", "adhoc"): errs.append(f"mode must be dashboard or adhoc, got {mode!r}")
-    # Ad-hoc deep dives report what the coverage check found, so `ran` squares are allowed there only (SPEC §5.3).
-    adhoc_deep = f == "deep" and mode == "adhoc"
+    # `ran` squares: updates, and ad-hoc deep dives, which report what the coverage check found (SPEC §5.3).
+    ran_allowed = f == "update" or (f == "deep" and mode == "adhoc")
     n = {"single": 1, "deep": 1, "update": 1, "bundle": 3, "weekly": 3}[f]
     if len(post["stories"]) != n: errs.append(f"{f} needs {n} stories, got {len(post['stories'])}")
     if f in ("bundle", "weekly") and post.get("bundle_hook") not in BUNDLE_HOOKS:
@@ -249,7 +249,7 @@ def check_copy(post):
         if len(g) != 11 or set(g) - STATES: errs.append(f"{tag}: grid must be 11 of {STATES}"); continue
         if s["confidence"] not in ("Verified", "Probable"): errs.append(f"{tag}: {s['confidence']} never posts")
         sil, ran, unc = g.count("silent"), g.count("ran"), g.count("unchecked")
-        if f != "update" and ran and not adhoc_deep:
+        if ran and not ran_allowed:
             errs.append(f"{tag}: a Flagged story can't have a 'ran' square (use format update, or mode adhoc on a deep post)")
         if f != "update": errs += [f"{tag}: {e}" for e in stat_errors(s)]
         for idx, st in enumerate(g):
@@ -356,12 +356,17 @@ def default_fonts():
              Path("node_modules/@fontsource"), Path("dead-air/node_modules/@fontsource")]
     return str(next((c for c in cands if c.is_dir()), cands[0]))
 
+def _secs(flag, v):
+    try: return float(v)
+    except ValueError: raise SystemExit(f"{flag}: '{v}' is not a number of seconds")
+
 def parse_budget(spec):
     out = {}
     for part in spec.split(","):
         k, _, v = part.partition("=")
-        if k.strip() not in REEL_BUDGET: raise SystemExit(f"--budget: unknown slide '{k}' (use {', '.join(REEL_BUDGET)})")
-        out[k.strip()] = float(v)
+        k = k.strip()
+        if k not in REEL_BUDGET: raise SystemExit(f"--budget: unknown slide '{k}' (use {', '.join(REEL_BUDGET)})")
+        out[k] = _secs("--budget", v)
     return out
 
 def main():
@@ -371,10 +376,11 @@ def main():
     fdir = _opt(a, "--fonts") or default_fonts()
     only = _opt(a, "--only")
     if only not in (None, "reel", "carousel"): raise SystemExit("--only must be reel or carousel")
-    if _opt(a, "--budget"): REEL_BUDGET.update(parse_budget(_opt(a, "--budget")))
-    if _opt(a, "--open-family"):
-        b, _, fin = _opt(a, "--open-family").partition(",")
-        OPEN_FAMILY.update(budget=float(b), final=float(fin or OPEN_FAMILY["final"]))
+    budget, open_family = dict(REEL_BUDGET), dict(OPEN_FAMILY)
+    if (v := _opt(a, "--budget")): budget.update(parse_budget(v))
+    if (v := _opt(a, "--open-family")):
+        b, _, fin = v.partition(",")
+        open_family.update(budget=_secs("--open-family", b), final=_secs("--open-family", fin) if fin else open_family["final"])
     post = json.loads(post_p.read_text())
     errs = check_copy(post)
     if errs:
@@ -391,7 +397,9 @@ def main():
     problems, files, frames = [], [], []
     with sync_playwright() as p:
         b = p.chromium.launch()
-        passes = [("slide", slides)] * (only != "reel") + [("reel", reels)] * (only != "carousel")
+        passes = []
+        if only != "reel": passes.append(("slide", slides))
+        if only != "carousel": passes.append(("reel", reels))
         for kind, items in passes:
             for i, body in enumerate(items, 1):
                 pg = b.new_page(viewport={"width": 1080, "height": 1350})
@@ -405,8 +413,8 @@ def main():
                 else:
                     words = pg.evaluate(GROUPS_JS)
                     kind_ = pg.evaluate("document.querySelector('.slide').dataset.kind")
-                    if kind_ == "family" and i == 1: holds = holds_for(words, OPEN_FAMILY["budget"], OPEN_FAMILY["final"])
-                    else: holds = holds_for(words, REEL_BUDGET.get(kind_, 6))
+                    if kind_ == "family" and i == 1: holds = holds_for(words, open_family["budget"], open_family["final"])
+                    else: holds = holds_for(words, budget.get(kind_, 6))
                     for k in range(1, len(words) + 1):
                         pg.evaluate(SHOW_JS, k)
                         fr = fdir_frames / f"r{i:02d}-{k:02d}.png"

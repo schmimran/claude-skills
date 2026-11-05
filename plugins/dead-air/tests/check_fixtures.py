@@ -22,7 +22,10 @@ ap.add_argument("--fonts", required=True)
 ap.add_argument("--out", required=True)
 A = ap.parse_args()
 OUT = Path(A.out)
-shutil.rmtree(OUT, ignore_errors=True); OUT.mkdir(parents=True)
+MARK = OUT / ".dead-air-test-out"
+if OUT.exists() and any(OUT.iterdir()) and not MARK.exists():
+    sys.exit(f"refusing to wipe {OUT}: not empty and not a previous test output dir")
+shutil.rmtree(OUT, ignore_errors=True); OUT.mkdir(parents=True); MARK.touch()
 
 results = []
 
@@ -55,7 +58,8 @@ def final_frame(d, slide_no):
 
 def expect_fail(name, post, needle):
     code, log, _ = render(name, post)
-    record(name, code == 1 and needle in log, f"exit {code}; wanted '{needle}'" if not (code == 1 and needle in log) else "")
+    ok = code == 1 and needle in log
+    record(name, ok, "" if ok else f"exit {code}; wanted '{needle}'")
 
 # ---------- 1. both fixtures render clean ----------
 def full_render_checks(name, post, pngs, steps, lo, hi, stem):
@@ -67,10 +71,10 @@ def full_render_checks(name, post, pngs, steps, lo, hi, stem):
     ok = code == 0 and not problems and n_png == pngs and st == steps and secs is not None and lo <= secs <= hi \
          and mp4.exists() and cover.exists()
     record(name, ok, f"exit {code}, {n_png} PNGs, {st} steps, {secs} s reported, {probe(mp4) if mp4.exists() else '-'} s in the MP4, problems={problems}")
-    return d, log
+    return d
 
-d_b, _ = full_render_checks("1-bundle", BUNDLE, 5, 25, 43, 45, "schmimknews-2026-10-31-bundle")
-d_h, _ = full_render_checks("1-hannibal", DEEP, 6, 28, 56, 58, "schmimknews-2026-10-31-deep")
+d_b = full_render_checks("1-bundle", BUNDLE, 5, 25, 43, 45, "schmimknews-2026-10-31-bundle")
+d_h = full_render_checks("1-hannibal", DEEP, 6, 28, 56, 58, "schmimknews-2026-10-31-deep")
 stem_h = "schmimknews-2026-10-31-deep"
 record("1-hannibal Reel opens on the families slide",
        sha(final_frame(d_h, 1)) == sha(d_h / f"{stem_h}-02.png"), "Reel slide 1 == carousel slide 2 (families)")
@@ -126,7 +130,7 @@ def single(flash, stat=None):
 
 # Story 1's copy was written for a bundle row and a Flash Reel cover. On a non-Flash single its headline
 # runs 4 lines at hook-l (max 3) and its stat 3 lines (max 2): the render check must catch that.
-code, log, d = render("6-single uncut copy overflows", single(False))
+code, log, d = render("6-single uncut copy overflows", single(False), "--only", "carousel")
 probs = json.loads((d / "checks.json").read_text())["problems"] if (d / "checks.json").exists() else []
 record("6-single uncut copy overflows", code == 1 and any("hook--l runs 4 lines" in x for x in probs), f"exit {code}, {probs}")
 
@@ -139,21 +143,21 @@ record("6-single", code == 0 and n == 3 and (d / "schmimknews-2026-10-31-single-
        f"exit {code}, {n} PNGs, Reel {st} steps / {secs} s" + ("" if code == 0 else f" {log.strip()[-300:]}"))
 
 # ---------- 7. review page ----------
-def review(name, post_json, d, calls, *flags):
+def review(post_json, d, calls, *flags):
     r = subprocess.run([sys.executable, str(SCRIPTS / "review_page.py"), str(post_json), str(d / "review"), str(calls), *flags],
                        capture_output=True, text=True)
     return r.returncode, list((d / "review").glob("*.html")), r.stdout + r.stderr
 
 for tag, d, pj, calls in (("bundle", d_b, FX / "2026-10-31-bundle.json", FX / "2026-10-31-calls.json"),
                           ("hannibal", d_h, FX / "2026-10-31-deep-hannibal.json", FX / "2026-10-31-deep-hannibal-calls.json")):
-    code, pages, log = review(f"7-{tag}", pj, d, calls)
+    code, pages, log = review(pj, d, calls)
     media = sorted(f.name for f in d.iterdir() if f.suffix in (".png", ".mp4"))
     html_ = pages[0].read_text() if len(pages) == 1 else ""
     missing = [m for m in media if m not in html_]
     record(f"7-{tag} review page", code == 0 and len(pages) == 1 and not missing,
            f"{len(pages)} HTML file(s), {len(media)} media, missing={missing}" + (f" {log}" if code else ""))
     shutil.rmtree(d / "review")
-code, pages, log = review("7-flags", FX / "2026-10-31-deep-hannibal.json", d_h, FX / "2026-10-31-deep-hannibal-calls.json",
+code, pages, log = review(FX / "2026-10-31-deep-hannibal.json", d_h, FX / "2026-10-31-deep-hannibal-calls.json",
                           "--title", "Dead Air: Hannibal", "--h1", "Dead Air · The Hannibal order", "--name", "dead-air-hannibal")
 html_ = pages[0].read_text() if pages else ""
 record("7-review page --title --h1 --name",
@@ -172,6 +176,18 @@ ok = (code == 0
       and secs is not None and 50.5 <= secs <= 53.5)
 record("7a-families at position 5, Reel ~52 s", ok,
        f"exit {code}, {st} steps, {secs} s reported, {probe(d / f'{stem_h}-reel.mp4') if code == 0 else '-'} s in the MP4")
+
+# ---------- §7.4.3-4 flags ----------
+code, log, d = render("flags --only reel --budget", BUNDLE, "--only", "reel", "--budget", "hook=6")
+st, secs = reel_stats(log)
+pngs = list(d.glob("*-[0-9][0-9].png"))
+record("flags --only reel --budget hook=6", code == 0 and not pngs and st == 25 and secs is not None and secs > 44.5
+       and (d / "schmimknews-2026-10-31-bundle-reel.mp4").exists(), f"exit {code}, {len(pngs)} carousel PNGs, {secs} s (default 43.9)")
+for name, extra, needle in (("flags --budget unknown slide", ("--budget", "intro=3"), "unknown slide"),
+                            ("flags --open-family not a number", ("--open-family", "long"), "not a number"),
+                            ("flags --only bad value", ("--only", "gif"), "--only must be")):
+    code, log, _ = render(name, BUNDLE, *extra)
+    record(name, code != 0 and needle in log, "" if needle in log else log.strip()[-200:])
 
 # ---------- summary ----------
 failed = [r for r in results if not r[1]]

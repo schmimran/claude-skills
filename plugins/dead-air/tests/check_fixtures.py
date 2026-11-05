@@ -1,19 +1,24 @@
 #!/usr/bin/env python3
-"""SPEC §13 acceptance tests 1-7a and addendum v2.1 §F tests for the dead-air scripts, against the bundled fixtures.
+"""SPEC §13 acceptance tests 1-7a, addendum v2.1 §F and addendum v2.2 §E (+ the 0.3.0 release tests)
+for the dead-air plugin, against the bundled fixtures.
 
-  python3 check_fixtures.py --python <python with playwright> --fonts <@fontsource dir> --out <scratch dir>
+  python3 -B check_fixtures.py --python <python with playwright> --fonts <@fontsource dir> --out <scratch dir>
 
 Stdlib only. Runs render.py and review_page.py as subprocesses on temp copies of the fixtures,
 so the fixtures themselves are never modified. Exits 1 if any test fails.
 """
-import argparse, copy, hashlib, json, re, shutil, subprocess, sys
+import argparse, copy, hashlib, json, os, re, shutil, subprocess, sys
 from pathlib import Path
+
+sys.dont_write_bytecode = True   # addendum v2.2 §I: importing the scripts below must not leave __pycache__/
 
 HERE = Path(__file__).resolve().parent
 SCRIPTS = HERE.parent / "scripts"
 FX = HERE / "fixtures"
 DESIGN = FX / "design-system"
-BUNDLE = json.loads((FX / "2026-10-31-bundle.json").read_text())
+# The Oct 31 bundle was posted before 0.3.0 with three stories: it renders only as a re-cut (addendum v2.2 §F).
+BUNDLE3 = json.loads((FX / "2026-10-31-bundle.json").read_text())
+BUNDLE = dict(BUNDLE3, recut_of="dead-air/posts/legacy/bundle-2026-10-31.json")
 DEEP = json.loads((FX / "2026-10-31-deep-hannibal.json").read_text())
 UPDATE = json.loads((FX / "2026-11-05-update.json").read_text())
 sys.path.insert(0, str(SCRIPTS))
@@ -41,7 +46,7 @@ def render(name, post, *extra):
     """Write the post to OUT/<name>.json, render into OUT/<name>/, return (exit code, stdout+stderr, out dir)."""
     p = OUT / f"{name}.json"; p.write_text(json.dumps(post, ensure_ascii=False, indent=1))
     d = OUT / name
-    r = subprocess.run([A.python, str(SCRIPTS / "render.py"), str(p), str(DESIGN), str(d), "--fonts", A.fonts, *extra],
+    r = subprocess.run([A.python, "-B", str(SCRIPTS / "render.py"), str(p), str(DESIGN), str(d), "--fonts", A.fonts, *extra],
                        capture_output=True, text=True)
     return r.returncode, r.stdout + r.stderr, d
 
@@ -152,7 +157,7 @@ record("6-single", code == 0 and n == 3 and (d / "schmimknews-2026-10-31-single-
 
 # ---------- 7. review page ----------
 def review(post_json, d, calls, *flags):
-    r = subprocess.run([sys.executable, str(SCRIPTS / "review_page.py"), str(post_json), str(d / "review"), str(calls), *flags],
+    r = subprocess.run([sys.executable, "-B", str(SCRIPTS / "review_page.py"), str(post_json), str(d / "review"), str(calls), *flags],
                        capture_output=True, text=True)
     return r.returncode, list((d / "review").glob("*.html")), r.stdout + r.stderr
 
@@ -219,7 +224,7 @@ record("carousel-only review page (no reel_length)", code == 0 and "bundle-05.pn
 shutil.rmtree(d_b / "review", ignore_errors=True)
 
 # A flag followed by another flag is a missing value, not a value.
-r = subprocess.run([A.python, str(SCRIPTS / "render.py"), str(FX / "2026-10-31-bundle.json"), str(DESIGN), str(OUT / "flag-missing"),
+r = subprocess.run([A.python, "-B", str(SCRIPTS / "render.py"), str(FX / "2026-10-31-bundle.json"), str(DESIGN), str(OUT / "flag-missing"),
                     "--only", "--fonts", A.fonts], capture_output=True, text=True)
 record("flag with missing value refused", r.returncode != 0 and "--only needs a value" in r.stdout + r.stderr, (r.stdout + r.stderr).strip()[-200:])
 
@@ -255,24 +260,6 @@ if code == 0:
     for k in range(2, 4):   # each pickup lights its square on its own step
         record(f"F1 update Reel step {k} differs from step {k+1}", sha(final_frame(d_u, k)) != sha(final_frame(d_u, k + 1)))
 
-# The day's post and its companion on one review page: a Nov 5 day post (the bundle fixture, re-dated, a different ask).
-day = copy.deepcopy(BUNDLE); day["date"] = "2026-11-05"
-code_d, log_d, d_day = render("F1-day", day, "--only", "carousel")
-calls_day = calls_without_reel("F1-day-calls.json")
-code, pages, log = review(OUT / "F1-day.json", d_day, calls_day, "--companion", str(FX / "2026-11-05-update.json"), str(UPD_CALLS))
-html_ = pages[0].read_text() if pages else ""
-media = sorted(f.name for f in d_day.iterdir() if f.suffix == ".png") + sorted(f.name for f in d_u.iterdir() if f.suffix in (".png", ".mp4"))
-missing = [m for m in media if m not in html_]
-record("F1 day's post + Update companion on one review page",
-       code_d == 0 and code == 0 and len(pages) == 1 and not missing and 'id="cap-1"' in html_ and 'id="rcap-1"' in html_,
-       f"{len(pages)} page(s), missing={missing} " + (log or log_d).strip()[-200:])
-shutil.rmtree(d_day / "review", ignore_errors=True)
-same_ask = copy.deepcopy(UPDATE); same_ask["ask"] = day["ask"]
-sa = OUT / "F1-same-ask.json"; sa.write_text(json.dumps(same_ask, ensure_ascii=False))
-code, _, log = review(OUT / "F1-day.json", d_day, calls_day, "--companion", str(sa), str(UPD_CALLS))
-record("F1 companion with the day's ask refused", code != 0 and "day's ask" in log, log.strip()[-200:])
-shutil.rmtree(d_day / "review", ignore_errors=True)
-
 # ---------- F.4 update copy checks ----------
 p = copy.deepcopy(UPDATE); del p["update"]["topic_line"]
 expect_fail("F4 missing topic_line", p, "update.topic_line is missing")
@@ -298,7 +285,7 @@ record("F4 topic_line over 2 lines fails", code == 1 and any("p.lede runs" in x 
 # ---------- F.1 / F.2 / F.5 the day's plan (plan_day.py) ----------
 def plan(inp):
     p = OUT / "plan-in.json"; p.write_text(json.dumps(inp))
-    r = subprocess.run([sys.executable, str(SCRIPTS / "plan_day.py"), str(p)], capture_output=True, text=True)
+    r = subprocess.run([sys.executable, "-B", str(SCRIPTS / "plan_day.py"), str(p)], capture_output=True, text=True)
     return json.loads(r.stdout) if r.returncode == 0 else {"error": r.stderr}
 
 def story(sid, status="Flagged", **kw):
@@ -311,11 +298,11 @@ def row(rid, post_date, fmt, stories, status="Ready", slot=None):
 NOV5 = {"run_date": "2026-11-05", "now": "2026-11-05T06:00:00-05:00"}
 base_rows = [row("rowOct22", "2026-10-22", "bundle", ["gas", "s2", "s3"]), row("rowOct31", "2026-10-31", "bundle", ["s4", "s5", "s6"])]
 base_stories = [story("gas", "Covered", first_pickup={"outlet": "WSJ", "date": "2026-11-01"}),
-                story("oil", override=True), story("s7"), story("s8")]
+                story("oil", override=True), story("s7"), story("s8"), story("s9")]
 pl = plan(dict(NOV5, ig_posts=base_rows, stories=base_stories))
-ok = pl.get("day", {}).get("format") == "single" and pl["day"]["eligible"][:1] == ["oil"] \
-     and [c["story"] for c in pl["companions"]] == ["gas"] and not pl["corrections"]
-record("F1 plan: one Covered story -> the day's normal single + one Update companion (two IG rows)", ok, json.dumps(pl)[:300])
+ok = pl.get("day", {}).get("format") == "bundle" and [x["id"] for x in pl["day"]["stories"]][:1] == ["oil"] \
+     and len(pl["day"]["stories"]) == 4 and [c["story"] for c in pl["companions"]] == ["gas"] and not pl["corrections"]
+record("F1 plan: one Covered story -> the day's four-story bundle (override leads) + one Update companion", ok, json.dumps(pl)[:300])
 
 pl = plan(dict(NOV5, ig_posts=base_rows + [row("rowOct10", "2026-10-10", "single", ["intel"])],
                stories=base_stories + [story("intel", "Covered", first_pickup={"outlet": "CNN", "date": "2026-10-10"})]))
@@ -332,7 +319,10 @@ record("F5 Ready row with a past slot blocks a repeat within 7 days",
        sk.get("s7") == "posted in the last 7 days" and pl["assumed_posted"] == ["rowNov2"], json.dumps(pl["day"])[:300])
 pl = plan(dict(NOV5, ig_posts=[row("rowNov5", "2026-11-05", "single", ["s7"], slot="2026-11-05T08:00:00-05:00")],
                stories=[story("s7"), story("s8")]))
-record("F5 Ready row with a future slot is not yet posted", pl["assumed_posted"] == [] and "s7" in pl["day"]["eligible"], json.dumps(pl)[:300])
+sk = {s["id"]: s["reason"] for s in pl["day"]["skipped"]}
+record("J.1 a queued Ready row (future slot) counts as posted and holds its slot",
+       pl["queued"] == ["rowNov5"] and pl["assumed_posted"] == [] and sk.get("s7") == "posted in the last 7 days"
+       and pl["next_slot"] == "2026-11-06T08:00:00-05:00", json.dumps(pl)[:400])
 pl = plan(dict(NOV5, ig_posts=[row("rowOct20", "2026-10-20", "single", ["s9"])], stories=[story("s8")]))
 record("D stale Ready rows (>7 days past slot) listed", [s["id"] for s in pl["stale_ready"]] == ["rowOct20"], json.dumps(pl["stale_ready"]))
 
@@ -341,13 +331,10 @@ pl = plan(dict(NOV5, ig_posts=[row("rowOct25", "2026-10-25", "bundle", ["g1", "g
 record("A.3 three Updates: two companions oldest pickup first, one deferred",
        [c["story"] for c in pl["companions"]] == ["g1", "g2"] and [c["story"] for c in pl["deferred_updates"]] == ["g3"],
        json.dumps(pl)[:300])
-# Yesterday's companion is the newest row: it is skipped for alternation (the last day's post was the Oct 31 bundle),
-# and its story is never updated twice.
 pl = plan(dict(NOV5, ig_posts=base_rows + [row("rowNov4u", "2026-11-04", "update", ["gas"], slot="2026-11-04T15:00:00-05:00")],
-               stories=[s for s in base_stories if s["id"] != "oil"]))
-record("A an earlier Update row is skipped for alternation and never repeats",
-       pl["companions"] == [] and pl["day"]["format"] == "single" and "last post was a bundle" in pl["day"]["rule"],
-       json.dumps(pl)[:300])
+               stories=[x for x in base_stories if x["id"] != "oil"] + [story("s10")]))
+record("A an earlier Update row's story is never updated again",
+       pl["companions"] == [] and pl["day"]["format"] == "bundle", json.dumps(pl)[:300])
 
 # ---------- code-review fixes (PR #59) ----------
 def copy_errs(mut):
@@ -373,12 +360,12 @@ e = copy_errs(lambda p: (p["update"].__setitem__("breaker_date", "2026-10-18"),
                          p["stories"][0].__setitem__("headline", "Update: WSJ ran it 14 days late.")))
 record("review-fix breaker_date: a headline counted from it passes", e == [], f"{e}")
 
-# plan_day: the weekly may repeat this week's stories (Sunday Nov 8).
+# plan_day: the weekly may repeat this week's stories (Sunday Nov 8), four of them.
 SUN = {"run_date": "2026-11-08", "now": "2026-11-08T06:00:00-05:00"}
-wk_rows = [row("rowNov3", "2026-11-03", "single", ["w1"]), row("rowNov5", "2026-11-05", "bundle", ["w2", "w3", "w4"])]
-pl = plan(dict(SUN, ig_posts=wk_rows, stories=[story(f"w{i}") for i in range(1, 5)]))
+wk_rows = [row("rowNov3", "2026-11-03", "single", ["w1"]), row("rowNov5", "2026-11-05", "bundle", ["w2", "w3", "w4", "w5"])]
+pl = plan(dict(SUN, ig_posts=wk_rows, stories=[story(f"w{i}") for i in range(1, 6)]))
 record("review-fix weekly may repeat this week's stories",
-       pl["day"]["format"] == "weekly" and len(pl["day"]["eligible"]) == 4 and not pl["day"]["skipped"], json.dumps(pl["day"])[:300])
+       pl["day"]["format"] == "weekly" and len(pl["day"]["stories"]) == 4 and not pl["day"]["skipped"], json.dumps(pl["day"])[:300])
 pl = plan(dict(NOV5, ig_posts=wk_rows[:1], stories=[story("w1"), story("w2")]))
 record("review-fix non-weekly still skips this week's stories",
        {s["id"]: s["reason"] for s in pl["day"]["skipped"]} == {"w1": "posted in the last 7 days"}, json.dumps(pl["day"])[:300])
@@ -389,10 +376,214 @@ record("review-fix Airtable 'Z' slot parses and counts as posted", pl.get("assum
 pl = plan(dict(NOV5, ig_posts=[row("rowNaive", "2026-11-02", "single", ["s7"], slot="2026-11-02T08:00")], stories=[story("s7")]))
 record("review-fix slot without offset is a clean error", "has no UTC offset" in pl.get("error", ""), str(pl)[:300])
 
-# plan_day: --format bundle that can't be met says the flag was overridden.
-pl = plan(dict(NOV5, format_override="bundle", ig_posts=[], stories=[story("s7"), story("s8")]))
-record("review-fix --format bundle fallback names the override",
-       pl["day"]["format"] == "single" and pl["day"]["rule"].startswith("--format bundle overridden by rule 5"), pl["day"]["rule"])
+# ================= addendum v2.2 §E + the 0.3.0 release tests =================
+PLUGIN = HERE.parent
+REPO = PLUGIN.parent.parent
+COMMANDS = sorted((PLUGIN / "commands").glob("*.md"))
+
+# ---------- the four-story bundle (§F) ----------
+GAS = UPDATE["update"]["then_story"]   # the Oct 22 gas-transit story as we posted it: a real fourth story
+STORY4 = dict(copy.deepcopy(GAS), grid=list(UPDATE["update"]["then_grid"]), title="Trump's envoys pitched Kyiv on reopening Russian gas transit",
+              count="NYT ran it · 10 others didn't · 5 days", stat="The NYT ran it. Ten other major US outlets didn't.",
+              meta="NYT Oct 17 · checked Oct 17–22")
+
+def bundle4(hook="4 stories. Dead air.", fmt="bundle", still_dark=False, date=None):
+    p = copy.deepcopy(BUNDLE3); s4 = copy.deepcopy(STORY4)
+    if still_dark: s4.update(still_dark=True, count=f"Still dark: day {s4['days_dark']}.")
+    p["stories"].append(s4); p.update(bundle_hook=hook, format=fmt)
+    p["alt"] = [p["alt"][0].replace("3 US stories, 11 US outlets, dead air.", "4 stories, dead air.")] + \
+               [a.replace(" of 3", " of 4") for a in p["alt"][1:4]] + \
+               ["Story 4 of 4: Trump's envoys pitched Kyiv on reopening Russian gas transit. The NYT broke it; the other 10 major US outlets didn't run it."] + p["alt"][4:]
+    if date: p["date"] = date
+    return p
+
+B4 = bundle4()
+stem_b = "schmimknews-2026-10-31-bundle"
+d_b4 = full_render_checks("v2.2 4-story bundle renders clean (hook: 4 stories. Dead air.)", B4, 6, 25, 43, 45, stem_b)
+for hook, fmt in (("4 abroad. 0 here.", "bundle"), ("This week's dead air.", "weekly")):
+    code, log, d = render(f"v2.2-4-story-{fmt}-{len(hook)}", bundle4(hook, fmt), "--only", "carousel")   # no quotes in folder names
+    stem = f"schmimknews-2026-10-31-{fmt}"
+    n = len(list(d.glob(f"{stem}-[0-9][0-9].png")))
+    probs = json.loads((d / "checks.json").read_text())["problems"] if (d / "checks.json").exists() else ["no checks.json"]
+    record(f"v2.2 4-story {fmt} renders clean with hook '{hook}'", code == 0 and n == 6 and not probs, f"exit {code}, {n} PNGs, {probs} {log.strip()[-200:] if code else ''}")
+cover = render_mod.build_slides(B4)[0]
+record("v2.2 the bundle hook is held to one line", 'data-maxlines="1">4 stories. Dead air.' in cover)
+record("v2.2 story kickers read 'Dead Air · n of 4'", all(f"Dead Air · {i} of 4" in render_mod.build_slides(B4)[i] for i in range(1, 5)))
+
+# a three-story bundle is refused (only a re-cut may carry three) — render.py and plan_day.py
+expect_fail("v2.2 3-story bundle refused (no recut_of)", BUNDLE3, "bundle needs 4 stories, got 3")
+p = copy.deepcopy(B4); p["bundle_hook"] = "3 US stories. 11 US outlets. Dead air."
+expect_fail("v2.2 the old two-line hook refused on four stories", p, "bundle_hook must be one of")
+p = copy.deepcopy(BUNDLE); p["bundle_hook"] = "4 stories. Dead air."
+expect_fail("v2.2 a legacy re-cut keeps a legacy hook", p, "bundle_hook must be one of")
+pl = plan(dict(NOV5, ig_posts=[], stories=[story("q1", override=True), story("q2"), story("q3")]))
+record("v2.2 /dead-air plan with 3 qualifying stories: no carousel, the lead's Reel runs alone",
+       pl["day"]["format"] is None and pl["day"]["reel_only"] == "q1" and len(pl["day"]["unfilled"]) == 1
+       and pl["day"]["unfilled"][0].startswith("slot 4"), json.dumps(pl["day"])[:300])
+pl = plan(dict(NOV5, format_override="single", ig_posts=[], stories=[story("q1")]))
+record("v2.2 --format single refused by plan_day", "builds a bundle or a weekly" in pl.get("error", ""), str(pl)[:200])
+
+# a Still-dark filler gets its kicker and its count line
+SD = bundle4(still_dark=True)
+code, log, d_sd = render("v2.2 Still-dark story", SD, "--only", "carousel")
+sl = render_mod.build_slides(SD)
+record("v2.2 Still-dark filler renders with its kicker and count line",
+       code == 0 and "Dead Air · Still dark" in sl[4] and "Dead Air · 4 of 4" not in sl[4] and "Still dark: day 5." in sl[0],
+       f"exit {code} {log.strip()[-200:] if code else ''}")
+p = copy.deepcopy(SD); p["stories"][3]["count"] = "Still dark: day 9."
+expect_fail("v2.2 Still-dark count line must match days dark", p, "Still-dark story count line must read 'Still dark: day 5.'")
+p = copy.deepcopy(SD); p["stories"][2].update(still_dark=True, count=f"Still dark: day {p['stories'][2]['days_dark']}.")
+expect_fail("v2.2 at most one Still-dark story", p, "at most one Still-dark story")
+p = copy.deepcopy(SD); p["stories"].insert(0, p["stories"].pop())
+expect_fail("v2.2 a Still-dark story never leads", p, "story 1 is the lead")
+
+# the plan's fill order: new, then passed over (by days dark), then at most one Still dark; topic spread
+FILL_ROWS = [row("rowOct10", "2026-10-10", "bundle", ["d1", "x1", "x2", "x3"]), row("rowOct12", "2026-10-12", "bundle", ["d2", "x4", "x5", "x6"]),
+             row("rowNov1", "2026-11-01", "bundle", ["p1", "p2", "p3", "p4"])]
+fs = lambda sid, seen, dd, **kw: story(sid, first_seen=seen, days_dark=dd, **kw)
+pl = plan(dict(NOV5, ig_posts=FILL_ROWS, stories=[story("L", override=True), fs("n1", "2026-11-03", 5), fs("o1", "2026-10-25", 30),
+                                                   fs("o2", "2026-10-20", 20), story("d1", days_dark=60), story("d2", days_dark=50)]))
+record("v2.2 fill order: lead, new, then passed over by days dark",
+       [(x["id"], x["slot"]) for x in pl["day"]["stories"]] == [("L", "lead"), ("n1", "new"), ("o1", "passed_over"), ("o2", "passed_over")],
+       json.dumps(pl["day"]["stories"]))
+pl = plan(dict(NOV5, ig_posts=FILL_ROWS, stories=[story("L", override=True), fs("n1", "2026-11-03", 5), fs("o1", "2026-10-25", 30),
+                                                   story("d1", days_dark=60), story("d2", days_dark=50)]))
+st = pl["day"]["stories"]
+record("v2.2 a Still-dark filler (longest dark) takes the last slot, with its count line",
+       [(x["id"], x["slot"]) for x in st] == [("L", "lead"), ("n1", "new"), ("o1", "passed_over"), ("d1", "still_dark")]
+       and st[3].get("count") == "Still dark: day 60.", json.dumps(st))
+pl = plan(dict(NOV5, ig_posts=FILL_ROWS, stories=[story("L", override=True), fs("n1", "2026-11-03", 5), story("d1", days_dark=60), story("d2", days_dark=50)]))
+record("v2.2 at most one Still-dark story: two dark rows can't fill two slots",
+       pl["day"]["format"] is None and [x["id"] for x in pl["day"]["stories"]] == ["L", "n1", "d1"], json.dumps(pl["day"])[:300])
+pl = plan(dict(NOV5, ig_posts=[], stories=[story("L", override=True, topic="Gaza")] + [story(f"a{i}", topic="Gaza", days_dark=50 - i) for i in range(3)]
+                                        + [story(f"b{i}", topic="Ukraine", days_dark=10 - i) for i in range(2)]))
+record("v2.2 topic spread: no more than two from one topic while an alternative exists",
+       [x["id"] for x in pl["day"]["stories"]] == ["L", "a0", "b0", "b1"] and "note" not in pl["day"], json.dumps(pl["day"])[:300])
+pl = plan(dict(NOV5, ig_posts=[], stories=[story("L", override=True, topic="Gaza")] + [story(f"a{i}", topic="Gaza") for i in range(3)]))
+record("v2.2 topic spread relaxed (and said so) when nothing else can fill the page",
+       pl["day"]["format"] == "bundle" and "relaxed" in pl["day"].get("note", ""), json.dumps(pl["day"])[:300])
+
+# §J: queued rows hold their slots; no two posts within 48 hours share an ask; incomplete rows reported
+ASK_F, ASK_S = "Follow for the next one.", "Save this. Check back in a week."
+qrows = [dict(row("rowNov5q", "2026-11-05", "bundle", ["z1"], slot="2026-11-05T08:00:00-05:00"), ask=ASK_F, flash=False),
+         dict(row("rowNov6q", "2026-11-05", "deep", ["z2"], slot="2026-11-06T08:00:00-05:00"), ask=ASK_S, flash=True),
+         {"id": "rowOld", "post_date": "2026-10-16", "format": None, "status": "Posted", "stories": [], "carousel_slot": None}]
+pl = plan(dict(NOV5, ig_posts=qrows, stories=[story("s1")]))
+record("J.1 the next slot comes after every queued slot (Sat 10am ET)", pl["next_slot"] == "2026-11-07T10:00:00-05:00", str(pl["next_slot"]))
+record("J.4 asks of posts within 48 hours of the slot are blocked", pl["blocked_asks"] == [ASK_S], str(pl["blocked_asks"]))
+record("J Flash counts the newest queued row", pl["last_flash"] is True, str(pl["last_flash"]))
+record("J.2 rows missing Format or slot are reported, never filled",
+       pl["incomplete_rows"] == [{"id": "rowOld", "missing": ["format", "carousel_slot"]}], str(pl["incomplete_rows"]))
+
+# ---------- §G review page: download links ----------
+# The day's post (four stories, Nov 5) and its companion on one page.
+day = bundle4(date="2026-11-05")
+code_d, log_d, d_day = render("F1-day", day)
+calls_day = OUT / "F1-day-calls.json"; calls_day.write_text((FX / "2026-10-31-calls.json").read_text())
+code, pages, log = review(OUT / "F1-day.json", d_day, calls_day, "--companion", str(FX / "2026-11-05-update.json"), str(UPD_CALLS))
+html_ = pages[0].read_text() if pages else ""
+media = sorted(f.name for f in d_day.iterdir() if f.suffix in (".png", ".mp4")) + sorted(f.name for f in d_u.iterdir() if f.suffix in (".png", ".mp4"))
+missing = [m for m in media if m not in html_]
+record("F1 day's post + Update companion on one review page",
+       code_d == 0 and code == 0 and len(pages) == 1 and not missing and 'id="cap-1"' in html_ and 'id="rcap-1"' in html_,
+       f"{len(pages)} page(s), missing={missing} " + (log or log_d).strip()[-200:])
+no_dl = [m for m in media if f'href="{m}" download="{m}"' not in html_]
+record("G review page: a download link for every MP4 and PNG (download attribute)", not media == [] and not no_dl, f"{len(media)} media, without a link: {no_dl}")
+zips = re.findall(r'data-zip="([^"]+)" data-files="([^"]+)"', html_)
+want = {"schmimknews-2026-11-05-bundle-slides.zip": 6, f"{stem_u}-slides.zip": 4}
+record("G review page: a 'Download all slides' zip button per carousel, listing its PNGs",
+       {z: len(f.split()) for z, f in zips} == want and html_.count(">Download all slides</button>") == 2, f"{zips}")
+record("G review page: JSZip pinned from cdnjs", "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" in html_)
+record("G review page: 'Download video' and 'Download cover' under each Reel",
+       html_.count(">Download video</a>") == 2 and html_.count(">Download cover</a>") == 2)
+record("G review page: four story labels", all(f"Story {i} of 4" in html_ for i in range(1, 5)))
+shutil.rmtree(d_day / "review", ignore_errors=True)
+same_ask = copy.deepcopy(UPDATE); same_ask["ask"] = day["ask"]
+sa = OUT / "F1-same-ask.json"; sa.write_text(json.dumps(same_ask, ensure_ascii=False))
+code, _, log = review(OUT / "F1-day.json", d_day, calls_day, "--companion", str(sa), str(UPD_CALLS))
+record("F1 companion with the day's ask refused", code != 0 and "day's ask" in log, log.strip()[-200:])
+shutil.rmtree(d_day / "review", ignore_errors=True)
+
+# ---------- §E.1 / §C versions agree ----------
+pver = json.loads((PLUGIN / ".claude-plugin/plugin.json").read_text())["version"]
+cver = {c.name: re.findall(r"^DEAD_AIR_VERSION=(\S+)$", c.read_text(), re.M) for c in COMMANDS}
+mver = [x["version"] for x in json.loads((REPO / ".claude-plugin/marketplace.json").read_text())["plugins"] if x["name"] == "dead-air"]
+record("E.1 DEAD_AIR_VERSION matches plugin.json in all three commands (and marketplace.json)",
+       len(COMMANDS) == 3 and all(v == [pver] for v in cver.values()) and mver == [pver], f"plugin {pver}, commands {cver}, marketplace {mver}")
+
+# ---------- §A / §H setup block ----------
+BLOCK = re.compile(r"(# --- dead-air setup:.*?# --- end dead-air setup ---)", re.S)
+blocks = {c.name: BLOCK.findall(c.read_text()) for c in COMMANDS}
+record("A the setup block is identical in all three commands",
+       all(len(b) == 1 for b in blocks.values()) and len({b[0] for b in blocks.values()}) == 1, f"{ {k: len(v) for k, v in blocks.items()} }")
+SESSION_PATH = re.compile(r"/root/\.claude|/home/[^/\s]+/\.claude|synced/(?!\*)[^\s/`'\"]+|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-")
+hard = [f"{c.name}:{i}" for c in COMMANDS for i, line in enumerate(c.read_text().splitlines(), 1) if SESSION_PATH.search(line)]
+record("H.1 no hard-coded session path in any command", not hard, f"{hard}")
+
+def run_setup(home, repo_url):
+    """Run the commands' setup block in a scratch working dir with its own HOME; return its KEY=value lines."""
+    wd = OUT / "setup-wd"; shutil.rmtree(wd, ignore_errors=True); wd.mkdir()
+    env = dict(os.environ, HOME=str(home), DEAD_AIR_REPO=repo_url); env.pop("CLAUDE_PLUGIN_ROOT", None)
+    r = subprocess.run(["bash", "-c", next(iter(blocks.values()))[0]], cwd=wd, env=env, capture_output=True, text=True, timeout=120)
+    return dict(l.split("=", 1) for l in r.stdout.splitlines() if "=" in l)
+
+def plugin_copy(dst, version):
+    shutil.copytree(PLUGIN, dst, ignore=shutil.ignore_patterns("tests", "__pycache__"))
+    pj = dst / ".claude-plugin/plugin.json"; pj.write_text(json.dumps(dict(json.loads(pj.read_text()), version=version)))
+
+H = OUT / "setup-home"; shutil.rmtree(H, ignore_errors=True)
+plugin_copy(H / ".claude/plugins/synced/aaaa/dead-air", "0.1.0")
+plugin_copy(H / ".claude/plugins/synced/bbbb/dead-air~g2", pver)
+plugin_copy(H / ".claude/plugins/synced/cccc/dead-air~g3", "9.9.9")
+out = run_setup(H, "file:///nonexistent")
+record("H.2 several synced copies: the one whose version equals DEAD_AIR_VERSION wins, never the first match",
+       out.get("DA_ROOT", "").endswith("bbbb/dead-air~g2") and out.get("DA_FROM") == f"local install {pver}", f"{out}")
+shutil.rmtree(H / ".claude/plugins/synced/bbbb")
+GIT = OUT / "setup-repo"; shutil.rmtree(GIT, ignore_errors=True)
+plugin_copy(GIT / "plugins/dead-air", pver)
+git = lambda *a: subprocess.run(["git", "-C", str(GIT), "-c", "user.name=t", "-c", "user.email=t@t", *a], capture_output=True, text=True)
+git("init", "-q", "-b", "main"); git("add", "-A"); git("commit", "-qm", "fixture")
+record("A step 1 fails on a version mismatch, and so does an unreachable repo: unresolved",
+       run_setup(H, "file:///nonexistent").get("DA_ROOT") == "unresolved")
+out = run_setup(H, f"file://{GIT}")
+record("A step 2: no tag -> main, recorded as a version mismatch with its SHA",
+       out.get("DA_FROM", "").startswith("version mismatch: ran main at ") and out.get("DA_ROOT", "").endswith("src/repo/plugins/dead-air"), f"{out}")
+git("tag", f"dead-air-v{pver}")
+out = run_setup(H, f"file://{GIT}")
+sha_ = git("rev-parse", "HEAD").stdout.strip()
+record("A step 2: the release tag is fetched into dead-air/src, version-checked",
+       out.get("DA_FROM") == f"repo tag dead-air-v{pver}" and out.get("DA_COMMIT") == sha_
+       and (Path(out.get("DA_ROOT", "/x")) / "scripts/render.py").is_file(), f"{out}")
+
+# ---------- §E.2-3 the cache manifest ----------
+C = OUT / "cache-check"; shutil.rmtree(C, ignore_errors=True)
+root = OUT / "cache-root"; shutil.rmtree(root, ignore_errors=True); plugin_copy(root, pver)
+(root / "scripts/__pycache__").mkdir(exist_ok=True); (root / "scripts/__pycache__/x.pyc").write_bytes(b"x")
+for top in ("scripts", "references", "agents"): shutil.copytree(root / top, C / top)
+r = subprocess.run([sys.executable, "-B", str(SCRIPTS / "cache_manifest.py"), str(root), str(C / "VERSION"), "--commit", "abc123", "--date", "2026-11-05"],
+                   capture_output=True, text=True)
+ver = (C / "VERSION").read_text() if (C / "VERSION").exists() else ""
+check = lambda: subprocess.run(["bash", "-c", "sed '1,/^files$/d' VERSION | sha256sum -c --quiet"], cwd=C, capture_output=True, text=True).returncode
+record("E.2 cache VERSION: version, commit, date, every mirrored file, no bytecode",
+       r.returncode == 0 and ver.startswith(f"dead-air {pver}\ncommit abc123\ndate 2026-11-05\nfiles\n")
+       and "  scripts/render.py\n" in ver and "  references/editorial-rules.md\n" in ver and "  agents/dead-air-qa.md\n" in ver
+       and "__pycache__" not in ver, ver[:200])
+record("E.2 a matching cache verifies with sha256sum -c alone", check() == 0)
+(C / "references/editorial-rules.md").write_text("tampered")
+record("E.3 a changed cached file fails the checksum (the run stops)", check() != 0)
+
+# ---------- §E.4 / §B no command writes under settings/ or dev/; §I python3 -B everywhere ----------
+WRITE = re.compile(r"project_write|upload|>\s*\S*dead-air/|writes?\b(?! it)", re.I)
+bad = [f"{c.name}:{i}" for c in COMMANDS for i, line in enumerate(c.read_text().splitlines(), 1)
+       if re.search(r"dead-air/(settings|dev)/", line) and WRITE.search(line) and not re.search(r"\*\*never|never writes|never write", line, re.I)]
+record("E.4 no command writes under settings/ or dev/", not bad, f"{bad}")
+texts = [c for c in COMMANDS] + sorted((PLUGIN / "references").glob("*.md")) + sorted((PLUGIN / "agents").glob("*.md")) + [PLUGIN / "README.md", HERE / "run-fixture.sh"]
+no_b = [f"{t.name}:{i}" for t in texts for i, line in enumerate(t.read_text().splitlines(), 1)
+        if (re.search(r"(?<![\w-])python3\s+(?!-B)(?!-m venv)\S", line) or re.search(r'^\s*"\$PY"\s+(?!-B)', line))]
+record("I.1 every script runs as python3 -B (commands, references, agents, README, test runner)", not no_b, f"{no_b}")
+shutil.rmtree(root, ignore_errors=True); shutil.rmtree(C, ignore_errors=True)   # the deliberate __pycache__ above
+pyc = [str(x) for x in PLUGIN.rglob("__pycache__")]
+record("I.1 no __pycache__ left in the plugin after the test run", not pyc, f"{pyc}")
 
 # ---------- summary ----------
 failed = [r for r in results if not r[1]]

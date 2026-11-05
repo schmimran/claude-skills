@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SPEC §13 acceptance tests 1-7a for the dead-air renderer, against the bundled fixtures.
+"""SPEC §13 acceptance tests 1-7a and addendum v2.1 §F tests for the dead-air scripts, against the bundled fixtures.
 
   python3 check_fixtures.py --python <python with playwright> --fonts <@fontsource dir> --out <scratch dir>
 
@@ -15,6 +15,10 @@ FX = HERE / "fixtures"
 DESIGN = FX / "design-system"
 BUNDLE = json.loads((FX / "2026-10-31-bundle.json").read_text())
 DEEP = json.loads((FX / "2026-10-31-deep-hannibal.json").read_text())
+UPDATE = json.loads((FX / "2026-11-05-update.json").read_text())
+sys.path.insert(0, str(SCRIPTS))
+import render as render_mod   # stdlib-only at import time; playwright loads inside main()
+import review_page as review_mod   # main() is guarded; importing it only defines helpers
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--python", default=sys.executable)
@@ -202,25 +206,12 @@ code2, log, _ = render("stale-slides", p, "--only", "carousel")
 left = sorted(x.name for x in d.glob(f"{stem_h}-[0-9][0-9].png"))
 record("stale slides cleared on re-render", code1 == 0 and code2 == 0 and len(left) == 5, f"{left}" + ("" if code2 == 0 else log[-200:]))
 
-# UPDATE posts: one cover, no Reel; review page builds without a Reel panel.
-up = copy.deepcopy(BUNDLE["stories"][0]); up["grid"][5] = "ran"
-up.update(headline="Update: CNN ran it Oct 30.", stat="44 days late.")
-upd = {"date": "2026-10-31", "format": "update", "flash": False, "stories": [up], "sources": BUNDLE["sources"],
-       "alt": ["Update: CNN ran the Powerus story Oct 30, 44 days after it broke abroad."]}
-code, log, d = render("update", upd)
-n = len(list(d.glob("schmimknews-2026-10-31-update-[0-9][0-9].png")))
-record("update post renders one cover, no Reel", code == 0 and n == 1 and not list(d.glob("*.mp4")), f"exit {code}, {n} PNGs " + log.strip()[-200:])
-calls_p = OUT / "update-calls.json"; calls_p.write_text(json.dumps({"facts": [["Format", "Update"]], "calls": []}))
-code, pages, log = review(OUT / "update.json", d, calls_p)
-html_ = pages[0].read_text() if pages else ""
-record("update review page (no Reel panel)", code == 0 and len(pages) == 1 and "update-01.png" in html_ and ".mp4" not in html_,
-       log.strip()[-300:])
-code, log, _ = render("update-only-reel", upd, "--only", "reel")
-record("--only reel on an update refused", code != 0 and "has no Reel" in log, log.strip()[-200:])
-
 # Carousel-only run: calls without reel_length -> no Reel panel, no KeyError.
-calls_c = OUT / "carousel-only-calls.json"
-cj = json.loads((FX / "2026-10-31-calls.json").read_text()); cj.pop("reel_length"); calls_c.write_text(json.dumps(cj))
+def calls_without_reel(name):
+    p = OUT / name; cj = json.loads((FX / "2026-10-31-calls.json").read_text()); cj.pop("reel_length")
+    p.write_text(json.dumps(cj)); return p
+
+calls_c = calls_without_reel("carousel-only-calls.json")
 code, pages, log = review(FX / "2026-10-31-bundle.json", d_b, calls_c)
 html_ = pages[0].read_text() if pages else ""
 record("carousel-only review page (no reel_length)", code == 0 and "bundle-05.png" in html_ and ".mp4" not in html_
@@ -231,6 +222,132 @@ shutil.rmtree(d_b / "review", ignore_errors=True)
 r = subprocess.run([A.python, str(SCRIPTS / "render.py"), str(FX / "2026-10-31-bundle.json"), str(DESIGN), str(OUT / "flag-missing"),
                     "--only", "--fonts", A.fonts], capture_output=True, text=True)
 record("flag with missing value refused", r.returncode != 0 and "--only needs a value" in r.stdout + r.stderr, (r.stdout + r.stderr).strip()[-200:])
+
+# ================= addendum v2.1 §F =================
+UPD_CALLS = FX / "2026-11-05-update-calls.json"
+stem_u = "schmimknews-2026-11-05-update-gas-transit"
+
+record("review_page.stem_of matches render.post_stem",
+       all(review_mod.stem_of(p) == render_mod.post_stem(p) for p in (BUNDLE, DEEP, UPDATE)))
+
+# ---------- F.3 count line (§E) ----------
+none_story = {"grid": ["silent"] * 11, "stat": "None of the 11 biggest US newsrooms ran it."}
+e1 = render_mod.stat_errors(none_story)
+e2 = render_mod.stat_errors(dict(none_story, grid=["silent"] * 9 + ["unchecked"] * 2, stat="9 of the 10 we could check: nothing."))
+e3 = render_mod.stat_errors(dict(none_story, grid=["silent"] * 9 + ["unchecked"] * 2, stat="9 of the 10 outlets didn't run it."))
+record("F3 'None of the 11 biggest US newsrooms ran it.' passes", e1 == [], f"{e1}")
+record("F3 '9 of the 10 we could check: nothing.' fails", any("insider phrasing" in x for x in e2), f"{e2}")
+record("F3 '9 of the 10' alone still fails", any("insider phrasing" in x for x in e3), f"{e3}")
+
+# ---------- F.1 update companion: 4 slides + ~20 s Reel ----------
+code, log, d_u = render("F1-update", UPDATE)
+st, secs = reel_stats(log)
+n_png = len(list(d_u.glob(f"{stem_u}-[0-9][0-9].png")))
+problems = json.loads((d_u / "checks.json").read_text())["problems"] if (d_u / "checks.json").exists() else ["no checks.json"]
+mp4 = d_u / f"{stem_u}-reel.mp4"
+record("F1 update renders 4 slides and a 5-step ~17 s Reel",
+       code == 0 and not problems and n_png == 4 and st == 5 and secs is not None and 16.5 <= secs <= 17.5
+       and length_matches(mp4, secs), f"exit {code}, {n_png} PNGs, {st} steps, {secs} s, problems={problems}")
+if code == 0:
+    record("F1 update Reel opens on the Then slide (carousel slide 2)", sha(final_frame(d_u, 1)) == sha(d_u / f"{stem_u}-02.png"))
+    record("F1 update Reel ends on the Closer (carousel slide 4)", sha(final_frame(d_u, 5)) == sha(d_u / f"{stem_u}-04.png"))
+    record("F1 update Reel cover is the UpdateCover", sha(d_u / f"{stem_u}-reel-cover.png") == sha(d_u / f"{stem_u}-01.png"))
+    for k in range(2, 4):   # each pickup lights its square on its own step
+        record(f"F1 update Reel step {k} differs from step {k+1}", sha(final_frame(d_u, k)) != sha(final_frame(d_u, k + 1)))
+
+# The day's post and its companion on one review page: a Nov 5 day post (the bundle fixture, re-dated, a different ask).
+day = copy.deepcopy(BUNDLE); day["date"] = "2026-11-05"
+code_d, log_d, d_day = render("F1-day", day, "--only", "carousel")
+calls_day = calls_without_reel("F1-day-calls.json")
+code, pages, log = review(OUT / "F1-day.json", d_day, calls_day, "--companion", str(FX / "2026-11-05-update.json"), str(UPD_CALLS))
+html_ = pages[0].read_text() if pages else ""
+media = sorted(f.name for f in d_day.iterdir() if f.suffix == ".png") + sorted(f.name for f in d_u.iterdir() if f.suffix in (".png", ".mp4"))
+missing = [m for m in media if m not in html_]
+record("F1 day's post + Update companion on one review page",
+       code_d == 0 and code == 0 and len(pages) == 1 and not missing and 'id="cap-1"' in html_ and 'id="rcap-1"' in html_,
+       f"{len(pages)} page(s), missing={missing} " + (log or log_d).strip()[-200:])
+shutil.rmtree(d_day / "review", ignore_errors=True)
+same_ask = copy.deepcopy(UPDATE); same_ask["ask"] = day["ask"]
+sa = OUT / "F1-same-ask.json"; sa.write_text(json.dumps(same_ask, ensure_ascii=False))
+code, _, log = review(OUT / "F1-day.json", d_day, calls_day, "--companion", str(sa), str(UPD_CALLS))
+record("F1 companion with the day's ask refused", code != 0 and "day's ask" in log, log.strip()[-200:])
+shutil.rmtree(d_day / "review", ignore_errors=True)
+
+# ---------- F.4 update copy checks ----------
+p = copy.deepcopy(UPDATE); del p["update"]["topic_line"]
+expect_fail("F4 missing topic_line", p, "update.topic_line is missing")
+p = copy.deepcopy(UPDATE); p["update"]["pickups"] = p["update"]["pickups"][:1]
+expect_fail("F4 'ran' square without a dated pickup", p, "Reuters is 'ran' in the grid but has no dated pickup")
+p = copy.deepcopy(UPDATE); p["update"]["pickups"][1]["date"] = ""
+expect_fail("F4 pickup without a date", p, "must read 'Mon D'")
+p = copy.deepcopy(UPDATE); p["stories"][0]["headline"] = "Update: WSJ ran it 14 days late."
+expect_fail("F4 wrong 'N days late'", p, "headline says 14 days late; WSJ ran it 15 days")
+p = copy.deepcopy(UPDATE); p["update"]["then_grid"][2] = "ran"
+expect_fail("F4 then_grid with a 'ran' square", p, "then_grid can't have a 'ran' square")
+p = copy.deepcopy(UPDATE); p["update"]["still_dark"] = "Nine of the 11 still haven't, as of Nov 2."
+expect_fail("F4 still_dark count off the grid", p, "still_dark says 9; the grid has 8 silent")
+p = copy.deepcopy(UPDATE); p["update"]["posted"] = "2026-11-01"
+expect_fail("F4 pickup on or before our post is a correction", p, "that's a correction to report, not an Update")
+p = copy.deepcopy(UPDATE); p["flash"] = True
+expect_fail("F4 Flash Update cover", p, "never Flash")
+code, log, d_t = render("F4-long topic_line", dict(copy.deepcopy(UPDATE), update=dict(UPDATE["update"],
+    topic_line="Trump's envoys pitched Kyiv on reopening Russian gas transit through Ukraine to Europe, and urged European capitals to buy far more of it.")), "--only", "carousel")
+probs = json.loads((d_t / "checks.json").read_text())["problems"] if (d_t / "checks.json").exists() else []
+record("F4 topic_line over 2 lines fails", code == 1 and any("p.lede runs" in x and "max 2" in x for x in probs), f"exit {code}, {probs}")
+
+# ---------- F.1 / F.2 / F.5 the day's plan (plan_day.py) ----------
+def plan(inp):
+    p = OUT / "plan-in.json"; p.write_text(json.dumps(inp))
+    r = subprocess.run([sys.executable, str(SCRIPTS / "plan_day.py"), str(p)], capture_output=True, text=True)
+    return json.loads(r.stdout) if r.returncode == 0 else {"error": r.stderr}
+
+def story(sid, status="Flagged", **kw):
+    return dict({"id": sid, "status": status, "confirmation": "Verified", "days_dark": 10, "silent": 10}, **kw)
+
+def row(rid, post_date, fmt, stories, status="Ready", slot=None):
+    return {"id": rid, "post_date": post_date, "format": fmt, "status": status, "stories": stories,
+            "carousel_slot": slot or f"{post_date}T10:00:00-04:00"}
+
+NOV5 = {"run_date": "2026-11-05", "now": "2026-11-05T06:00:00-05:00"}
+base_rows = [row("rowOct22", "2026-10-22", "bundle", ["gas", "s2", "s3"]), row("rowOct31", "2026-10-31", "bundle", ["s4", "s5", "s6"])]
+base_stories = [story("gas", "Covered", first_pickup={"outlet": "WSJ", "date": "2026-11-01"}),
+                story("oil", override=True), story("s7"), story("s8")]
+pl = plan(dict(NOV5, ig_posts=base_rows, stories=base_stories))
+ok = pl.get("day", {}).get("format") == "single" and pl["day"]["eligible"][:1] == ["oil"] \
+     and [c["story"] for c in pl["companions"]] == ["gas"] and not pl["corrections"]
+record("F1 plan: one Covered story -> the day's normal single + one Update companion (two IG rows)", ok, json.dumps(pl)[:300])
+
+pl = plan(dict(NOV5, ig_posts=base_rows + [row("rowOct10", "2026-10-10", "single", ["intel"])],
+               stories=base_stories + [story("intel", "Covered", first_pickup={"outlet": "CNN", "date": "2026-10-10"})]))
+corr = [c for c in pl.get("corrections", []) if c["story"] == "intel"]
+record("F2 measurement miss -> no Update, a 'Correction due' line",
+       "intel" not in [c["story"] for c in pl.get("companions", [])] and len(corr) == 1
+       and corr[0]["line"].startswith("Correction due: intel, posted 2026-10-10, said CNN hadn't run it; CNN ran it 2026-10-10."),
+       json.dumps(pl.get("corrections"))[:300])
+
+rows5 = [row("rowNov2", "2026-11-02", "single", ["s7"], slot="2026-11-02T08:00:00-05:00")]
+pl = plan(dict(NOV5, ig_posts=rows5, stories=[story("s7"), story("s8")]))
+sk = {s["id"]: s["reason"] for s in pl["day"]["skipped"]}
+record("F5 Ready row with a past slot blocks a repeat within 7 days",
+       sk.get("s7") == "posted in the last 7 days" and pl["assumed_posted"] == ["rowNov2"], json.dumps(pl["day"])[:300])
+pl = plan(dict(NOV5, ig_posts=[row("rowNov5", "2026-11-05", "single", ["s7"], slot="2026-11-05T08:00:00-05:00")],
+               stories=[story("s7"), story("s8")]))
+record("F5 Ready row with a future slot is not yet posted", pl["assumed_posted"] == [] and "s7" in pl["day"]["eligible"], json.dumps(pl)[:300])
+pl = plan(dict(NOV5, ig_posts=[row("rowOct20", "2026-10-20", "single", ["s9"])], stories=[story("s8")]))
+record("D stale Ready rows (>7 days past slot) listed", [s["id"] for s in pl["stale_ready"]] == ["rowOct20"], json.dumps(pl["stale_ready"]))
+
+three = [story(f"g{i}", "Covered", first_pickup={"outlet": "AP", "date": f"2026-11-0{i}"}) for i in (3, 1, 2)]
+pl = plan(dict(NOV5, ig_posts=[row("rowOct25", "2026-10-25", "bundle", ["g1", "g2", "g3"])], stories=three + [story("s8")]))
+record("A.3 three Updates: two companions oldest pickup first, one deferred",
+       [c["story"] for c in pl["companions"]] == ["g1", "g2"] and [c["story"] for c in pl["deferred_updates"]] == ["g3"],
+       json.dumps(pl)[:300])
+# Yesterday's companion is the newest row: it is skipped for alternation (the last day's post was the Oct 31 bundle),
+# and its story is never updated twice.
+pl = plan(dict(NOV5, ig_posts=base_rows + [row("rowNov4u", "2026-11-04", "update", ["gas"], slot="2026-11-04T15:00:00-05:00")],
+               stories=[s for s in base_stories if s["id"] != "oil"]))
+record("A an earlier Update row is skipped for alternation and never repeats",
+       pl["companions"] == [] and pl["day"]["format"] == "single" and "last post was a bundle" in pl["day"]["rule"],
+       json.dumps(pl)[:300])
 
 # ---------- summary ----------
 failed = [r for r in results if not r[1]]

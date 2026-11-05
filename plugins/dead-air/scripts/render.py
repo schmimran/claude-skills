@@ -11,15 +11,18 @@ Usage:
                work-sans, ibm-plex-mono). Default: the first of node_modules/@fontsource
                next to this script, ./node_modules/@fontsource, ./dead-air/node_modules/@fontsource.
   --only       render just the carousel PNGs, or just the Reel (MP4 + cover). Copy checks always run.
-  --budget     override per-slide Reel seconds (keys: hook timeline claims receipt family closer).
+  --budget     override per-slide Reel seconds (keys: hook timeline claims receipt family closer,
+               and for update Reels update_then update_square update_hold update_closer).
   --open-family  seconds for a family slide that opens the Reel, and its final hold. Default 13,5.5.
 
 Formats: single | bundle | weekly | deep | update.
-Writes the carousel PNGs (1080x1350), reel.mp4 (the lead story as a deep dive, each line
-revealed in turn, about 44 s, 1080x1350, no audio), reel-cover.png and checks.json. Exits 1 on any failed
-check (copy rules or overflow). Fix the copy and re-run; never shrink type.
+Writes the carousel PNGs (1080x1350), reel.mp4 (1080x1350, no audio), reel-cover.png and checks.json.
+The Reel is the lead story as a deep dive, each line revealed in turn (about 44 s); an update's Reel
+is the Then slide, then each late pickup lighting its square, then the still-dark line (about 20 s).
+Exits 1 on any failed check (copy rules or overflow). Fix the copy and re-run; never shrink type.
 """
-import html, json, os, re, subprocess, sys
+import html, json, os, re, shutil, subprocess, sys
+from datetime import date as Date
 from pathlib import Path
 
 OUTLETS = ["NYT", "WaPo", "WSJ", "AP", "Reuters", "CNN", "ABC", "NBC", "CBS", "Fox", "NPR"]
@@ -118,7 +121,7 @@ def hook_slide(st, date, flash, segment="Dead Air"):
             f'<p class="stat" data-r data-maxlines="2">{esc(st["stat"])}</p>'
             f'<div class="proof" data-r>{grid(st["grid"], grid_label(st["grid"]))}'
             f'<p class="meta" style="margin-top:24px">{esc(st["meta"])}</p></div>'
-            f'{foot(right="news.schmim.com") if segment == "Update" else foot(cue="Swipe →")}</section>')
+            f'{foot(cue="Swipe →")}</section>')
 
 def receipt_slide(st, segment="Dead Air", small=None, show_topic=True):
     conf = st["confidence"]; on = {"Verified": 3, "Probable": 2}.get(conf, 1)
@@ -177,6 +180,47 @@ def family_slide(fm):
             f'<p class="lede" data-r data-maxlines="4">{esc(fm["who"])}</p>{q2}'
             f'<p class="meta" data-r="+">{esc(fm["src"])}</p>{foot(cue="Swipe →")}</section>')
 
+# ---------- UPDATE companion (addendum v2.1 §B): UpdateCover, Then, Now, Closer; existing classes only ----------
+def update_cover(st, up, date):
+    """HookCover markup with the stat slot left empty and a `lede` topic line under the headline. Never Flash."""
+    return (f'<section class="slide slide--hook" data-kind="hook">{kicker(f"Update · {nice_date(date)}")}'
+            f'<h1 class="hook hook--l" data-r data-maxlines="3">{esc(st["headline"])}</h1>'
+            f'<p class="lede" data-r data-maxlines="2">{esc(up["topic_line"])}</p>'
+            f'<div class="proof" data-r>{grid(st["grid"], grid_label(st["grid"]))}'
+            f'<p class="meta" style="margin-top:24px">{esc(st["meta"])}</p></div>'
+            f'{foot(cue="Swipe →")}</section>')
+
+def then_slide(up):
+    """The story slide as we posted it: the original story object, with the grid as it stood on our post date."""
+    st = dict(up["then_story"], grid=up["then_grid"])
+    return receipt_slide(st, f"Update · 01 What we posted {nice_date(up['posted'], False)}", show_topic=False)
+
+def now_slide(st, up, lit=None, added=True, dark=True):
+    """Who ran it since. `lit` = how many pickups (in listed order) show as ran; the Reel steps through 1..n.
+    `dark=False` keeps the still-dark line's space but hides it, so the layout doesn't shift between steps."""
+    picks = up["pickups"][:len(up["pickups"]) if lit is None else lit]
+    on = {p["outlet"] for p in picks}
+    g = [("ran" if OUTLETS[i] in on else "silent") if s == "ran" else s for i, s in enumerate(st["grid"])]
+    dates = " · ".join(f'{p["outlet"]} {p["date"]}' for p in picks)
+    body = "".join(f'<p class="body" data-maxlines="2">{esc(a)}</p>' for a in up["added"]) if added else ""
+    hide = "" if dark else ' style="visibility:hidden"'
+    return (f'<section class="slide" data-kind="now">{kicker("Update · 02 Who ran it since")}'
+            f'<div class="panel"><p class="label" style="margin-bottom:0">The 11 major US outlets</p>'
+            f'{grid(g, grid_label(g))}<p class="meta">{esc(dates)}</p></div>'
+            f'<div style="display:flex;flex-direction:column;gap:24px">{body}'
+            f'<p class="body" data-maxlines="2"{hide}><b>{esc(up["still_dark"])}</b></p></div>'
+            f'{foot(right="news.schmim.com")}</section>')
+
+def update_reel(post, budget):
+    """Static frames as (html, seconds): Then, one step per late pickup, the still-dark line, the Closer.
+    The `added` lines are carousel-only: there's no time to read them in a 20 s Reel."""
+    st, up = post["stories"][0], post["update"]
+    n = len(up["pickups"])
+    return ([(then_slide(up), budget["update_then"])]
+            + [(now_slide(st, up, k, added=False, dark=False), budget["update_square"]) for k in range(1, n + 1)]
+            + [(now_slide(st, up, n, added=False), budget["update_hold"]),
+               (closer_slide(post["ask"]), budget["update_closer"])])
+
 def deep_slides(st, dd, date, ask):
     sl = [hook_slide(st, date, True, "Deep dive"), timeline_slide(dd), claims_slide(dd),
           receipt_slide(st, "Deep dive · 03 Who ran it", dd.get("us_small"), show_topic=False)]
@@ -190,9 +234,10 @@ def reel_order(sl, dd):
     fm = dd.get("family") or {}
     return [sl[1], sl[0]] + sl[2:] if fm.get("open") else sl
 
-def reel_slides(post):
-    """Every post's Reel is a deep dive on its lead story, revealed line by line (Imran, Oct 31)."""
-    if post["format"] == "update": return []
+def reel_slides(post, budget):
+    """Every post's Reel is a deep dive on its lead story, revealed line by line (Imran, Oct 31).
+    An update's Reel is its own short sequence of static frames (addendum v2.1 §B)."""
+    if post["format"] == "update": return update_reel(post, budget)
     if post["format"] == "deep": return reel_order(build_slides(post), post["deep"])
     rl = post["reel"]
     return reel_order(deep_slides(rl["story"], rl["deep"], post["date"], post["ask"]), rl["deep"])
@@ -207,7 +252,9 @@ def build_slides(post):
     if f == "deep":
         dd = post["deep"]
         return deep_slides(S[0], dd, d, post["ask"])
-    if f == "update": return [hook_slide(S[0], d, flash, "Update")]
+    if f == "update":
+        up = post["update"]
+        return [update_cover(S[0], up, d), then_slide(up), now_slide(S[0], up), closer_slide(post["ask"])]
     raise SystemExit(f"unknown format {f}")
 
 # ---------- copy checks (run before rendering) ----------
@@ -217,7 +264,8 @@ def stat_errors(s):
     """The count line must be plain English a stranger understands, and literally true of the grid."""
     g, st, errs = s["grid"], s["stat"], []
     sil = g.count("silent")
-    if re.search(r"we could check|of the \d+|: nothing", st, re.I):
+    # "9 of the 10" is insider phrasing; "None of the 11 biggest US newsrooms" is the approved line (addendum v2.1 §E).
+    if re.search(r"we could check|\b\d+ of the \d+\b|: nothing", st, re.I):
         errs.append(f"stat '{st}' uses the old insider phrasing; write a sentence, e.g. 'Reuters reported it. Nine other major US outlets didn't.'")
     nums = {str(sil), NUMWORDS[sil]} | ({"none", "no "} if sil == 11 else set())
     if not any(re.search(r"\b" + re.escape(n.strip()) + r"\b", st, re.I) for n in nums):
@@ -225,6 +273,69 @@ def stat_errors(s):
     for idx, state in enumerate(g):
         if state == "broke" and not any(nm.lower() in st.lower() for nm in OUTLET_NAMES[OUTLETS[idx]] + ["Washington Post", "New York Times"]):
             errs.append(f"stat must name the outlet that broke it ({OUTLETS[idx]})")
+    return errs
+
+UPDATE_HEAD = re.compile(r"Update: (.+?) ran it (\d+) days? late\.")
+MON_D = re.compile(r"(" + "|".join(MONTHS) + r") (\d{1,2})")
+
+def mon_date(mon, day, year): return Date(int(year), MONTHS.index(mon) + 1, int(day))
+
+def md_date(s, ref):
+    """'Nov 1' -> the latest such date on or before `ref` (pickup dates carry no year)."""
+    m = MON_D.fullmatch((s or "").strip())
+    if not m: return None
+    d = mon_date(m[1], m[2], ref.year)
+    return d if d <= ref else d.replace(year=ref.year - 1)
+
+def first_count(s):
+    """The first number in a sentence, as digits or a word ('Eight of the 11 still haven't' -> 8)."""
+    m = re.search(r"\b(\d+|none|" + "|".join(NUMWORDS) + r")\b", s, re.I)
+    if not m: return None
+    w = m[1].lower()
+    return int(w) if w.isdigit() else 0 if w == "none" else NUMWORDS.index(w)
+
+def update_errors(post):
+    """Addendum v2.1 §B copy checks, plus §C: a pickup on or before our post is a correction, not an Update."""
+    up = post.get("update")
+    if not isinstance(up, dict): return ["update posts need an `update` block (post-schema §1)"]
+    errs = [f"update.{k} is missing" for k in ("of_post", "posted", "topic_line", "then_story", "then_grid",
+                                               "pickups", "added", "still_dark") if not up.get(k)]
+    if errs: return errs
+    if not re.fullmatch(r"[a-z0-9]+(-[a-z0-9]+)*", post.get("slug") or ""):
+        errs.append("update posts need `slug` (lowercase words joined by hyphens): it keeps two Updates' files apart")
+    if post.get("flash"): errs.append("an Update cover is never Flash")
+    st, tg = post["stories"][0], up["then_grid"]
+    if len(tg) != 11 or set(tg) - STATES: errs.append(f"update.then_grid must be 11 of {STATES}")
+    elif "ran" in tg: errs.append("update.then_grid can't have a 'ran' square: it is the grid as we posted it")
+    if up["then_story"].get("grid") not in (None, tg): errs.append("update.then_story.grid differs from update.then_grid")
+    if not 2 <= len(up["added"]) <= 3: errs.append(f"update.added needs 2-3 lines, got {len(up['added'])}")
+    g = st["grid"]
+    if len(g) != 11 or set(g) - STATES: return errs   # reported by the story checks
+    run, posted = Date.fromisoformat(post["date"]), Date.fromisoformat(up["posted"])
+    picks = {}
+    for p in up["pickups"]:
+        o, d = p.get("outlet"), md_date(p.get("date"), run)
+        if o not in OUTLETS: errs.append(f"pickup outlet {o!r} must be one of {OUTLETS}"); continue
+        if d is None: errs.append(f"pickup {o}: date {p.get('date')!r} must read 'Mon D'"); continue
+        if d <= posted:
+            errs.append(f"pickup {o} {p['date']} is on or before our post ({up['posted']}): that's a correction to report, not an Update")
+        picks[o] = d
+    ran = [OUTLETS[i] for i, s in enumerate(g) if s == "ran"]
+    if not ran: errs.append("an Update needs at least one 'ran' square")
+    errs += [f"{o} is 'ran' in the grid but has no dated pickup" for o in ran if o not in picks]
+    errs += [f"pickup {o} has no 'ran' square in the grid" for o in picks if o not in ran]
+    sil, said = g.count("silent"), first_count(up["still_dark"])
+    if said != sil: errs.append(f"update.still_dark says {said if said is not None else 'no number'}; the grid has {sil} silent")
+    m = UPDATE_HEAD.fullmatch(st["headline"])
+    b = re.search(MON_D.pattern + r", (\d{4})", st.get("dateline", ""))
+    if not m: errs.append("update headline must read 'Update: <outlet> ran it <N> days late.'")
+    elif not b: errs.append("the story's dateline must carry the breaker's date as 'Mon D, YYYY'")
+    else:
+        o = next((o for o in picks if m[1].lower() in (n.lower() for n in OUTLET_NAMES[o])), None)
+        if o is None: errs.append(f"headline outlet {m[1]!r} isn't one of the pickups")
+        else:
+            late = (picks[o] - mon_date(b[1], b[2], b[3])).days
+            if int(m[2]) != late: errs.append(f"headline says {m[2]} days late; {o} ran it {late} days after it broke")
     return errs
 
 def check_copy(post):
@@ -238,9 +349,14 @@ def check_copy(post):
     if len(post["stories"]) != n: errs.append(f"{f} needs {n} stories, got {len(post['stories'])}")
     if f in ("bundle", "weekly") and post.get("bundle_hook") not in BUNDLE_HOOKS:
         errs.append(f"bundle_hook must be one of {BUNDLE_HOOKS}")
-    if f != "update" and post.get("ask") not in ASKS: errs.append(f"ask must be one of {ASKS}")
+    if post.get("ask") not in ASKS: errs.append(f"ask must be one of {ASKS}")
     items = [(f"story {i+1}", s, f) for i, s in enumerate(post["stories"])]
-    if f not in ("update", "deep"):
+    if f == "update":
+        errs += update_errors(post)
+        up = post.get("update") or {}
+        if isinstance(up.get("then_story"), dict) and up.get("then_grid"):
+            items.append(("then story", dict(up["then_story"], grid=up["then_grid"]), "then"))
+    elif f != "deep":
         if "reel" not in post: errs.append("every post needs `reel` {story, deep}: the lead story as a deep dive")
         else: items.append(("reel story", post["reel"]["story"], "deep"))
     outer_f = f
@@ -251,7 +367,7 @@ def check_copy(post):
         sil, ran, unc = g.count("silent"), g.count("ran"), g.count("unchecked")
         if ran and not ran_allowed:
             errs.append(f"{tag}: a Flagged story can't have a 'ran' square (use format update, or mode adhoc on a deep post)")
-        if f != "update": errs += [f"{tag}: {e}" for e in stat_errors(s)]
+        if f not in ("update", "then"): errs += [f"{tag}: {e}" for e in stat_errors(s)]   # update slides show no stat
         for idx, st in enumerate(g):
             if st == "unchecked" and not any(nm in s["us"] for nm in OUTLET_NAMES[OUTLETS[idx]]):
                 errs.append(f"{tag}: {OUTLETS[idx]} is unchecked but not named in `us`")
@@ -272,16 +388,15 @@ def check_copy(post):
         if re.search(p, texts, re.I): errs.append(f"voice: banned phrase /{p}/")
     if EMOJI.search(texts): errs.append("voice: emoji found")
     cap = post.get("caption", "")
-    if f != "update" or cap:
-        lines = cap.split("\n")
-        if len(lines[0]) > 125: errs.append(f"caption line 1 is {len(lines[0])} chars (125 max)")
-        if "#" in lines[0] or re.search(r"\d{4}", lines[0]) or re.search(r"\b(" + "|".join(MONTHS) + r")\w* \d", lines[0]):
-            errs.append("caption line 1 must have no hashtag and no date")
-        if METHOD not in cap: errs.append("caption is missing the fixed method sentence")
-        tags = re.findall(r"#\w+", cap)
-        if not {"#DeadAir", "#SchmimKnews"} <= set(tags) or not 3 <= len(tags) <= 5:
-            errs.append(f"caption hashtags must be #DeadAir #SchmimKnews + 1-3 subject tags (got {tags})")
-        if f != "update" and post.get("ask") not in cap: errs.append("caption must carry the same ask as the Closer")
+    lines = cap.split("\n")
+    if len(lines[0]) > 125: errs.append(f"caption line 1 is {len(lines[0])} chars (125 max)")
+    if "#" in lines[0] or re.search(r"\d{4}", lines[0]) or re.search(r"\b(" + "|".join(MONTHS) + r")\w* \d", lines[0]):
+        errs.append("caption line 1 must have no hashtag and no date")
+    if METHOD not in cap: errs.append("caption is missing the fixed method sentence")
+    tags = re.findall(r"#\w+", cap)
+    if not {"#DeadAir", "#SchmimKnews"} <= set(tags) or not 3 <= len(tags) <= 5:
+        errs.append(f"caption hashtags must be #DeadAir #SchmimKnews + 1-3 subject tags (got {tags})")
+    if post.get("ask") not in cap: errs.append("caption must carry the same ask as the Closer")
     # Every caption block ends with the post's sources (Imran, Oct 31): "Sources" on its own line, then the list.
     src = (post.get("sources") or "").strip()
     if not src: errs.append("post needs `sources`: one line, outlet (date); outlet (date); ...")
@@ -332,7 +447,10 @@ SHOW_JS = "(k) => { window.__groups.forEach((g, i) => g.forEach(e => e.style.vis
 
 # Seconds per Reel slide (about 42 s in all, close to the Oct 22 Board of Peace cut Imran liked).
 # Lines appear one at a time inside each slide's budget; the finished slide holds for 2 s.
-REEL_BUDGET = {"hook": 5, "timeline": 12, "claims": 11, "receipt": 8, "family": 8, "closer": 6}
+REEL_BUDGET = {"hook": 5, "timeline": 12, "claims": 11, "receipt": 8, "family": 8, "closer": 6,
+               # Update Reels (addendum v2.1 §B): fixed holds, about 20 s. `update_closer` is the addendum's
+               # "closer 4", kept apart so the deep Reels' 6 s Closer doesn't change.
+               "update_then": 6, "update_square": 1.5, "update_hold": 4, "update_closer": 4}
 # A family slide that opens the Reel holds its last frame "a couple of seconds too long" (Imran, Oct 31).
 OPEN_FAMILY = {"budget": 13, "final": 5.5}
 
@@ -369,6 +487,11 @@ def parse_budget(spec):
         out[k] = _secs("--budget", v)
     return out
 
+def post_stem(post):
+    """Output file stem. An update adds its slug, so two Updates on one day never share file names."""
+    s = f"schmimknews-{post['date']}-{post['format']}"
+    return f"{s}-{post['slug']}" if post["format"] == "update" else s
+
 def main():
     a = sys.argv[1:]
     if len(a) < 3: print(__doc__); sys.exit(2)
@@ -388,11 +511,10 @@ def main():
     tokens = json.loads((ddir / "project/tokens.json").read_text())
     css = fonts_css(fdir) + tokens_css(tokens) + (ddir / "project/components/bundle.css").read_text() + "body{margin:0;background:#000}"
     out.mkdir(parents=True, exist_ok=True)
-    slides, reels = build_slides(post), reel_slides(post)
-    if only == "reel" and not reels: raise SystemExit(f"--only reel: a {post['format']} post has no Reel")
-    if only != "reel" and post["format"] != "update" and len(post.get("alt", [])) != len(slides):
+    slides, reels = build_slides(post), reel_slides(post, budget)
+    if only != "reel" and len(post.get("alt", [])) != len(slides):
         print(f"COPY CHECK FAILED:\n - alt needs {len(slides)} strings, one per slide"); sys.exit(1)
-    stem = f"schmimknews-{post['date']}-{post['format']}"
+    stem = post_stem(post)
     fdir_frames = out / ".reel-frames"; fdir_frames.mkdir(exist_ok=True)
     # Clear what this run is about to write, so a re-render with fewer slides or steps leaves nothing stale behind.
     stale = []
@@ -405,9 +527,13 @@ def main():
         b = p.chromium.launch()
         passes = []
         if only != "reel": passes.append(("slide", slides))
+        # An update's Reel opens on its Then slide, so its cover is carousel slide 1: copied below, or rendered on its own with --only reel.
+        if only == "reel" and post["format"] == "update": passes.append(("cover", slides[:1]))
         if only != "carousel": passes.append(("reel", reels))
         for kind, items in passes:
-            for i, body in enumerate(items, 1):
+            for i, item in enumerate(items, 1):
+                static = isinstance(item, tuple)
+                body = item[0] if static else item
                 pg = b.new_page(viewport={"width": 1080, "height": 1350})
                 doc = f'<!doctype html><html lang="en"><head><meta charset="utf-8"><style>{css}</style></head><body>{body}</body></html>'
                 tmp = out / f".tmp-{kind}-{i}.html"; tmp.write_text(doc)
@@ -416,6 +542,13 @@ def main():
                 if kind == "slide":
                     name = f"{stem}-{i:02d}.png"
                     pg.locator(".slide").screenshot(path=str(out / name)); files.append(name)
+                elif kind == "cover":
+                    name = f"{stem}-reel-cover.png"
+                    pg.locator(".slide").screenshot(path=str(out / name)); files.append(name)
+                elif static:
+                    fr = fdir_frames / f"r{i:02d}-01.png"
+                    pg.locator(".slide").screenshot(path=str(fr))
+                    frames.append((fr, item[1]))
                 else:
                     words = pg.evaluate(GROUPS_JS)
                     kind_ = pg.evaluate("document.querySelector('.slide').dataset.kind")
@@ -431,6 +564,8 @@ def main():
                         pg.locator(".slide").screenshot(path=str(out / name)); files.append(name)
                 tmp.unlink(); pg.close()
         b.close()
+    if only is None and post["format"] == "update":
+        shutil.copyfile(out / f"{stem}-01.png", out / f"{stem}-reel-cover.png"); files.append(f"{stem}-reel-cover.png")
     if frames:
         lst = fdir_frames / "list.txt"
         lines = []

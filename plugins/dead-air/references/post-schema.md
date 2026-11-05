@@ -116,6 +116,7 @@ The story object (`stories[0]`) needs no `stat`. Its `dateline` must carry a dat
 ```json
 {"reel_length": "44 s",
  "bundle": "2026-10-31_bundle01",
+ "bundle_files": ["slide_01.png", "slide_02.png", "video.mp4", "caption_carousel.txt", "caption_video.txt"],
  "facts": [["Format", "Bundle"], ["Flash", "No (…)"], ["Carousel", "Sat Oct 31, 10:00am ET"], ["Reel", "12:00–2:00pm ET"], ["Ask", "…"]],
  "calls": [["Bold lead.", "Plain explanation."]]}
 ```

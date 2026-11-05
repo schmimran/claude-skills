@@ -128,7 +128,7 @@ Rendering itself needs the design system. If the Artifact tool can't **read** th
 
 Every post gets one hand-off bundle of its raw media and captions, in a fixed layout, offered on its review page as one zip. **The viewer builds the zip.** A published artifact can't serve a `.zip` (the Artifact tool refuses any archive, under any contentType), and a claude.ai viewer blocks a download the page starts itself. So the run stages the files under their convention names and publishes them beside the page, and the page zips them in the browser (JSZip, pinned from cdnjs) and saves the zip through the `downloads` capability, where the viewer confirms the save. (A Google Drive route was tried first and dropped: the Drive connector sees only files it created and can't carry binaries at a usable cost.)
 
-**The convention. It is documented here once, and `bundle_stage.py` enforces it: a post that doesn't match gets nothing staged.** The zip the page builds has exactly this layout.
+**The convention. It is documented here once, and `bundle_stage.py` enforces it: a post that doesn't match gets nothing staged.** The zip the page builds has exactly these files under that one root folder (JSZip also writes the folder's own entry, which is harmless).
 
 | Part | Rule |
 | --- | --- |

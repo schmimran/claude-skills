@@ -5,11 +5,12 @@
 
 <flat dir> holds the page and every file it references side by side, as a published artifact does (the render's PNGs
 and MP4, and the staged <bundle folder>/). It is served over http://127.0.0.1, the page's own JavaScript runs in
-Chromium, and `window.claude` is stubbed the way the claude.ai viewer provides it. Three scenarios:
+Chromium, and `window.claude` is stubbed the way the claude.ai viewer provides it. Four scenarios:
   cap      the `downloads` capability is present: the bundle zip, "Download video" and "Download all slides" must reach
            downloads.save() with the right filename and the right bytes (the stub hashes what it receives)
   decline  the viewer says no: nothing is saved and the button comes back, no error shown
-  nocap    no capability (a plain browser): the old link/blob download is the fallback, and the zip it produces is real
+  nullcap  a viewer without the capability (the publish forgot to declare it): the warning shows and a click fails visibly
+  nocap    no viewer at all (a plain browser): the old link/blob download is the fallback, and the zip it produces is real
 Prints one JSON object. Needs network for JSZip from cdnjs, exactly as the page does. Stdlib + Playwright."""
 import functools, hashlib, http.server, json, socketserver, sys, tempfile, threading, zipfile
 from pathlib import Path
@@ -36,6 +37,10 @@ window.claude = {use: async n => n === 'downloads' ? {save: async req => {
   return {status: 'saved'}; }} : null};
 """
 
+DELAY = """
+const _use = window.claude.use; window.claude.use = async n => { await new Promise(r => setTimeout(r, 1500)); return _use(n); };
+"""   # the capability resolves 1.5 s late, so a click can arrive first
+
 def open_page(browser, stub=None):
     ctx = browser.new_context(accept_downloads=True)
     if stub: ctx.add_init_script(stub)
@@ -49,18 +54,30 @@ try:
         browser = p.chromium.launch()
         # cap: the capability is there
         page = open_page(browser, STUB.replace("%DECLINE%", "false"))
-        page.wait_for_function("DL !== null", timeout=10000)
+        assert page.evaluate("DLP.then(d => !!d)"), "the stub capability did not resolve"
+        warn_hidden = page.evaluate("document.getElementById('dl-warn').hidden")
         page.click("button.dl-bundle"); page.wait_for_function("window.__saves.length >= 1", timeout=60000)
         page.click("a:has-text('Download video')"); page.wait_for_function("window.__saves.length >= 2", timeout=30000)
         page.click("button:has-text('Download all slides')"); page.wait_for_function("window.__saves.length >= 3", timeout=60000)
-        out["cap"] = {"saves": page.evaluate("window.__saves"), "bundle_label": page.inner_text("button.dl-bundle")}
+        out["cap"] = {"saves": page.evaluate("window.__saves"), "bundle_label": page.inner_text("button.dl-bundle"), "warn_hidden": warn_hidden}
+        # an early click: the click lands before the capability has resolved and must still be saved, not fall through to a native download
+        page = open_page(browser, STUB.replace("%DECLINE%", "false") + DELAY)
+        page.click("a:has-text('Download video')"); page.wait_for_function("window.__saves.length >= 1", timeout=30000)
+        out["early"] = {"saves": page.evaluate("window.__saves")}
         # decline: the viewer says no
         page = open_page(browser, STUB.replace("%DECLINE%", "true"))
-        page.wait_for_function("DL !== null", timeout=10000)
+        page.evaluate("DLP.then(d => !!d)")
         label = page.inner_text("button.dl-bundle")
         page.click("button.dl-bundle")
         page.wait_for_function("!document.querySelector('button.dl-bundle').disabled", timeout=30000)
         out["decline"] = {"saves": page.evaluate("window.__saves"), "label_before": label, "label_after": page.inner_text("button.dl-bundle")}
+        # nullcap: a viewer is there but the capability is not
+        page = open_page(browser, "window.claude = {use: async () => null};")
+        page.evaluate("DLP.then(d => !!d)")
+        warn_shown = not page.evaluate("document.getElementById('dl-warn').hidden")
+        page.click("a:has-text('Download video')")
+        page.wait_for_function("document.querySelector('a[download]').textContent.includes('unavailable')", timeout=15000)
+        out["nullcap"] = {"warn_shown": warn_shown, "link_text": page.evaluate("document.querySelector('a[download]').textContent")}
         # nocap: no window.claude at all
         page = open_page(browser)
         with page.expect_download(timeout=30000) as dv: page.click("a:has-text('Download video')")
@@ -68,7 +85,7 @@ try:
         with page.expect_download(timeout=60000) as dz: page.click("button.dl-bundle")
         tmp = Path(tempfile.mkdtemp()) / "bundle.zip"; dz.value.save_as(str(tmp))
         z = zipfile.ZipFile(tmp)
-        out["nocap"] = {"video_name": video_name, "zip_name": dz.value.suggested_filename, "names": z.namelist(), "testzip": z.testzip()}
+        out["nocap"] = {"warn_hidden": page.evaluate("document.getElementById('dl-warn').hidden"), "video_name": video_name, "zip_name": dz.value.suggested_filename, "names": z.namelist(), "testzip": z.testzip()}
         browser.close()
 except Exception as e:   # reported, never raised: the caller records the failure with this text
     out["error"] = f"{type(e).__name__}: {str(e)[:400]}"

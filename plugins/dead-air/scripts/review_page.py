@@ -156,28 +156,34 @@ ul.calls{{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:8px;
 <main class="wrap">
 <header><div class="kicker"><i></i><b>Schmim Knews</b><span>Dead Air · Review</span></div><h1>Dead Air · {nice}</h1></header>
 {facts_html(calls)}
+<p id="dl-warn" class="note" hidden>Saving files is unavailable in this view: this page was published without the downloads capability, so its download buttons can't save. Open the files directly instead.</p>
 {post_blocks(post, calls, 0)}
 {comp_html}
 </main>
 <script src="{JSZIP}"></script>
 <script>
 // The claude.ai viewer blocks downloads a page starts itself: saving goes through the `downloads` capability (the viewer confirms).
-// Without it (a plain browser) the old link/blob download is the fallback.
-let DL=null;
-try{{if(window.claude&&window.claude.use)window.claude.use('downloads').then(d=>{{DL=d||null}},()=>{{}})}}catch(e){{}}
+// Where there is no viewer (a plain browser, a local copy) the old link/blob download is the fallback. In a viewer, clicks wait for
+// the capability instead of falling through to a blocked download, and a missing capability is shown, not silent.
+const IN_VIEWER=!!(window.claude&&window.claude.use);
+const DLP=IN_VIEWER?Promise.resolve().then(()=>window.claude.use('downloads')).then(d=>d||null,()=>null):Promise.resolve(null);
+DLP.then(d=>{{if(IN_VIEWER&&!d){{const w=document.getElementById('dl-warn');if(w)w.hidden=false}}}});
 function saveFile(name,blob){{
- if(DL)return DL.save({{filename:name,data:blob}});
- const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();
- setTimeout(()=>URL.revokeObjectURL(url),4000);return Promise.resolve({{status:'saved'}});
+ return DLP.then(d=>{{
+  if(d)return d.save({{filename:name,data:blob}});
+  if(IN_VIEWER)throw {{code:'unavailable',message:'the downloads capability is missing'}};
+  const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),4000);return {{status:'saved'}};
+ }});
 }}
 const declined=err=>err&&err.code==='declined';
 document.querySelectorAll('a[download]').forEach(a=>a.addEventListener('click',ev=>{{
- if(!DL)return;
+ if(!IN_VIEWER)return;
  ev.preventDefault();
  const label=a.textContent,href=a.getAttribute('href');
  fetch(href).then(r=>{{if(!r.ok)throw new Error(href);return r.blob()}})
   .then(b=>saveFile(a.getAttribute('download'),b))
-  .catch(err=>{{if(!declined(err)){{a.textContent='Save failed: open the file instead';setTimeout(()=>a.textContent=label,4000)}}}});
+  .catch(err=>{{if(!declined(err)){{a.textContent=err&&err.code==='unavailable'?'Saving unavailable here':'Save failed: open the file instead';setTimeout(()=>a.textContent=label,4000)}}}});
 }}));
 document.querySelectorAll('[data-zip]').forEach(b=>b.addEventListener('click',async()=>{{
  const label=b.textContent;
@@ -188,7 +194,7 @@ document.querySelectorAll('[data-zip]').forEach(b=>b.addEventListener('click',as
   for(const f of b.dataset.files.split(' ')){{const r=await fetch(f);if(!r.ok)throw new Error(f);z.file(f,await r.blob())}}
   await saveFile(b.dataset.zip,await z.generateAsync({{type:'blob'}}));
   b.textContent=label;
- }}catch(err){{b.textContent=declined(err)?label:'Zip failed: use each file link'}}
+ }}catch(err){{b.textContent=declined(err)?label:err&&err.code==='unavailable'?'Saving unavailable here':'Zip failed: use each file link'}}
  b.disabled=false;
 }}));
 document.querySelectorAll('[data-copy]').forEach(b=>b.addEventListener('click',()=>{{

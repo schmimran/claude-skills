@@ -642,7 +642,8 @@ record("0.4.0 review page: 'Download bundle zip' button zips <bundle>/<file> for
        code == 0 and f'<button type="button" class="dl dl-zip dl-bundle" data-zip="{BZ_DAY}.zip" data-files="{want_files}">Download bundle zip</button>' in html_
        and html_.count("Download bundle zip") == 1 and ">Download all slides</button>" in html_, log)
 record("0.4.0 review page: downloads go through the `downloads` capability (with a plain-browser fallback)",
-       "claude.use('downloads')" in html_ and "DL.save(" in html_ and "createObjectURL" in html_ and "a[download]" in html_)
+       "claude.use('downloads')" in html_ and "d.save(" in html_ and "createObjectURL" in html_ and "a[download]" in html_
+       and "IN_VIEWER" in html_ and '<p id="dl-warn" class="note" hidden>' in html_)
 code, html_, log = page(c_day, "--companion", str(FX / "2026-11-05-update.json"), str(c_u))
 record("0.4.0 review page: the Update companion gets its own bundle button",
        code == 0 and f'data-zip="{BZ_UPD}.zip"' in html_ and f'data-zip="{BZ_DAY}.zip"' in html_ and html_.count(">Download bundle zip</button>") == 2, log)
@@ -665,9 +666,12 @@ flat = OUT / "bz-browser"; shutil.rmtree(flat, ignore_errors=True)
 shutil.copytree(d_day, flat, ignore=shutil.ignore_patterns("review", ".reel-frames"))
 code, pages, log = review(DAYJ, flat, c_day)   # writes flat/review/...; the browser needs the page beside its files
 (flat / "review" / pages[0].name).replace(flat / pages[0].name) if pages else None
-br = subprocess.run([A.python, "-B", str(HERE / "check_page_downloads.py"), str(flat), f"dead-air-2026-11-05.html", BZ_DAY], capture_output=True, text=True, timeout=300)
-try: res = json.loads(br.stdout.strip().splitlines()[-1])
-except Exception: res = {"error": f"no result: {(br.stdout + br.stderr).strip()[-300:]}"}
+try:
+    br = subprocess.run([A.python, "-B", str(HERE / "check_page_downloads.py"), str(flat), f"dead-air-2026-11-05.html", BZ_DAY], capture_output=True, text=True, timeout=300)
+    try: res = json.loads(br.stdout.strip().splitlines()[-1])
+    except Exception: res = {"error": f"no result: {(br.stdout + br.stderr).strip()[-300:]}"}
+except subprocess.TimeoutExpired:   # a failed check, never an aborted suite (the page needs network for JSZip from cdnjs)
+    res = {"error": "the browser check timed out after 300 s (it needs network for JSZip from cdnjs)"}
 staged_sha = {p.name: sha(p) for p in (flat / BZ_DAY).iterdir()}
 saves = (res.get("cap") or {}).get("saves") or []
 zsave = next((s for s in saves if s["filename"] == f"{BZ_DAY}.zip"), None)
@@ -679,6 +683,13 @@ record("0.4.0 browser: 'Download video' saves the MP4 through downloads.save, by
 asave = next((s for s in saves if s["filename"] == f"{STEM_DAY}-slides.zip"), None)
 record("0.4.0 browser: 'Download all slides' zips the six PNGs and saves it through downloads.save",
        bool(asave) and asave["entries"] == {f"{STEM_DAY}-{i:02d}.png": sha(flat / f"{STEM_DAY}-{i:02d}.png") for i in range(1, 7)}, res.get("error") or "")
+record("0.4.0 browser: with the capability present the 'unavailable' warning stays hidden",
+       (res.get("cap") or {}).get("warn_hidden") is True and (res.get("nocap") or {}).get("warn_hidden") is True, res.get("error") or "")
+record("0.4.0 browser: a click that lands before the capability has resolved still saves through it (no blocked native download)",
+       len((res.get("early") or {}).get("saves") or []) == 1 and res["early"]["saves"][0]["filename"] == f"{STEM_DAY}-reel.mp4", res.get("error") or str(res.get("early")))
+nl = res.get("nullcap") or {}
+record("0.4.0 browser: a viewer without the capability shows the warning and a click fails visibly, not silently",
+       nl.get("warn_shown") is True and "unavailable" in (nl.get("link_text") or ""), res.get("error") or str(nl))
 dc = res.get("decline") or {}
 record("0.4.0 browser: a declined save saves nothing and restores the button without an error",
        dc.get("saves") == [] and dc.get("label_after") == dc.get("label_before") and "download bundle zip" in (dc.get("label_after") or "").lower(),   # CSS upper-cases the label

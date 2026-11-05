@@ -1,17 +1,24 @@
-"""Build one post's hand-off zip, and enforce its naming convention (0.4.0):
-python3 bundle_zip.py <post.json> <out_dir> <calls.json> <folder>   build <out_dir>/<folder>.zip, print its path
-python3 bundle_zip.py --check <file.zip>                            check an existing zip against the convention
+"""Stage one post's hand-off bundle, and enforce its naming convention (0.4.0):
+python3 bundle_stage.py <post.json> <out_dir> <calls.json> <folder>   stage <out_dir>/<folder>/, print its files
+python3 bundle_stage.py --check <dir>                                 check a staged folder against the convention
 
-<folder> is <YYYY-MM-DD>_<format><NN>, e.g. 2026-11-05_bundle01. The zip has that one root folder and nothing else but:
+<folder> is <YYYY-MM-DD>_<format><NN>, e.g. 2026-11-05_bundle01. The staged folder holds exactly:
   slide_01.png ... slide_NN.png   contiguous from 01, posting order; NN = the post's `alt` count
   video.mp4                       only when the calls JSON has `reel_length` (a Reel was rendered)
   caption_carousel.txt            the post's `caption`, UTF-8, plus one trailing newline
   caption_video.txt               the post's `reel_caption` (only with a Reel), same rules
-The media is copied from the render folder (`schmimknews-<date>-<format>-NN.png`, `-reel.mp4`); nothing is re-encoded.
-Any deviation exits 1 and writes no zip. On success the script records `"bundle": "<folder>"` in the calls JSON (the
-review page links the zip only when that field exists); on a refusal it removes any `bundle` already there, so a
-failed build can never leave a link to a zip that doesn't exist. Stdlib only. Run as python3 -B."""
-import json, os, re, sys, zipfile
+The media is copied byte for byte from the render folder (`schmimknews-<date>-<format>-NN.png`, `-reel.mp4`).
+
+Why a folder and not a zip: a published artifact can't serve a .zip, and a viewer blocks downloads a page starts
+itself. So the folder's files are published under their convention names, and the review page zips them in the
+viewer's browser (JSZip) and hands the zip over through the `downloads` capability. The names here are the zip's.
+
+On success the script prints one `<folder>/<file>` path per line (relative to <out_dir>: the paths to publish) and
+records `bundle` (the folder) and `bundle_files` (the file names) in the calls JSON; the review page shows the
+bundle button only when both are there. Any deviation exits 1, stages nothing, removes a stale staged folder and
+removes `bundle`/`bundle_files` from the calls, so a failed build can't leave a link to files that don't exist.
+Stdlib only. Run as python3 -B."""
+import json, os, re, shutil, sys
 from pathlib import Path
 
 sys.dont_write_bytecode = True
@@ -28,11 +35,11 @@ def folder_errors(folder):
     return ["folder counter must be 01 or higher"] if int(m.group(3)) == 0 else []
 
 def layout_errors(names):
-    """Zip entry names -> problems. One root folder, exactly the allowed files, slides contiguous from 01,
+    """`<folder>/<file>` names -> problems. One root folder, exactly the allowed files, slides contiguous from 01,
     captions present, video and its caption together."""
     files = [n for n in names if not n.endswith("/")]
     roots = {n.split("/", 1)[0] for n in files}
-    if len(roots) != 1: return [f"the zip needs exactly one root folder, found {sorted(roots) or 'none'}"]
+    if len(roots) != 1: return [f"the bundle needs exactly one root folder, found {sorted(roots) or 'none'}"]
     root = roots.pop()
     errs, leaf = folder_errors(root), set()
     for n in files:
@@ -49,8 +56,8 @@ def layout_errors(names):
     if len(set(names)) != len(names): errs.append("duplicate entries")
     return errs
 
-def build(post, out, calls, folder):
-    """Return (zip path, problems). Writes nothing unless there are no problems."""
+def stage(post, out, calls, folder):
+    """Return (file names in posting order, problems). Stages nothing unless there are no problems."""
     errs = folder_errors(folder)
     if m := FOLDER.fullmatch(folder) if isinstance(folder, str) else None:
         if m.group(1) != post["date"]: errs.append(f"folder date {m.group(1)} is not the post date {post['date']}")
@@ -68,19 +75,14 @@ def build(post, out, calls, folder):
     if errs: return None, errs
     data = {k: p.read_bytes() for k, p in srcs.items()}
     data.update({k: v.rstrip("\n").encode("utf-8") + b"\n" for k, v in caps.items()})
-    when = tuple(int(x) for x in post["date"].split("-")) + (0, 0, 0)   # fixed stamp: same inputs, same bytes
-    dest, tmp = out / f"{folder}.zip", out / f"{folder}.zip.part"
-    with zipfile.ZipFile(tmp, "w") as z:
-        for name, b in data.items():
-            z.writestr(zipfile.ZipInfo(f"{folder}/{name}", when), b, zipfile.ZIP_DEFLATED if name.endswith(".txt") else zipfile.ZIP_STORED)
-    with zipfile.ZipFile(tmp) as z:   # read it back before it counts: entries, CRCs, every byte
-        bad = z.testzip()
-        back = [f"zip CRC check failed at {bad}"] if bad else []
-        if sorted(z.namelist()) != sorted(f"{folder}/{k}" for k in data): back.append(f"zip lists {sorted(z.namelist())}, wanted {sorted(data)}")
-        else: back += [f"{k} differs from its source after zipping" for k, b in data.items() if z.read(f"{folder}/{k}") != b]
-    if back: tmp.unlink(); return None, back
-    tmp.replace(dest)
-    return dest, []
+    dest, tmp = out / folder, out / f"{folder}.part"
+    shutil.rmtree(tmp, ignore_errors=True); tmp.mkdir()
+    for name, b in data.items(): (tmp / name).write_bytes(b)
+    back = [f"{k} differs from its source after staging" for k, b in data.items() if (tmp / k).read_bytes() != b]   # read it back before it counts
+    back += [f"{tmp.name}: {e}" for e in layout_errors([f"{folder}/{p.name}" for p in tmp.iterdir()])]
+    if back: shutil.rmtree(tmp, ignore_errors=True); return None, back
+    shutil.rmtree(dest, ignore_errors=True); tmp.rename(dest)
+    return list(data), []
 
 def write_calls(path, calls):
     tmp = Path(str(path) + ".tmp")
@@ -89,17 +91,21 @@ def write_calls(path, calls):
 def main():
     a = sys.argv[1:]
     if a[:1] == ["--check"] and len(a) == 2:
-        try: errs = layout_errors(zipfile.ZipFile(a[1]).namelist())
-        except (OSError, zipfile.BadZipFile) as e: sys.exit(f"bundle_zip: can't read {a[1]} as a zip: {e}")
+        d = Path(a[1])
+        if not d.is_dir(): sys.exit(f"bundle_stage: {a[1]} is not a folder")
+        errs = layout_errors([f"{d.name}/{p.relative_to(d).as_posix()}" for p in sorted(d.rglob("*")) if p.is_file()])
         print("\n".join(errs) if errs else "ok"); sys.exit(1 if errs else 0)
-    if len(a) != 4: sys.exit("usage: bundle_zip.py <post.json> <out_dir> <calls.json> <folder> | --check <file.zip>")
-    post, calls = json.load(open(a[0])), json.load(open(a[2]))
-    dest, errs = build(post, Path(a[1]), calls, a[3])
+    if len(a) != 4: sys.exit("usage: bundle_stage.py <post.json> <out_dir> <calls.json> <folder> | --check <dir>")
+    post, calls, out, folder = json.load(open(a[0])), json.load(open(a[2])), Path(a[1]), a[3]
+    names, errs = stage(post, out, calls, folder)
     if errs:
-        if "bundle" in calls: del calls["bundle"]; write_calls(a[2], calls)   # never leave a link to a zip that wasn't built
-        sys.exit("bundle_zip: no zip written.\n  " + "\n  ".join(errs))
-    calls["bundle"] = a[3]; write_calls(a[2], calls)
-    print(dest)
+        if not folder_errors(folder):   # a validated name can't point outside <out_dir>
+            shutil.rmtree(out / folder, ignore_errors=True); shutil.rmtree(out / f"{folder}.part", ignore_errors=True)
+        if "bundle" in calls or "bundle_files" in calls:
+            calls.pop("bundle", None); calls.pop("bundle_files", None); write_calls(a[2], calls)
+        sys.exit("bundle_stage: nothing staged.\n  " + "\n  ".join(errs))
+    calls["bundle"], calls["bundle_files"] = folder, names; write_calls(a[2], calls)
+    print("\n".join(f"{folder}/{n}" for n in names))
 
 if __name__ == "__main__":
     main()

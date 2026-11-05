@@ -7,7 +7,7 @@ This plugin turns rows from the **News Blind Spots** Airtable dashboard, or any 
 - **Carousels:** 1080×1350 PNG slides, with caption and alt text.
 - **Reels:** 40–60 s, 1080×1350 MP4s with no audio track (you add the music). Each one is a reported deep dive on a single story, revealed line by line.
 - **A dated review page** per post (a claude.ai artifact), plus the post files in the project and a row in the IG Posts table.
-- **A bundle zip** per post, linked from its review page: the slides, the Reel and both captions in one fixed layout (below).
+- **A bundle zip** per post, built in your browser from its review page: the slides, the Reel and both captions in one fixed layout (below).
 
 It never posts to Instagram, never sends email, and never writes the Stories table.
 
@@ -81,9 +81,9 @@ The report always says where the code came from. If an agent type isn't availabl
 
 Nothing else lives directly under `dead-air/`. In the session's own workspace, `./dead-air/` holds `src/` (the fetched plugin, fonts, staged cache), `work/<date>/` (scratch, deleted at the end), `out/<post>/` (media, never uploaded to the project) and `posts/` (uploaded to `dead-air/posts/`).
 
-### The bundle zip (0.4.0)
+### The bundle (0.4.0)
 
-Every post, Update companions included, gets `<folder>.zip` on its review page ("Download bundle zip", one tap on a phone). It holds exactly this, and `scripts/bundle_zip.py` refuses to write a zip that doesn't match:
+Every post, Update companions included, gets a **Download bundle zip** button on its review page (one tap on a phone). It saves `<folder>.zip` holding exactly this, and `scripts/bundle_stage.py` refuses to stage anything that doesn't match:
 
 ```
 2026-11-05_bundle01/
@@ -93,7 +93,9 @@ Every post, Update companions included, gets `<folder>.zip` on its review page (
   caption_video.txt             the Reel caption (only with a Reel)
 ```
 
-The folder is `<date>_<format><NN>`: format is `bundle`, `weekly`, `single`, `deep` or `update`, and `NN` counts that day's posts of that format (`bundle01`, `bundle02`, `update01`, `update02`), so several runs on one day never mix. The full convention and the counter rule are in [references/render-guide.md](references/render-guide.md) §7. The zip is published with the review page; it is not stored in the project or in Airtable. (A Google Drive route was tried and dropped: the Drive connector sees only files it created and can't carry binaries at a usable cost.)
+The folder is `<date>_<format><NN>`: format is `bundle`, `weekly`, `single`, `deep` or `update`, and `NN` counts that day's posts of that format (`bundle01`, `bundle02`, `update01`, `update02`), so several runs on one day never mix. The full convention and the counter rule are in [references/render-guide.md](references/render-guide.md) §7.
+
+**How it reaches you.** A published artifact can't serve a `.zip`, and a claude.ai viewer blocks downloads a page starts itself. So the run stages the files under their convention names and publishes them beside the review page; the page zips them in your browser and saves the zip through the viewer's Save prompt (the `downloads` capability). The same prompt now saves the video, cover and slides. A Google Drive route was tried first and dropped: the Drive connector sees only files it created and can't carry binaries at a usable cost.
 
 ## How it decides
 
@@ -105,7 +107,7 @@ The rules live in [references/](references/):
 | [post-schema.md](references/post-schema.md) | post JSON, story object, deep block, update block, calls JSON, plan input |
 | [reel-spec.md](references/reel-spec.md) | Reel structure and timing, ad-hoc mode, families slide, Update Reels |
 | [render-guide.md](references/render-guide.md) | setup, script lookup, renderer flags and checks, the fix loop, the bundle-zip naming convention |
-| [review-page.md](references/review-page.md) | the review page, its download links and bundle zip |
+| [review-page.md](references/review-page.md) | the review page, its downloads and the bundle zip |
 | [airtable-guide.md](references/airtable-guide.md) | IG Posts fields (by name) and quirks |
 | [coverage-guide.md](references/coverage-guide.md) | which outlets the search tools can and can't reach |
 | [report-format.md](references/report-format.md) | the end-of-run report |
@@ -119,17 +121,17 @@ python3 -B scripts/render.py <post.json> <design_dir> <out_dir> [--fonts <dir>] 
 python3 -B scripts/review_page.py <post.json> <out_dir> <calls.json> [--companion <update.json> <update-calls.json>]...
                                [--title …] [--h1 …] [--name …]
 python3 -B scripts/plan_day.py <plan-input.json>
-python3 -B scripts/bundle_zip.py <post.json> <out_dir> <calls.json> <folder>   # or: --check <file.zip>
+python3 -B scripts/bundle_stage.py <post.json> <out_dir> <calls.json> <folder>   # or: --check <dir>
 python3 -B scripts/cache_manifest.py <DA_ROOT> <out VERSION> [--commit <sha>] [--date YYYY-MM-DD]
 ```
 
 Always `python3 -B`: no `__pycache__/` in the repo or the project.
 
-`render.py` runs the copy checks, renders the carousel and the Reel against the live design system (read from its artifact on every run; never copied into the plugin), and exits 1 on any failure. `review_page.py` builds the day's review page, with any Update companions on it, and a download link for every video, cover and slide plus a "Download all slides" zip. `plan_day.py` turns the IG Posts and Stories rows into the day's plan: what counts as posted (queued rows included), the four stories and why each is there, the next open slot, the asks it can't use, Update companions and corrections. `bundle_zip.py` builds a post's hand-off zip and enforces its naming convention (above). `cache_manifest.py` writes the project cache's `VERSION` doc. See [references/render-guide.md](references/render-guide.md).
+`render.py` runs the copy checks, renders the carousel and the Reel against the live design system (read from its artifact on every run; never copied into the plugin), and exits 1 on any failure. `review_page.py` builds the day's review page, with any Update companions on it, and a download link for every video, cover and slide plus a "Download all slides" zip. `plan_day.py` turns the IG Posts and Stories rows into the day's plan: what counts as posted (queued rows included), the four stories and why each is there, the next open slot, the asks it can't use, Update companions and corrections. `bundle_stage.py` stages a post's hand-off folder and enforces its naming convention (above). `cache_manifest.py` writes the project cache's `VERSION` doc. See [references/render-guide.md](references/render-guide.md).
 
 ## Tests
 
-The fixture tests cover SPEC §13 tests 1–7a, the `mode: adhoc` rule, spec addendum v2.1 §F (Update companions, corrections, the count-line fix, Update copy checks, Ready-as-posted) and addendum v2.2 §E: four-story bundles with each hook, three-story bundles refused, the Still-dark story, the fill order and topic spread, queued slots and asks, the review page's download links, the version check, the setup block (synced copies, repo tag, `main` fallback), the cache checksums, no writes to `settings/` or `dev/`, no hard-coded session paths and `python3 -B` everywhere. The 0.4.0 tests build the bundle zip from real renders (bundle, carousel-only, Update): exact names, bytes and caption text, determinism, `--check`, every refusal (bad folder name, wrong date or format, missing slide or video, empty caption, stray or mis-numbered files) and the review page's zip button. They render two approved Oct 31 posts (the bundle, and the Hannibal deep dive whose Reel opens on a families slide) and the Nov 5 gas-transit Update against an **offline snapshot** of the design system in `tests/fixtures/design-system/`. Live runs never use that snapshot.
+The fixture tests cover SPEC §13 tests 1–7a, the `mode: adhoc` rule, spec addendum v2.1 §F (Update companions, corrections, the count-line fix, Update copy checks, Ready-as-posted) and addendum v2.2 §E: four-story bundles with each hook, three-story bundles refused, the Still-dark story, the fill order and topic spread, queued slots and asks, the review page's download links, the version check, the setup block (synced copies, repo tag, `main` fallback), the cache checksums, no writes to `settings/` or `dev/`, no hard-coded session paths and `python3 -B` everywhere. The 0.4.0 tests stage the bundle from real renders (bundle, carousel-only, Update): exact names, bytes and caption text, `--check`, every refusal (bad folder name, wrong date or format, missing slide or video, empty caption, stray or mis-numbered files, stale folder and fields removed), the review page's markup and hostile `bundle` values, and a real Chromium run of the page's own JavaScript with a stubbed `downloads` capability: the zip it builds, the saves it makes, a declined save and the no-capability fallback (needs Playwright, and network for JSZip from cdnjs). They render two approved Oct 31 posts (the bundle, and the Hannibal deep dive whose Reel opens on a families slide) and the Nov 5 gas-transit Update against an **offline snapshot** of the design system in `tests/fixtures/design-system/`. Live runs never use that snapshot.
 
 ```bash
 python3 -m venv /tmp/da-venv && /tmp/da-venv/bin/pip install playwright && /tmp/da-venv/bin/python -m playwright install chromium
@@ -159,7 +161,7 @@ Pass if:
 
 ### Manual check for 0.4.0 (needs claude.ai and a phone)
 
-Run `/dead-air --dry-run`. Pass if: the review page has a "Download bundle zip" link under each carousel strip (and under the Update companion's, if any); tapping it on a phone saves `<date>_<format><NN>.zip`; unzipped, it holds exactly `slide_01.png`…, `video.mp4`, `caption_carousel.txt` and `caption_video.txt` under one folder named `<date>_<format><NN>`; and `bundle_zip.py --check` on it prints `ok`. Run it twice in one day and confirm the second post's folder ends `02`.
+Run `/dead-air --dry-run`. Pass if: the review page has a "Download bundle zip" button under each carousel strip (and under the Update companion's, if any); tapping it on a phone shows the Save prompt for `<date>_<format><NN>.zip`; unzipped, it holds exactly `slide_01.png`…, `video.mp4`, `caption_carousel.txt` and `caption_video.txt` under one folder named `<date>_<format><NN>`; "Download video" shows the same prompt. Run it twice in one day and confirm the second post's folder ends `02`.
 
 ## Releasing
 

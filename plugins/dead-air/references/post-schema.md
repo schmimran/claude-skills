@@ -121,7 +121,7 @@ The story object (`stories[0]`) needs no `stat`. Its `dateline` must carry a dat
 ```
 
 - `reel_length`: the length `render.py` reports, e.g. "44 s". Leave it out when no Reel was rendered (carousel-only runs); the review page then omits its Reel panel. Update posts have a Reel, so their calls carry it.
-- `bundle`: the hand-off zip's root folder, `<date>_<format><NN>` (e.g. `2026-11-05_bundle01`). `bundle_zip.py` records it after a verified build and removes it on a refusal; never set it by hand ([render-guide.md](render-guide.md) §7 has the naming convention and the counter). The review page links `<bundle>.zip` only when it is present.
+- `bundle`, `bundle_files`: the hand-off bundle's root folder, `<date>_<format><NN>` (e.g. `2026-11-05_bundle01`), and the file names staged in it (`slide_01.png` …). `bundle_stage.py` records both after a verified build and removes both on a refusal; never set them by hand ([render-guide.md](render-guide.md) §7 has the naming convention and the counter). The review page shows the bundle button only when both are present.
 - `facts`: label/value pairs shown at the top of the review page.
 - `calls`: one `[lead, explanation]` pair per judgment.
 

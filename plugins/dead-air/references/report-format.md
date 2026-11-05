@@ -14,7 +14,7 @@ A few short lines, in this order. Leave a line out only if it has nothing to say
 - **Version mismatch** (only when the code came from `main` because the release tag was missing) and the old-config-path warning open the report.
 - **Code** says where the code and rules came from (addendum v2.2 §A), and **Agents** which agents ran as agents and which ran inline.
 - **Correction due** comes from `plan_day.py`'s `corrections` (a pickup dated on or before our post; [editorial-rules.md](editorial-rules.md) §1.1). Imran decides whether to post one. Nothing is made for it.
-- **Made** lists the day's post and each Update companion, each with its IG Posts row, slots and bundle zip folder name (e.g. `2026-11-05_bundle01`). Companions share the day's review link, which carries every zip. A zip that couldn't be built goes under Open calls.
+- **Made** lists the day's post and each Update companion, each with its IG Posts row, slots and bundle folder name (e.g. `2026-11-05_bundle01`). Companions share the day's review link, which carries every zip. A zip that couldn't be built goes under Open calls.
 - **Held back / skipped** includes any Update that waits for the next run (more than two due).
 
 ```

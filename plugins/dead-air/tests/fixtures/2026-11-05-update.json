@@ -1,0 +1,114 @@
+{
+  "date": "2026-11-05",
+  "format": "update",
+  "slug": "gas-transit",
+  "flash": false,
+  "ask": "Send this to someone who reads the Times.",
+  "update": {
+    "of_post": "dead-air/bundle-2026-10-22.json",
+    "posted": "2026-10-22",
+    "topic_line": "Trump's envoys pitched Kyiv on reopening Russian gas transit.",
+    "then_story": {
+      "record_id": "recFIXTURE0000004",
+      "topic": "Russian gas",
+      "claim": "Trump's envoys pitched Kyiv on resuming Russian gas transit, and urged Europe to buy more Russian gas.",
+      "dateline": "Reported Oct 17, 2026 · The New York Times",
+      "abroad": [
+        {
+          "name": "Kyiv Post",
+          "country": "Ukraine"
+        },
+        {
+          "name": "Ukrainska Pravda",
+          "country": "Ukraine"
+        },
+        {
+          "name": "Meduza",
+          "country": "Russia, exile"
+        }
+      ],
+      "confidence": "Verified",
+      "us": "The NYT broke it Oct 17. The other 10 major US outlets hadn't run it by Oct 22.",
+      "days_dark": 5
+    },
+    "then_grid": [
+      "broke",
+      "silent",
+      "silent",
+      "silent",
+      "silent",
+      "silent",
+      "silent",
+      "silent",
+      "silent",
+      "silent",
+      "silent"
+    ],
+    "pickups": [
+      {
+        "outlet": "WSJ",
+        "date": "Nov 1",
+        "note": "own report, US, European and Ukrainian officials"
+      },
+      {
+        "outlet": "Reuters",
+        "date": "Nov 2",
+        "note": "carried the WSJ report"
+      }
+    ],
+    "added": [
+      "The WSJ sourced it to US, European and Ukrainian officials.",
+      "European governments reject it; EU law ends Russian gas imports by end-2027."
+    ],
+    "still_dark": "Eight of the 11 still haven't, as of Nov 2."
+  },
+  "stories": [
+    {
+      "record_id": "recFIXTURE0000004",
+      "topic": "Russian gas",
+      "grid": [
+        "broke",
+        "silent",
+        "ran",
+        "silent",
+        "ran",
+        "silent",
+        "silent",
+        "silent",
+        "silent",
+        "silent",
+        "silent"
+      ],
+      "claim": "Trump's envoys pitched Kyiv on resuming Russian gas transit, and urged Europe to buy more Russian gas.",
+      "dateline": "Reported Oct 17, 2026 · The New York Times",
+      "abroad": [
+        {
+          "name": "Kyiv Post",
+          "country": "Ukraine"
+        },
+        {
+          "name": "Ukrainska Pravda",
+          "country": "Ukraine"
+        },
+        {
+          "name": "Meduza",
+          "country": "Russia, exile"
+        }
+      ],
+      "us": "The NYT broke it Oct 17. The WSJ ran its own report Nov 1, and Reuters carried it Nov 2.",
+      "confidence": "Verified",
+      "days_dark": 15,
+      "headline": "Update: WSJ ran it 15 days late.",
+      "meta": "NYT Oct 17 · WSJ Nov 1 · Reuters Nov 2"
+    }
+  ],
+  "caption": "The Times broke it. The Journal got there 15 days later, on its own sources.\n\nOn Oct 17 the New York Times reported that Trump envoys Steve Witkoff and Jared Kushner pitched Kyiv on resuming Russian gas transit and urged Europe to buy more Russian gas. We posted it Oct 22, when none of the other major US outlets had followed. On Nov 1 the Wall Street Journal reported, from US, European and Ukrainian officials, that the US is pushing to restore Russian gas sales to Europe through Ukraine; Reuters carried the Journal's report Nov 2.\n\nSend this to someone who reads the Times.\n\nCounts as reported abroad at 3+ major foreign outlets; counts as missing at home when none of the 11 major US outlets ran it, not counting whoever broke it. Board: news.schmim.com\n\n#DeadAir #SchmimKnews #Russia #Ukraine\n\nSources\nThe New York Times (Oct 17, 2026); Kyiv Post, Ukrainska Pravda and Meduza (Oct 18–19, 2026); The Wall Street Journal (Nov 1, 2026) via Reuters and Arab News (Nov 2, 2026).",
+  "reel_caption": "We posted the Times' gas-transit story Oct 22. The Journal ran its own version 15 days after it broke.\n\n#DeadAir #SchmimKnews\n\nSources\nThe New York Times (Oct 17, 2026); Kyiv Post, Ukrainska Pravda and Meduza (Oct 18–19, 2026); The Wall Street Journal (Nov 1, 2026) via Reuters and Arab News (Nov 2, 2026).",
+  "sources": "The New York Times (Oct 17, 2026); Kyiv Post, Ukrainska Pravda and Meduza (Oct 18–19, 2026); The Wall Street Journal (Nov 1, 2026) via Reuters and Arab News (Nov 2, 2026).",
+  "alt": [
+    "Update cover. Update: WSJ ran it 15 days late. Trump's envoys pitched Kyiv on reopening Russian gas transit. Grid of 11 US outlets: the New York Times broke it, the Wall Street Journal and Reuters ran it, eight others shown as not having run it as of Nov 2.",
+    "What we posted Oct 22: Trump's envoys pitched Kyiv on resuming Russian gas transit and urged Europe to buy more Russian gas. Reported Oct 17 by the New York Times; Kyiv Post, Ukrainska Pravda and Meduza ran it abroad. The grid then: the Times broke it, the other 10 had not run it.",
+    "Who ran it since: the Wall Street Journal Nov 1 and Reuters Nov 2. The Journal sourced it to US, European and Ukrainian officials. European governments reject it; EU law ends Russian gas imports by end-2027. Eight of the 11 still haven't, as of Nov 2.",
+    "How we check: abroad counts at three or more major foreign outlets; at home it counts as missing when none of the 11 major US outlets ran it. Send this to someone who reads the Times."
+  ]
+}

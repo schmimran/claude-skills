@@ -40,8 +40,9 @@ Read `${CLAUDE_PLUGIN_ROOT}/references/editorial-rules.md` (§4 grid, §5 count 
    - **Each grid matches its stat:** count the hatched (`broke`), filled (`ran`) and empty squares. The stat's number must equal the silent count (unchecked outlets render as empty squares too; check them against `us` and `meta`, which must name them).
    - **Each count is true** of the grid and the `us` text.
    - **Every claim on a slide** appears in a source listed in the calls. Flag any line with no source.
-   - **Each Reel line is readable** before the next appears: no step under about 0.8 s, nothing flashing past on the sheet. The total length is 40–60 s.
-   - **The Reel's order:** with `deep.family.open`, the first frames are the families slide and the hook follows; otherwise it opens on the hook. The cover is the finished Flash hook.
+   - **Each Reel line is readable** before the next appears: no step under about 0.8 s, nothing flashing past on the sheet. The total length is 40–60 s, except an **Update** Reel: about 15–25 s, with 1.5 s per lit square by design (`${CLAUDE_PLUGIN_ROOT}/references/reel-spec.md` §5).
+   - **The Reel's order:** with `deep.family.open`, the first frames are the families slide and the hook follows; otherwise it opens on the hook. The cover is the finished Flash hook. An **Update** Reel opens on the Then slide, lights one square per step with its date, shows the still-dark line, then the Closer; its cover is the (never Flash) UpdateCover.
+   - **Update posts:** the Then slide's grid has no filled square and matches what we posted; each filled square on the Now slide and the cover has its outlet and date under it; the still-dark count matches the empty squares; the topic line says what "it" is.
    - **No banned wording,** including the unchecked oversell words ("proof", "exposed", "they hid", "bombshell") and "receipt(s)" anywhere visible.
    - **Dates are current:** the cover date is the run date; "As of" notes use the run date; no stale "checked" window is presented as new.
 5. Don't re-litigate settled editorial rules (no "receipts", plain count lines, Reels as deep dives, Sources blocks). Check that they were followed.

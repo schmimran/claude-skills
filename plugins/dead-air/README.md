@@ -24,7 +24,7 @@ The only questions it may ask are whether a `/dead-air-carousel` or `/dead-air-r
 
 | Command | What it does |
 | --- | --- |
-| `/dead-air` | The daily editor. Reads the dashboard, picks the format (single, bundle, weekly, update) and stories, builds the carousel plus a deep-dive Reel on the lead story, and optionally a second deep-dive Reel. Publishes the review page(s), writes the project docs, logs IG Posts rows. |
+| `/dead-air` | The daily editor. Reads the dashboard, picks the day's format (single, bundle, weekly) and stories, builds the carousel plus a deep-dive Reel on the lead story, and optionally a second deep-dive Reel. A story we posted that a US outlet has since picked up rides along as an **Update companion** (four slides and a ~20 s Reel) on the same review page; one picked up before our post is reported as a correction instead. Publishes the review page(s), writes the project docs, logs one IG Posts row per post. |
 | `/dead-air-carousel` | Builds one carousel from Stories records you name, or re-cuts an existing post as a new `-v2` version. No story selection. Add `--with-reel` for its Reel. |
 | `/dead-air-reel` | One reported deep-dive Reel (plus its carousel) on a dashboard record, one or more URLs, or a plain-language topic. Runs a real 11-outlet coverage check for ad-hoc topics. |
 
@@ -64,8 +64,8 @@ The rules live in [references/](references/):
 | File | Covers |
 | --- | --- |
 | [editorial-rules.md](references/editorial-rules.md) | format choice, eligibility and ranking, Flash, the grid, the count line, captions and Sources, Reel content, voice |
-| [post-schema.md](references/post-schema.md) | post JSON, story object, deep block, calls JSON |
-| [reel-spec.md](references/reel-spec.md) | Reel structure and timing, ad-hoc mode, families slide |
+| [post-schema.md](references/post-schema.md) | post JSON, story object, deep block, update block, calls JSON, plan input |
+| [reel-spec.md](references/reel-spec.md) | Reel structure and timing, ad-hoc mode, families slide, Update Reels |
 | [render-guide.md](references/render-guide.md) | setup, script lookup, renderer flags and checks, the fix loop |
 | [review-page.md](references/review-page.md) | the review page |
 | [airtable-guide.md](references/airtable-guide.md) | IG Posts fields (by name) and quirks |
@@ -78,14 +78,16 @@ The rules live in [references/](references/):
 ```
 python3 scripts/render.py <post.json> <design_dir> <out_dir> [--fonts <dir>] [--only reel|carousel]
                           [--budget hook=5,timeline=12,...] [--open-family 13,5.5]
-python3 scripts/review_page.py <post.json> <out_dir> <calls.json> [--title …] [--h1 …] [--name …]
+python3 scripts/review_page.py <post.json> <out_dir> <calls.json> [--companion <update.json> <update-calls.json>]...
+                               [--title …] [--h1 …] [--name …]
+python3 scripts/plan_day.py <plan-input.json>
 ```
 
-`render.py` runs the copy checks, renders the carousel and the Reel against the live design system (read from its artifact on every run; never copied into the plugin), and exits 1 on any failure. See [references/render-guide.md](references/render-guide.md).
+`render.py` runs the copy checks, renders the carousel and the Reel against the live design system (read from its artifact on every run; never copied into the plugin), and exits 1 on any failure. `review_page.py` builds the day's review page, with any Update companions on it. `plan_day.py` turns the IG Posts and Stories rows into the day's plan: what counts as posted, eligibility, format, Update companions and corrections. See [references/render-guide.md](references/render-guide.md).
 
 ## Tests
 
-The fixture tests cover SPEC §13 tests 1–7a, plus the `mode: adhoc` rule. They render two approved Oct 31 posts (the bundle, and the Hannibal deep dive whose Reel opens on a families slide) against an **offline snapshot** of the design system in `tests/fixtures/design-system/`. Live runs never use that snapshot.
+The fixture tests cover SPEC §13 tests 1–7a, the `mode: adhoc` rule, and spec addendum v2.1 §F (Update companions, corrections, the count-line fix, Update copy checks, Ready-as-posted). They render two approved Oct 31 posts (the bundle, and the Hannibal deep dive whose Reel opens on a families slide) and the Nov 5 gas-transit Update against an **offline snapshot** of the design system in `tests/fixtures/design-system/`. Live runs never use that snapshot.
 
 ```bash
 python3 -m venv /tmp/da-venv && /tmp/da-venv/bin/pip install playwright && /tmp/da-venv/bin/python -m playwright install chromium
@@ -111,5 +113,5 @@ Pass if:
 ## After install (SPEC §14)
 
 1. In the project, run `/dead-air --dry-run` and check the first call in the review page: it says where the scripts were loaded from.
-2. If they came from the plugin's own `scripts/`, delete the project copies of the renderer, the review-page builder and the spec. If they came from the project copies, keep those in sync with each plugin release.
+2. If they came from the plugin's own `scripts/`, delete the project copies of the renderer, the review-page builder, the day planner and the spec. If they came from the project copies, keep those in sync with each plugin release.
 3. The earlier `dead-air` skill cards from Oct 31 are superseded; don't save them.

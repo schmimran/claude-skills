@@ -8,37 +8,42 @@ SPEC §4 and §7. How a command sets up its workspace, finds the scripts, render
 
 1. **Config.** Read `dead-air/config.md`. In a claude.ai project, use the Projects tool (`project_read`). In Claude Code, read `./dead-air/config.md` in the working directory. If neither works, **stop**: "Can't read dead-air/config.md in the News Blindspots Domestically project." The file holds the Airtable base, table and field IDs, the design-system artifact URL and the playbook URL. **None of these values are ever written into the plugin.**
 2. **Workspace.** Create `dead-air/` in the working directory, plus `dead-air/out/<name>/` for each post.
-3. **Scripts.** Find `render.py` and `review_page.py` (§2) and copy them into `dead-air/`. Record in the calls where they came from.
+3. **Scripts.** Find `render.py`, `review_page.py` and `plan_day.py` (§2) and copy them into `dead-air/`. Record in the calls where they came from.
 4. **Fonts.** Run `npm i @fontsource/big-shoulders-display @fontsource/work-sans @fontsource/ibm-plex-mono` inside `dead-air/`. Google Fonts is blocked in the claude.ai workspace, and these are the same faces. Playwright and ffmpeg are preinstalled there; **never reinstall Playwright**.
 5. **Design system.** Artifact `read` of the design-system URL from config with `paths: ["project/tokens.json", "project/components/bundle.css"]`. The folder it saves into is `design_dir` (it must contain `project/tokens.json` and `project/components/bundle.css`). `tokens.css` isn't served; `render.py` builds the CSS variables from `tokens.json`. **Never use `tests/fixtures/design-system/`** for a live run: it is an offline test snapshot. Never edit the design system.
 6. **Today.** Take the run date from the current-time tool, in US Eastern time, not from the shell clock.
 
 ## 2. Finding the scripts
 
-Try these in order, and stop at the first that has both files:
+Try these in order, and stop at the first that has all three files:
 
 1. **The plugin's own `scripts/` folder:** `${CLAUDE_PLUGIN_ROOT}/scripts/`. If the variable is empty or unexpanded, and `~/.claude/plugins/installed_plugins.json` exists, find the key under `plugins` that starts with `dead-air@`. Its value is a list of installs; take the last entry's `installPath` and use `<installPath>/scripts/`.
-2. **The project docs** `dead-air/render.py` and `dead-air/review_page.py`, via the Projects tool. Imran keeps these in sync with each release until (1) is confirmed to work in claude.ai.
+2. **The project docs** `dead-air/render.py`, `dead-air/review_page.py` and `dead-air/plan_day.py`, via the Projects tool. Imran keeps these in sync with each release until (1) is confirmed to work in claude.ai.
 
-If neither has both files, **stop** and report which places were tried. **Never search the filesystem for the scripts, and never retype a script from memory.**
+If neither has all three files, **stop** and report which places were tried. **Never search the filesystem for the scripts, and never retype a script from memory.**
 
 ## 3. Invocation
 
 ```
 python3 render.py <post.json> <design_dir> <out_dir> [--fonts <dir>] [--only reel|carousel]
-                  [--budget hook=5,timeline=12,claims=11,receipt=8,family=8,closer=6]
+                  [--budget hook=5,timeline=12,claims=11,receipt=8,family=8,closer=6,
+                            update_then=6,update_square=1.5,update_hold=4,update_closer=4]
                   [--open-family 13,5.5]
-python3 review_page.py <post.json> <out_dir> <calls.json> [--title "…"] [--h1 "…"] [--name <file stem>]
+python3 review_page.py <post.json> <out_dir> <calls.json> [--companion <update.json> <update-calls.json>]...
+                       [--title "…"] [--h1 "…"] [--name <file stem>]
+python3 plan_day.py <plan-input.json>
 ```
 
 - `--fonts` defaults to the first `node_modules/@fontsource` found next to `render.py`, in the working directory, or in `./dead-air/`.
-- `--only carousel` renders just the PNGs. `--only reel` renders just the MP4 and the cover, and refuses an update post (it has no Reel). Copy checks always run in full.
+- `--only carousel` renders just the PNGs. `--only reel` renders just the MP4 and the cover. Copy checks always run in full.
 - Each run first deletes the outputs it is about to write (the carousel PNGs, and/or the MP4, cover and `.reel-frames/`), so re-rendering into the same `<out_dir>` never leaves a stale slide or frame behind. Other files in `<out_dir>` (the review HTML, `checks.json`) are left alone.
 - The MP4 is cut to exactly the planned length (`-t`), so the length `render.py` prints is the length of the file.
 - `--budget` / `--open-family` override the Reel timing ([reel-spec.md](reel-spec.md) §2). Use them only on purpose, and log it.
-- `review_page.py` creates `<out_dir>` and prints the path of the HTML file it wrote. Use its `--title`, `--h1` and `--name` flags for standalone deep posts ([review-page.md](review-page.md)). Never post-edit the HTML with `sed`.
+- `review_page.py` creates `<out_dir>` and prints the path of the HTML file it wrote. `--companion` adds an Update companion's section to the day's page (repeat it for a second; at most two). It refuses a companion with a different date or the day's ask. Use its `--title`, `--h1` and `--name` flags for standalone deep posts ([review-page.md](review-page.md)). Never post-edit the HTML with `sed`.
 
-**Outputs** in `<out_dir>`: `schmimknews-<date>-<format>-NN.png` (carousel), `-reel.mp4`, `-reel-cover.png`, `checks.json` (`{files, problems}`), and `.reel-frames/` (the per-step frames; QA may use them, but don't publish them).
+- `plan_day.py` prints the day's plan as JSON ([post-schema.md](post-schema.md) §3). It reads no files but its input and writes nothing.
+
+**Outputs** in `<out_dir>`: `schmimknews-<date>-<format>-NN.png` (carousel; an update adds its slug, `schmimknews-<date>-update-<slug>-NN.png`), `-reel.mp4`, `-reel-cover.png`, `checks.json` (`{files, problems}`), and `.reel-frames/` (the per-step frames; QA may use them, but don't publish them).
 
 `render.py` prints `reel: <N> steps, <T> s`. Put `<T>` (rounded) in the calls' `reel_length`.
 
@@ -47,17 +52,18 @@ python3 review_page.py <post.json> <out_dir> <calls.json> [--title "…"] [--h1 
 `render.py` exits **1** on any failure and prints each problem.
 
 **Copy checks (run before rendering):**
-- story count per format; bundle hook and ask from the fixed sets; `mode` is dashboard or adhoc
+- story count per format; bundle hook from the fixed set; ask from the fixed set on every format; `mode` is dashboard or adhoc
 - a grid of 11 valid states; Provisional never posts; no `ran` squares except on updates and ad-hoc deep posts
-- stat rules; every unchecked outlet named in `us`
+- stat rules (no "we could check", "N of the M" or ": nothing"; "None of the 11 …" is fine); every unchecked outlet named in `us`
 - headline 5–14 words with no hedges; bundle titles 6–11 words; 3–5 abroad outlets; topic ≤ 14 characters; `us` ≤ 2 sentences
 - every single, bundle or weekly has a `reel`, and the Reel story passes the same checks
 - the banned voice list and emoji, across the whole JSON
 - caption: line 1 ≤ 125 characters, no hashtag or date in line 1, the method sentence, `#DeadAir #SchmimKnews` + 1–3 subject tags, the same ask as the Closer
 - both captions end with `\n\nSources\n` + `sources`; neither is over 2,200 characters
 - alt count equals slide count (skipped with `--only reel`)
+- **update posts:** the `update` block is complete; `slug` is set; not Flash; `then_grid` has no `ran`; every `ran` square has a dated pickup and every pickup a `ran` square; pickups one per outlet, oldest first, none after the run date; no pickup on or before `posted` (that's a correction); `then_story` has every story key; the `still_dark` number equals the silent count; the headline reads "Update: <outlet> ran it <N> days late." with N = pickup date minus the `dateline` date (or `update.breaker_date`); `then_story` passes the story checks
 
-**Render checks (after layout):** content taller than the canvas; the footer pushed past its line; any `data-maxlines` element over its cap (hook-l 3, hook-m 4, stat 2, lede 4, bundle titles 2, bundle counts 1, `us` 3).
+**Render checks (after layout):** content taller than the canvas; the footer pushed past its line; any `data-maxlines` element over its cap (hook-l 3, hook-m 4, stat 2, lede 4, bundle titles 2, bundle counts 1, `us` 3, Update topic line 2, Update `added` and still-dark lines 2 each).
 
 **Text hygiene (automatic):** date ranges ("Oct 12–26") and "Mon D" pairs never break across lines.
 

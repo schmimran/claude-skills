@@ -1,0 +1,63 @@
+{
+ "reel_length": "17 s",
+ "facts": [
+  [
+   "Format",
+   "Update companion"
+  ],
+  [
+   "Flash",
+   "No (an Update cover is never Flash)"
+  ],
+  [
+   "Story",
+   "recFIXTURE0000004 · NYT gas-transit pitch"
+  ],
+  [
+   "Carousel",
+   "Thu Nov 5, 3:00pm ET"
+  ],
+  [
+   "Reel",
+   "5:00–7:00pm ET"
+  ],
+  [
+   "Ask",
+   "Send this to someone who reads the Times."
+  ]
+ ],
+ "calls": [
+  [
+   "Fixture, built from the Nov 5 hand-made Update.",
+   "Facts from the Nov 5 compare files (the v2.0 one-cover shape), recast as the v2.1 four-slide companion. Record ID is a placeholder."
+  ],
+  [
+   "Corrected: the grid.",
+   "The Nov 5 hand-built cover lit WaPo and WSJ; every text field (us, meta, caption, calls) says WSJ and Reuters, so the grid lights WSJ and Reuters."
+  ],
+  [
+   "Update, not the day's post.",
+   "Addendum v2.1 §A: the Oct 22 gas-transit story is now Covered, so it rides along as a companion; the day's post is chosen as if no Update were due."
+  ],
+  [
+   "Late pickup, not a correction.",
+   "WSJ Nov 1 and Reuters Nov 2 are both after our Oct 22 post (§C)."
+  ],
+  [
+   "Reconstructed: the Then slide's `us` line and days dark.",
+   "The Oct 22 post JSON wasn't available when this fixture was made; the `us` line and days_dark (5) on the Then slide are written from the Nov 5 calls, not copied from the original post."
+  ],
+  [
+   "Ready counted as posted.",
+   "The Oct 22 row was Status Ready with its slot in the past, so it counts as posted (§D)."
+  ],
+  [
+   "Grid as of Nov 2.",
+   "NYT broke; WSJ and Reuters ran. The other eight per the scan's Nov 2 weekly pass. Not re-checked today."
+  ],
+  [
+   "Sources",
+   "NYT Oct 17; Kyiv Post, Ukrainska Pravda, Meduza Oct 18–19; WSJ Nov 1 via Reuters and Arab News Nov 2 (WSJ page itself not opened)."
+  ]
+ ]
+}

@@ -24,7 +24,7 @@ Plugins are self-contained: each lives in its own directory with its own agents,
 | [bug-sweeper](plugins/bug-sweeper/) | 0.5.0 | Daily bug-discovery sweep for Node.js, Swift, and Kotlin repos — runs build/audit + multi-agent code review, filters false positives, and files confirmed bugs as GitHub Issues for feature-creator to remediate | [README](plugins/bug-sweeper/README.md) |
 | [voice-forge](plugins/voice-forge/) | 0.3.0 | Analyze a sent-mail export to produce a data-driven written voice profile, then optionally generate a personalized ghostwriting skill | [README](plugins/voice-forge/README.md) |
 | [fullstack-mobile-feature](plugins/fullstack-mobile-feature/) | 0.4.0 | Supervisor-led full-stack mobile feature development — intake, master plan, parallel iOS/Android implementation, cross peer review, and reconciliation on one branch. No PR, no mobile build. | [README](plugins/fullstack-mobile-feature/README.md) |
-| [dead-air](plugins/dead-air/) | 0.1.0 | Schmim Knews · Dead Air — turns News Blind Spots dashboard rows (or any topic) into Instagram carousels and reported deep-dive Reels, with a review page and an Airtable log. Never posts or emails. | [README](plugins/dead-air/README.md) |
+| [dead-air](plugins/dead-air/) | 0.2.0 | Schmim Knews · Dead Air — turns News Blind Spots dashboard rows (or any topic) into Instagram carousels and reported deep-dive Reels, with a review page and an Airtable log. Never posts or emails. | [README](plugins/dead-air/README.md) |
 
 ## What Each Plugin Does
 

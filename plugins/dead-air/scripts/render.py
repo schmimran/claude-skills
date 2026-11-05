@@ -225,6 +225,10 @@ def stat_errors(s):
 def check_copy(post):
     errs = []
     f = post["format"]
+    mode = post.get("mode", "dashboard")
+    if mode not in ("dashboard", "adhoc"): errs.append(f"mode must be dashboard or adhoc, got {mode!r}")
+    # Ad-hoc deep dives report what the coverage check found, so `ran` squares are allowed there only (SPEC §5.3).
+    adhoc_deep = f == "deep" and mode == "adhoc"
     n = {"single": 1, "deep": 1, "update": 1, "bundle": 3, "weekly": 3}[f]
     if len(post["stories"]) != n: errs.append(f"{f} needs {n} stories, got {len(post['stories'])}")
     if f in ("bundle", "weekly") and post.get("bundle_hook") not in BUNDLE_HOOKS:
@@ -240,7 +244,8 @@ def check_copy(post):
         if len(g) != 11 or set(g) - STATES: errs.append(f"{tag}: grid must be 11 of {STATES}"); continue
         if s["confidence"] not in ("Verified", "Probable"): errs.append(f"{tag}: {s['confidence']} never posts")
         sil, ran, unc = g.count("silent"), g.count("ran"), g.count("unchecked")
-        if f != "update" and ran: errs.append(f"{tag}: a Flagged story can't have a 'ran' square (use format update)")
+        if f != "update" and ran and not adhoc_deep:
+            errs.append(f"{tag}: a Flagged story can't have a 'ran' square (use format update, or mode adhoc on a deep post)")
         if f != "update": errs += [f"{tag}: {e}" for e in stat_errors(s)]
         for idx, st in enumerate(g):
             if st == "unchecked" and not any(nm in s["us"] for nm in OUTLET_NAMES[OUTLETS[idx]]):

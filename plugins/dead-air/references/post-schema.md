@@ -1,6 +1,6 @@
 # Post schema
 
-SPEC §6. A post has three files in the project's `dead-air/posts/` folder:
+SPEC §6, with addenda v2.1 and v2.2. A post has three files. They are written in the workspace's `DA_WS/posts/` and uploaded at delivery to the project's `dead-air/posts/` folder (posts from before v2 sit in `dead-air/posts/legacy/` under their original names, e.g. `bundle-2026-10-22.json`):
 
 | File | Holds |
 | --- | --- |
@@ -8,9 +8,9 @@ SPEC §6. A post has three files in the project's `dead-air/posts/` folder:
 | `<name>-calls.json` | the calls JSON: facts and judgment calls for the review page and the audit trail |
 | `<name>.md` | the review link, IG Posts row ID, slots, stories, dashboard corrections, Reel sources |
 
-`<name>` is `<date>-<format>` (e.g. `2026-10-31-bundle`). A standalone `/dead-air-reel` post is `<date>-deep-<slug>` (e.g. `2026-10-31-deep-hannibal`). An Update companion is `<date>-update-<slug>` (e.g. `2026-11-05-update-gas-transit`). A re-cut is `<date>-<format>-v2`, then `-v3`, and so on. A file is never overwritten.
+`<name>` is `<date>-<format>` (e.g. `2026-10-31-bundle`). A standalone `/dead-air-reel` post is `<date>-deep-<slug>` (e.g. `2026-10-31-deep-hannibal`). An Update companion is `<date>-update-<slug>` (e.g. `2026-11-05-update-gas-transit`). A re-cut is `<date>-<format>-v2`, then `-v3`, and so on, with `recut_of` set. A file is never overwritten, and the plugin never edits an old post.
 
-The fixtures in `tests/fixtures/` are complete examples of the bundle, deep and update shapes. Their record IDs are placeholders (`recFIXTURE…`) or `null`.
+The fixtures in `tests/fixtures/` are complete examples of the bundle (a pre-0.3.0 three-story post, so the tests render it as a re-cut), deep and update shapes; the tests build the four-story bundle from them. Their record IDs are placeholders (`recFIXTURE…`) or `null`.
 
 ---
 
@@ -25,9 +25,10 @@ The fixtures in `tests/fixtures/` are complete examples of the bundle, deep and 
 | `slug` | string | **Required** on update posts: lowercase words joined by hyphens (`gas-transit`). It goes into every file name (`schmimknews-<date>-update-<slug>-NN.png`), so two Updates on one day never collide. Ignored on other formats. |
 | `mode` | `dashboard` (default) · `adhoc` | `adhoc` allows `ran` squares, on deep posts only. Any other value is rejected. |
 | `flash` | bool | [editorial-rules.md](editorial-rules.md) §3. Always `true` for deep, always `false` for update (rejected otherwise). |
-| `bundle_hook` | string | Bundles and weeklies only; one of the three fixed hooks. |
+| `bundle_hook` | string | Bundles and weeklies only; one of the three fixed one-line hooks ([editorial-rules.md](editorial-rules.md) §6). A legacy three-story re-cut uses one of the old three-story hooks. |
+| `recut_of` | string | Re-cuts only: the project path of the post this re-cuts (`dead-air/posts/…` or `dead-air/posts/legacy/…`). It is the only way a three-story bundle renders: a re-cut of a bundle posted before 0.3.0. |
 | `ask` | string | One of the three fixed asks, on every format; never the same as the last post. An Update companion's ask differs from the day's post's. |
-| `stories` | list | 1 story (single, deep, update) or 3 (bundle, weekly). On an update, the one story is the story **now**: its grid has the late pickups as `ran`. |
+| `stories` | list | 1 story (single, deep, update) or **4** (bundle, weekly; 3 only on a legacy re-cut). Story 1 is the lead. On an update, the one story is the story **now**: its grid has the late pickups as `ran`. |
 | `reel` | `{story, deep}` | **Required** for single, bundle and weekly: the Reel's lead story as a full story object, plus its deep block. Not used on deep or update posts. |
 | `deep` | object | **Required** for deep posts. |
 | `update` | object | **Required** for update posts; see the update block below. |
@@ -42,7 +43,8 @@ The fixtures in `tests/fixtures/` are complete examples of the bundle, deep and 
 | `record_id` | Stories record ID. Ad-hoc: `null`. |
 | `topic` | 14 characters max ("Pakistan", "Deportations"). Sits in the story-slide kicker. |
 | `headline` | Single, deep and update posts, and every Reel story. On an update it is exactly `Update: <outlet short> ran it <N> days late.` ([editorial-rules.md](editorial-rules.md) §8). On a non-Flash single, use the reporter's `headline_short`. One declarative sentence: named actors, no outlet, no date, no hedges. 5–14 words. It must fit **3 lines at hook-l** (non-Flash cover) or **4 lines at hook-m** (Flash cover; every deep Reel is Flash). Measured against the design system: hook-l holds about **6 words** in 3 lines; hook-m holds about 11–12. SPEC §6.1's "12 words or fewer" holds only for Flash covers. |
-| `title`, `count` | Bundles: title 6–11 words, two lines max. Count is one line: `<outlet> ran it · <N> others didn't · <days> days` or `<non-list source> broke it · <N> didn't · <days> days`. |
+| `title`, `count` | Bundles: title 6–11 words, two lines max. Count is one line: `<outlet> ran it · <N> others didn't · <days> days` or `<non-list source> broke it · <N> didn't · <days> days`. A Still-dark story's count is exactly `Still dark: day <days_dark>.` (rejected otherwise). |
+| `still_dark` | Bundles and weeklies only: `true` on the one Still-dark story ([editorial-rules.md](editorial-rules.md) §2.1). Its story-slide kicker reads "Dead Air · Still dark". At most one per post, never story 1 (rejected otherwise). |
 | `grid` | 11 states in fixed order NYT, WaPo, WSJ, AP, Reuters, CNN, ABC, NBC, CBS, Fox, NPR: `silent` · `broke` · `ran` · `unchecked`. |
 | `stat` | [editorial-rules.md](editorial-rules.md) §5. 2 lines max. Not used on update posts (the UpdateCover leaves the stat slot empty). |
 | `claim` | The story slide's lede, 4 lines max at 48 px (about 150 characters). |
@@ -70,7 +72,7 @@ The fixtures in `tests/fixtures/` are complete examples of the bundle, deep and 
 Addendum v2.1 §B. Everything the Then and Now slides need that the story object doesn't hold.
 
 ```json
-{"of_post": "dead-air/bundle-2026-10-22.json",
+{"of_post": "dead-air/posts/legacy/bundle-2026-10-22.json",
  "posted": "2026-10-22",
  "topic_line": "Trump's envoys pitched Kyiv on reopening Russian gas transit.",
  "then_story": { /* the story object as we posted it */ },
@@ -84,7 +86,7 @@ Addendum v2.1 §B. Everything the Then and Now slides need that the story object
 
 | Key | Rule |
 | --- | --- |
-| `of_post` | Project path of the post we're updating: `dead-air/posts/<date>-<format>.json`, or `dead-air/bundle-<date>.json` for pre-v2 posts. |
+| `of_post` | Project path of the post we're updating: `dead-air/posts/<date>-<format>.json`, or `dead-air/posts/legacy/bundle-<date>.json` for pre-v2 posts. Look in `posts/` first, then `posts/legacy/`. |
 | `posted` | That post's date, `YYYY-MM-DD`. Every pickup must be **after** it; one on or before it is a correction, not an Update (rejected). |
 | `topic_line` | What "it" is, one sentence, under the cover headline in `lede`. 2 lines max (rejected if missing or longer). |
 | `then_story` | The story object **copied from `of_post`**, as posted: `topic`, `claim`, `dateline`, `abroad`, `us` (the count as we said it then), `confidence`, `days_dark` (each required; rejected if missing). Not in the addendum's sample: `render.py` can't read project files, and the Then slide is that story slide. A `grid` here must equal `then_grid`. It passes the same story checks as any other (except the stat). |
@@ -101,7 +103,7 @@ The story object (`stories[0]`) needs no `stat`. Its `dateline` must carry a dat
 | Format | Carousel | Reel |
 | --- | --- | --- |
 | single | HookCover, story slide, Closer (3) | `reel.story` + `reel.deep` as a deep sequence |
-| bundle, weekly | BundleCover, story slide × 3, Closer (5) | same |
+| bundle, weekly | BundleCover, story slide × 4, Closer (6); a legacy re-cut × 3 (5) | same |
 | deep | Flash HookCover, [families if `open`], DeepTimeline, DeepClaims, story slide, [families if not `open`], Closer (5, or 6 with families) | the carousel's slides; a families slide marked `open` moves in front of the hook |
 | update | UpdateCover, Then, Now, Closer (4) | Then, one step per pickup, the still-dark line, the Closer: about 20 s ([reel-spec.md](reel-spec.md) §5) |
 
@@ -127,18 +129,34 @@ The story object (`stories[0]`) needs no `stat`. Its `dateline` must carry a dat
 
 ## 3. Plan input (`plan_day.py`)
 
-`/dead-air` phase 2 writes what phase 1 read into `dead-air/out/plan-<date>.json` and runs `python3 dead-air/plan_day.py <that file>`. Field names here are the script's own, not Airtable's; map them from the rows by field ID.
+`/dead-air` phase 2 writes what phase 1 read into `DA_WS/work/<date>/plan-<date>.json` and runs `python3 -B <DA_ROOT>/scripts/plan_day.py <that file>`. Field names here are the script's own, not Airtable's; map them from the rows by field ID.
 
 ```json
 {"run_date": "2026-11-05", "now": "2026-11-05T06:00:00-05:00", "format_override": null,
  "ig_posts": [{"id": "<IG Posts row ID>", "post_date": "2026-10-31", "format": "bundle", "status": "Ready",
-               "carousel_slot": "2026-10-31T10:00:00-04:00", "stories": ["<Stories record ID>", "…"]}],
+               "carousel_slot": "2026-10-31T10:00:00-04:00", "stories": ["<Stories record ID>", "…"],
+               "flash": false, "ask": "Save this. Check back in a week."}],
  "stories": [{"id": "<Stories record ID>", "status": "Flagged", "confirmation": "Verified", "days_dark": 40,
-              "silent": 10, "override": false, "hold": null, "first_pickup": null}]}
+              "silent": 10, "topic": "Pakistan", "first_seen": "2026-10-20",
+              "override": false, "hold": null, "first_pickup": null}]}
 ```
 
-- `ig_posts`: every IG Posts row. `carousel_slot` is an ISO datetime with its offset; Airtable's UTC form (`2026-10-31T14:00:00.000Z`) is fine as is. A slot without an offset stops the script.
-- `stories`: every Flagged row, plus every row that a post from the last 30 days carried (they may now be Covered).
-- `override`: your call on [editorial-rules.md](editorial-rules.md) §1 rule 1 for that row. `hold`: the counting question that makes it ineligible, or `null`. `first_pickup`: for a Covered row, `{"outlet", "date": "YYYY-MM-DD"}` of the first domestic Tier-A pickup; `null` otherwise.
+- `format_override`: `null`, `"bundle"` or `"weekly"` (from `--format`); anything else stops the script.
+- `ig_posts`: every IG Posts row, queued ones included. `carousel_slot` is an ISO datetime with its offset; Airtable's UTC form (`2026-10-31T14:00:00.000Z`) is fine as is. A slot without an offset stops the script; a missing one is reported in `incomplete_rows`. `flash` is the row's Flash box; `ask` is the post's ask (the Closer line of its Caption).
+- `stories`: every Flagged row, plus every row that a post from the last 30 days carried (they may now be Covered). `topic` is the dashboard topic (for the topic spread). `first_seen` is the record's created time as `YYYY-MM-DD`: it tells new rows (a) from rows passed over on earlier days (b). Leave it out if unknown; the row then counts as new.
+- `override`: your call on [editorial-rules.md](editorial-rules.md) §1 rule 2 for that row (Verified, all 11 checked and silent since the last post; it leads). `hold`: the counting question that makes it ineligible, or `null`. `first_pickup`: for a Covered row, `{"outlet", "date": "YYYY-MM-DD"}` of the first domestic Tier-A pickup; `null` otherwise.
 
-It prints `assumed_posted`, `stale_ready`, `day` (`format`, `rule`, ranked `eligible`, `skipped` with reasons), `companions` (at most two), `deferred_updates`, `corrections` (each with its report `line`) and `unresolved`. The plan file stays in `out/`: it holds record IDs and is never committed or published.
+It prints:
+
+| Key | Holds |
+| --- | --- |
+| `assumed_posted`, `queued` | Ready rows counted as posted: slot passed, or slot ahead (queued, holding its slot) |
+| `stale_ready` | Ready rows more than 7 days past their slot |
+| `incomplete_rows` | rows missing Format or Carousel slot (Open calls; never filled in by the plugin) |
+| `day` | `format` (`bundle`, `weekly`, or `null` for no carousel), `rule`, `stories` (in order, each `{id, slot}`: `lead`, `new`, `passed_over`, `still_dark` (with its `count`) or `week`), ranked `eligible`, `skipped` with reasons, `note` when the topic spread was relaxed. With `format: null`: `unfilled` (one reason per empty slot) and `reel_only` (the lead whose Reel runs as a standalone deep post, or `null`) |
+| `next_slot` | the next open carousel slot: 8:00am ET weekdays, 10:00am ET weekends, on a day no row's morning slot holds |
+| `taken_slots`, `blocked_asks`, `last_flash` | slots still ahead; asks used by the last day's post or by any post within 48 hours of `next_slot`; the newest posted or queued row's Flash box |
+| `companions`, `deferred_updates` | Update companions (at most two, oldest pickup first) and the rest |
+| `corrections`, `unresolved` | measurement misses (each with its report `line`), and Covered rows without a pickup date |
+
+The plan file stays in `work/`: it holds record IDs, is never uploaded, committed or published, and is deleted at the end of the run.

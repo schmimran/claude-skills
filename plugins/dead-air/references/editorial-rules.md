@@ -1,6 +1,6 @@
 # Editorial rules
 
-SPEC §8 and §9, with spec addendum v2.1 (Nov 5, 2026) folded in. These rules decide what Dead Air posts and how it reads. Where the "Schmim Knews — Instagram Playbook" doc disagrees on cadence, delivery or wording, this file wins.
+SPEC §8 and §9, with spec addenda v2.1 and v2.2 (both Nov 5, 2026) folded in; where they disagree, v2.2 wins. These rules decide what Dead Air posts and how it reads. Where the "Schmim Knews — Instagram Playbook" doc disagrees on cadence, delivery or wording, this file wins.
 
 The renderer enforces everything marked **(rejected)**. `scripts/plan_day.py` decides everything marked **(planned)** from the rows phase 1 read. Every other rule is a judgment call: the agent applies it and records it in the calls JSON (see [post-schema.md](post-schema.md)).
 
@@ -8,20 +8,23 @@ The renderer enforces everything marked **(rejected)**. `scripts/plan_day.py` de
 
 ## 0. What counts as posted
 
-Imran posts by hand and rarely flips IG Posts Status to Posted. For every rule that depends on what was posted (Updates, no-repeats, Flash, ask rotation, alternation), a row counts as posted when its Status is **Posted**, or its Status is **Ready and its Carousel slot is in the past** **(planned)**. Skipped rows never count. Say so once per run in the calls. The report lists every Ready row more than 7 days past its slot **(planned)**, so Imran can mark it Posted or Skipped.
+Imran posts by hand and rarely flips IG Posts Status to Posted. For every rule that depends on what was posted (Updates, no-repeats, Flash, ask rotation), a row counts as posted when its Status is **Posted** or **Ready**, whatever its Carousel slot **(planned)**:
+- **Ready with a past slot** is assumed posted. Say so once per run in the calls. The report lists every Ready row more than 7 days past its slot **(planned)**, so Imran can mark it Posted or Skipped.
+- **Ready with a future slot is queued** (addendum v2.2 §J.1). It holds its slot: the next post is scheduled after it **(planned)**. Its stories count for no-repeats, its Flash box for Flash, and its ask for ask rotation. (Nov 5 queued the Nathaniel deep dive for Fri Nov 6, 8:00am.)
 
-## 1. Format choice (`/dead-air`)
+Skipped rows never count. An IG Posts row missing Format or Carousel slot is listed under Open calls **(planned)**; the plugin never fills in an old row. (The Oct 10, 16 and 22 rows lacked both, and the Oct 18 bundle had no row at all: one-time fixes by hand, with Imran's OK.)
+
+## 1. The day's post (`/dead-air`)
+
+Addendum v2.2 §F, on Imran's word of Nov 5: a one-story carousel isn't a post.
+
+1. **The day's carousel is always a bundle of 4 stories:** BundleCover, four story slides, Closer (6 slides) **(planned, rejected** otherwise**)**. On a Sunday with no weekly in the last 6 days it is the **weekly**, also 4: the week's highest-ranked rows, repeats allowed **(planned)**. `single` stays in the schema for `/dead-air-carousel` and ad-hoc use, but `/dead-air` never chooses it. `--format bundle|weekly` overrides the Sunday choice; log the override.
+2. **Story 1 is the lead.** A Flagged row that reached Verified with all 11 outlets checked and silent since the last post (the old override, rule 2; your call, passed to `plan_day.py` as `override`) leads. Otherwise the top of the §2 ranking leads **(planned)**. The day's Reel is a deep dive on the lead.
+3. **Stories 2–4 fill the page** (§2.1).
+4. **Fewer than 4 qualifying stories: no carousel that day** **(planned)**. The lead's Reel still runs on its own, as a standalone **deep post** (five slides plus the Reel, its own IG Posts row). The report says which slots couldn't be filled and why.
+5. A fifth story needs a BundleCover variant in the design system (smaller numerals). Not in this release.
 
 An Update never takes the day. Choose the day's post first, **as if no Update were due**; Updates ride along as companion posts (§1.1).
-
-Read the IG Posts table newest first by Post date. For the day's post, take the first rule that applies **(planned)**:
-
-1. **Override.** A Flagged row reached Verified with all 11 outlets checked and silent since the last post → **SINGLE**, with that story.
-2. **Weekly.** It's a Sunday and no weekly ran in the last 6 days → **WEEKLY** bundle of the week's three highest-confidence rows. Repeats are allowed. Hook: "This week's dead air."
-3. **Alternate.** Do the opposite of the last day's post: after a single or deep → **BUNDLE**; after a bundle or weekly → **SINGLE**. Update rows are skipped here: they are never "the last post" for alternation.
-4. **Fallback.** Fewer than three eligible rows for a bundle or weekly → **SINGLE**, even over `--format`. Note the fallback in the calls.
-
-`--format` on the command overrides this; log the override. The day's post always gets its normal Reel.
 
 There is no 7-day cap on deep posts. The v3 carousel spec had one; SPEC §5.1 replaced it with the second-Reel rule below.
 
@@ -31,20 +34,18 @@ Separately from the day's post, check every story in a post from the last 30 day
 
 - **Update.** The story is now **Covered** on the dashboard **and** its first domestic pickup is dated **after** our post → an **UPDATE companion**: its own four-slide carousel and ~20 s Reel ([post-schema.md](post-schema.md), [reel-spec.md](reel-spec.md) §5), on the **same review page** as the day's post, with **its own IG Posts row**.
 - **Correction.** The first domestic pickup is dated **on or before** our post: the outlet had already run it when we said it hadn't. That is **not an Update**. Make no post. Put it at the top of the report: "Correction due: <story>, posted <date>, said <outlet> hadn't run it; <outlet> ran it <date>." Imran decides whether to post one. (Nov 5: the Oct 10 intel-sharing story; CNN ran it Oct 10.) A pickup on or before `posted` is also **(rejected)** in an update post.
-- When a story ran in more than one post, compare against the **latest** post that carried it. A story that already has an update row is never updated again.
+- When a story ran in more than one post, compare against the **latest** post that carried it. A story that already has an update row is never updated again. A queued post isn't compared against: it hasn't run yet.
 - A Covered story with no pickup date can't be told apart; list it under Open calls.
 
-Several Updates on one day: one companion each, **oldest pickup first**. More than two: the third and later wait for the next run, and the report says so **(planned)**.
+Several Updates on one day: one companion each, **oldest pickup first**. More than two: the third and later wait for the next run, and the report says so **(planned)**. A companion rides along with whatever the day makes: the carousel, or on a no-carousel day the standalone deep post.
 
-**Scheduling:** the companion goes after the day's carousel, the same day, in the next open slot from **3:00pm ET**. Its Reel goes 2–4 hours after its carousel, or the next morning if that would run past 9:00pm ET.
+**Scheduling:** the companion goes after the day's carousel, the same day, in the next open slot from **3:00pm ET**, after any queued row. Its Reel goes 2–4 hours after its carousel, or the next morning if that would run past 9:00pm ET.
 
-**Flash and ask:** the day's Flash rule is unchanged. An Update cover is never Flash **(rejected)**, so it never collides with "no two Flash in a row". The companion never uses the day's ask (`review_page.py` refuses it).
-
-Nov 5 example: the day's post is a SINGLE on the FT oil-majors story (rule 1: it reached Verified with all 11 checked and silent since the last post; rule 3 agrees, since the last post was the Oct 31 bundle). It gets its normal Reel. The gas-transit Update rides along as a companion with its own four slides and Reel.
+**Flash and ask:** the day's Flash rule is unchanged. An Update cover is never Flash **(rejected)**, so it never collides with "no two Flash in a row". The companion never uses the day's ask (`review_page.py` refuses it), nor an ask blocked under §6.
 
 ## 2. Eligibility and ranking
 
-**Eligible:** Status = Flagged, and Confirmation = Verified or Probable. Provisional never posts **(rejected)**. "Posted" below means §0.
+**Eligible:** Status = Flagged, and Confirmation = Verified or Probable. Provisional never posts **(rejected)**. "Posted" below means §0, queued rows included.
 
 **Not eligible:**
 - any story in a post from the last 7 days (the weekly is the only exception: it may repeat this week's stories) **(planned)**;
@@ -57,17 +58,27 @@ Nov 5 example: the day's post is a SINGLE on the FT oil-majors story (rule 1: it
 3. Days dark, higher first.
 4. Number of outlets checked silent, higher first.
 
-**Bundles:** avoid two stories from the same dashboard topic when an eligible alternative at the same confidence exists. Put the strongest first.
+### 2.1 Filling stories 2–4 (addendum v2.2 §F.3–5)
 
-**Reel story:** the post's lead story. A **second Reel** (a DEEP post with its own five-slide carousel) runs only when the next eligible story's public record supports 4–6 dated events **and** at least three sourced statements. If none qualifies, say why and stop at one.
+In this order of preference **(planned)**:
 
-**Freshness (phase 3):** run one WebSearch per chosen story for US Tier-A pickup since the row's Last checked. A pickup drops the story; report it. A fresh search is not a full pass, so the check window on the slides stays the dashboard's.
+a. **New rows:** eligible, never posted, and first seen (the Stories record's created time, `first_seen`) on or after the last day's post. Ranked as above.
+b. **Rows passed over on earlier days:** eligible and never posted, but already on the dashboard at the last day's post (eligible then, not chosen). By days dark, longest first.
+c. **Still dark:** rows posted before but not in the last 14 days, still Flagged, by days dark, longest first. These are stories that have stayed dark in the US press a long time (Sama Safi, say): they can be resurfaced with no new information. Their count line on the BundleCover becomes **"Still dark: day <N>."** with N their days dark, and the story slide's kicker reads **"Dead Air · Still dark"** **(rejected** otherwise**)**. **At most one Still-dark story per carousel**, and never story 1 **(rejected)**.
+
+**Never as fillers:** Provisional rows, rows with an open counting question (`hold`), Covered rows, and anything in a post from the last 7 days **(planned)**.
+
+**Topic spread:** no more than two stories from one dashboard topic when an alternative exists **(planned)**. If keeping to it would leave a slot empty, it's relaxed and `plan_day.py` says so; log it. Put the strongest first.
+
+**Reel story:** the post's lead story. A **second Reel** (a DEEP post with its own five-slide carousel) runs on story 2 only when its public record supports 4–6 dated events **and** at least three sourced statements. A Still-dark story is never a Reel candidate. If none qualifies, say why and stop at one.
+
+**Freshness (phase 3):** run one WebSearch per chosen story for US Tier-A pickup since the row's Last checked. A pickup drops the story; report it and re-plan without it. A fresh search is not a full pass, so the check window on the slides stays the dashboard's.
 
 ## 3. Flash
 
 - Every deep dive and every Reel cover is Flash.
 - Carousels: positions 3, 5 and 7 of each nine posts, counting from the newest.
-- Never two Flash covers in a row: check the last posted IG Posts row's Flash box (§0). An Update cover is never Flash, so a companion never blocks the next day's Flash.
+- Never two Flash covers in a row: check the newest posted **or queued** IG Posts row's Flash box (§0). An Update cover is never Flash, so a companion never blocks the next day's Flash.
 - On a bundle day the BundleCover takes the Flash.
 
 ## 4. The grid
@@ -110,9 +121,14 @@ The carousel caption, in this order, with a blank line between each part:
 
 **Sources (every caption, Imran Oct 31):** both captions end with a blank line, `Sources` on its own line, then the post's `sources` line, character for character **(rejected)**. That line lists every source the slides and captions draw on, semicolon-separated: outlet, carrier and date ("Haaretz via Times of Israel (Jul 7, 2024)"). Coverage critiques are labelled "on coverage". Every source in it must also appear in the calls. Each caption is 2,200 characters max **(rejected)**.
 
-**Ask:** one of "Follow for the next one." · "Send this to someone who reads the Times." · "Save this. Check back in a week." **(rejected** otherwise**)**, on every post, Updates included. Never the same as the last post; an Update companion never uses the day's post's ask. Don't follow a grieving relative with a jab: the Hannibal post changed its ask for that reason.
+**Ask:** one of "Follow for the next one." · "Send this to someone who reads the Times." · "Save this. Check back in a week." **(rejected** otherwise**)**, on every post, Updates included. Never the same as the last post, and **no two posts scheduled within 48 hours share an ask**, queued posts included (addendum v2.2 §J.4; `plan_day.py` lists them as `blocked_asks`). An Update companion never uses the day's post's ask. Don't follow a grieving relative with a jab: the Hannibal post changed its ask for that reason.
 
-**Bundle hook:** one of "3 US stories. 11 US outlets. Dead air." · "This week's dead air." (weekly) · "3 things they ran abroad. 0 ran here." (only when all three are 0 of 11) **(rejected** otherwise**)**.
+**Bundle hook:** **one line only**, so four stories fit **(rejected** if it wraps**)**. One of **(rejected** otherwise**)**:
+- "4 stories. Dead air."
+- "This week's dead air." (weekly)
+- "4 abroad. 0 here." only when none of the four has a domestic Tier-A outlet other than its breaker (no `ran` square) **(rejected** otherwise**)**. (Addendum v2.2 §F.7 proposed "4 ran abroad. 0 ran here."; it wraps to two lines at four stories, so Imran approved this shorter form.)
+
+Tested Nov 5: the two-line "3 US stories. 11 US outlets. Dead air." pushes the footer into the keep-out zone at four stories. The old three-story hooks ("3 US stories. 11 US outlets. Dead air." · "This week's dead air." · "3 things they ran abroad. 0 ran here.") survive only on a re-cut of a three-story bundle posted before 0.3.0 (`recut_of` set).
 
 ## 7. Reel content
 
@@ -137,7 +153,7 @@ The carousel caption, in this order, with a blank line between each part:
 
 **Fixed wording:**
 - Swipe cue: "Swipe →".
-- Story-slide kicker: "Dead Air" (single) or "Dead Air · n of 3" (bundle).
+- Story-slide kicker: "Dead Air" (single), "Dead Air · n of 4" (bundle, weekly), or "Dead Air · Still dark" for the Still-dark story (§2.1). A legacy three-story re-cut keeps "n of 3".
 - Deep-dive kickers: "Deep dive · 01 What happened", "02 Both sides", "03 Who ran it". A families slide is "Deep dive · 04 <place>" when it closes and "Deep dive · <place>" when it opens. A deep dive's story slide drops the topic from its kicker.
 - Update kickers: "Update · <Mon D YYYY>" (cover), "Update · 01 What we posted <Mon D>", "Update · 02 Who ran it since".
 - Update headline: "Update: <outlet short> ran it <N> days late." **(rejected** otherwise**)**. N is the pickup date minus the hatched US breaker's date: the story's `dateline` date, or `update.breaker_date` when the breaker rule makes them differ **(rejected** if wrong**)**. hook-l, 3 lines max, about 6–8 words.

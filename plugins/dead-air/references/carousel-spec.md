@@ -13,6 +13,8 @@ Renderer: `render.py`. Review page: `review_page.py` (both found as described in
 
 Every Reel needs real reporting: read the source articles (WebFetch the foreign Tier-A pieces and any wire copy) for the timeline, who says what, and what is not established. Every line on a deep-dive slide must trace to a source named in the post's calls. Where a dashboard row and the sources disagree (an order value, a merger status), the sources win; flag the row to Imran and do not edit it.
 
+> **Superseded in part by spec addendum v2.1 (Nov 5, 2026).** An Update no longer takes the day or renders as one cover: it is a four-slide companion post with its own Reel, and a pickup dated on or before our post is a correction. See [editorial-rules.md](editorial-rules.md) §0–1 and [post-schema.md](post-schema.md). The rules below are kept as history.
+
 ## 1. Choose the format (cadence-agnostic)
 
 Read the IG Posts table (IDs in the project doc `dead-air/config.md`), newest first by Post date.

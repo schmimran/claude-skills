@@ -19,6 +19,8 @@ This command is **fire and forget** (SPEC §0). It never asks a question the rul
 
 No story selection. The freshness search and QA still run.
 
+`--format update` takes one record ID and builds the four-slide Update (UpdateCover, Then, Now, Closer) with its ~20 s Reel, per `${CLAUDE_PLUGIN_ROOT}/references/post-schema.md` (update block) and `${CLAUDE_PLUGIN_ROOT}/references/reel-spec.md` §5. Find the latest IG Posts row that carried the record for `of_post`, and copy its story object into `then_story`. If the first pickup is dated on or before that post, stop cleanly: it's a correction, not an Update (`${CLAUDE_PLUGIN_ROOT}/references/editorial-rules.md` §1.1). An update has its own Reel, so render it without `--only carousel`.
+
 ---
 
 ## Phase 0 — Setup

@@ -164,7 +164,7 @@ plugins/
     .claude-plugin/
       plugin.json                 # Plugin manifest
     commands/
-      dead-air.md                 # Daily editor — dashboard → format/stories → report → build → render → QA → deliver → report
+      dead-air.md                 # Daily editor — dashboard → plan (day's post + Update companions) → report → build → render → QA → deliver → report
       dead-air-carousel.md        # One carousel from chosen Stories records, or a -vN re-cut of an existing post JSON
       dead-air-reel.md            # One reported deep-dive Reel on any topic (record, URLs, plain language); ad-hoc coverage check
     agents/
@@ -183,11 +183,12 @@ plugins/
       carousel-spec.md            # Historical v3 rules from the claude.ai session, reconciled to SPEC v2
     scripts/
       render.py                   # Post JSON + design system → carousel PNGs, Reel MP4, cover, checks.json (Playwright + ffmpeg)
-      review_page.py              # Post JSON + calls JSON → review-page HTML
+      review_page.py              # Post JSON + calls JSON (+ Update companions) → review-page HTML
+      plan_day.py                 # IG Posts + Stories rows → the day's plan: posted-ness, eligibility, format, Updates, corrections (stdlib)
     tests/
       run-fixture.sh              # Runs the fixture tests (needs a Python with Playwright, ffmpeg, npm)
-      check_fixtures.py           # SPEC §13 tests 1–7a + mode: adhoc, stdlib only
-      fixtures/                   # Two approved posts + calls, and an offline design-system snapshot (tests only)
+      check_fixtures.py           # SPEC §13 tests 1–7a + mode: adhoc + addendum v2.1 §F, stdlib only
+      fixtures/                   # Two approved Oct 31 posts, the Nov 5 Update companion, their calls, and an offline design-system snapshot (tests only)
     README.md                     # Plugin-specific documentation
 ```
 

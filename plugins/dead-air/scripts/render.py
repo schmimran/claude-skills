@@ -2,12 +2,17 @@
 """Schmim Knews · Dead Air renderer (v2, amber-on-black design system).
 
 Usage:
-  python3 render-v2.py <post.json> <design_dir> <out_dir> [--fonts <dir>]
+  python3 render.py <post.json> <design_dir> <out_dir> [--fonts <dir>] [--only reel|carousel]
+                    [--budget hook=5,timeline=12,...] [--open-family <budget>,<final>]
 
-  design_dir  folder holding project/tokens.json and project/components/bundle.css,
-              as saved by an Artifact `read` of the "Schmim Knews" design system.
-  fonts       folder holding the @fontsource packages (big-shoulders-display,
-              work-sans, ibm-plex-mono). Default: ./node_modules/@fontsource.
+  design_dir   folder holding project/tokens.json and project/components/bundle.css,
+               as saved by an Artifact `read` of the "Schmim Knews" design system.
+  --fonts      folder holding the @fontsource packages (big-shoulders-display,
+               work-sans, ibm-plex-mono). Default: the first of node_modules/@fontsource
+               next to this script, ./node_modules/@fontsource, ./dead-air/node_modules/@fontsource.
+  --only       render just the carousel PNGs, or just the Reel (MP4 + cover). Copy checks always run.
+  --budget     override per-slide Reel seconds (keys: hook timeline claims receipt family closer).
+  --open-family  seconds for a family slide that opens the Reel, and its final hold. Default 13,5.5.
 
 Formats: single | bundle | weekly | deep | update.
 Writes the carousel PNGs (1080x1350), reel.mp4 (the lead story as a deep dive, each line
@@ -339,11 +344,37 @@ def holds_for(words, budget, final=2.0):
     hs[-1] += final
     return [round(h, 2) for h in hs]
 
+def _opt(a, flag):
+    if flag not in a: return None
+    i = a.index(flag)
+    if i + 1 >= len(a): raise SystemExit(f"{flag} needs a value")
+    return a[i + 1]
+
+def default_fonts():
+    """First @fontsource folder found: next to this script, then the working dir, then ./dead-air (SPEC §4.2-3)."""
+    cands = [Path(__file__).resolve().parent / "node_modules/@fontsource",
+             Path("node_modules/@fontsource"), Path("dead-air/node_modules/@fontsource")]
+    return str(next((c for c in cands if c.is_dir()), cands[0]))
+
+def parse_budget(spec):
+    out = {}
+    for part in spec.split(","):
+        k, _, v = part.partition("=")
+        if k.strip() not in REEL_BUDGET: raise SystemExit(f"--budget: unknown slide '{k}' (use {', '.join(REEL_BUDGET)})")
+        out[k.strip()] = float(v)
+    return out
+
 def main():
     a = sys.argv[1:]
     if len(a) < 3: print(__doc__); sys.exit(2)
     post_p, ddir, out = Path(a[0]), Path(a[1]), Path(a[2])
-    fdir = a[a.index("--fonts") + 1] if "--fonts" in a else str(Path(__file__).resolve().parent / "node_modules/@fontsource")
+    fdir = _opt(a, "--fonts") or default_fonts()
+    only = _opt(a, "--only")
+    if only not in (None, "reel", "carousel"): raise SystemExit("--only must be reel or carousel")
+    if _opt(a, "--budget"): REEL_BUDGET.update(parse_budget(_opt(a, "--budget")))
+    if _opt(a, "--open-family"):
+        b, _, fin = _opt(a, "--open-family").partition(",")
+        OPEN_FAMILY.update(budget=float(b), final=float(fin or OPEN_FAMILY["final"]))
     post = json.loads(post_p.read_text())
     errs = check_copy(post)
     if errs:
@@ -352,7 +383,7 @@ def main():
     css = fonts_css(fdir) + tokens_css(tokens) + (ddir / "project/components/bundle.css").read_text() + "body{margin:0;background:#000}"
     out.mkdir(parents=True, exist_ok=True)
     slides, reels = build_slides(post), reel_slides(post)
-    if post["format"] != "update" and len(post.get("alt", [])) != len(slides):
+    if only != "reel" and post["format"] != "update" and len(post.get("alt", [])) != len(slides):
         print(f"COPY CHECK FAILED:\n - alt needs {len(slides)} strings, one per slide"); sys.exit(1)
     stem = f"schmimknews-{post['date']}-{post['format']}"
     fdir_frames = out / ".reel-frames"; fdir_frames.mkdir(exist_ok=True)
@@ -360,7 +391,8 @@ def main():
     problems, files, frames = [], [], []
     with sync_playwright() as p:
         b = p.chromium.launch()
-        for kind, items in (("slide", slides), ("reel", reels)):
+        passes = [("slide", slides)] * (only != "reel") + [("reel", reels)] * (only != "carousel")
+        for kind, items in passes:
             for i, body in enumerate(items, 1):
                 pg = b.new_page(viewport={"width": 1080, "height": 1350})
                 doc = f'<!doctype html><html lang="en"><head><meta charset="utf-8"><style>{css}</style></head><body>{body}</body></html>'

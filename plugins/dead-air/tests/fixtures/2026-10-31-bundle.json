@@ -1,0 +1,253 @@
+{
+  "date": "2026-10-31",
+  "format": "bundle",
+  "flash": false,
+  "bundle_hook": "3 US stories. 11 US outlets. Dead air.",
+  "ask": "Save this. Check back in a week.",
+  "stories": [
+    {
+      "record_id": "recFIXTURE0000001",
+      "topic": "Pakistan",
+      "title": "Pakistan's army ordered drones from a firm tied to Trump's sons",
+      "count": "Reuters ran it · 9 others didn't · 40 days",
+      "headline": "Pakistan's army ordered drones from a firm tied to Trump's sons.",
+      "stat": "Reuters reported it. Nine other major US outlets didn't.",
+      "grid": [
+        "silent",
+        "silent",
+        "silent",
+        "silent",
+        "broke",
+        "silent",
+        "unchecked",
+        "silent",
+        "silent",
+        "silent",
+        "silent"
+      ],
+      "claim": "Pakistan's army signed a drone deal with Powerus, a US maker backed by a fund of Trump's sons, and its defence ministry placed a first order.",
+      "dateline": "Reported Sep 16, 2026 · Financial Times",
+      "abroad": [
+        {
+          "name": "Financial Times",
+          "country": "UK"
+        },
+        {
+          "name": "Al Jazeera",
+          "country": "Qatar"
+        },
+        {
+          "name": "Times of India",
+          "country": "India"
+        },
+        {
+          "name": "Express Tribune",
+          "country": "Pakistan"
+        }
+      ],
+      "us": "Reuters reported it Sep 17. Checked Oct 12–26: nothing at the other 9; ABC couldn't be checked.",
+      "confidence": "Verified",
+      "days_dark": 40,
+      "meta": "FT broke it Sep 16 · Reuters Sep 17 · checked Oct 12–26 · ABC not checked"
+    },
+    {
+      "record_id": "recFIXTURE0000002",
+      "topic": "Pentagon",
+      "title": "The US told allies missile deliveries may slip five years",
+      "count": "Bloomberg broke it · 10 didn't · 38 days",
+      "headline": "The US told allies missile deliveries may slip five years.",
+      "stat": "Ten major US outlets didn't run it.",
+      "grid": [
+        "silent",
+        "silent",
+        "silent",
+        "silent",
+        "silent",
+        "silent",
+        "unchecked",
+        "silent",
+        "silent",
+        "silent",
+        "silent"
+      ],
+      "claim": "Washington warned allies that missile, Patriot interceptor and Tomahawk deliveries could take up to five years, after the Iran war drained US stocks.",
+      "dateline": "Reported Sep 18, 2026 · Bloomberg",
+      "abroad": [
+        {
+          "name": "Ukrainska Pravda",
+          "country": "Ukraine"
+        },
+        {
+          "name": "Kyiv Post",
+          "country": "Ukraine"
+        },
+        {
+          "name": "Japan Times",
+          "country": "Japan"
+        },
+        {
+          "name": "Times of India",
+          "country": "India"
+        }
+      ],
+      "us": "Bloomberg, not one of the 11, broke it. Checked Oct 12–26: nothing at 10; ABC couldn't be checked.",
+      "confidence": "Verified",
+      "days_dark": 38,
+      "meta": "Bloomberg broke it Sep 18 · checked Oct 12–26 · ABC not checked"
+    },
+    {
+      "record_id": "recFIXTURE0000003",
+      "topic": "Deportations",
+      "title": "$410 million to deport 25,000 people to third countries",
+      "count": "WaPo ran it · 9 others didn't · 36 days",
+      "headline": "The US deported 25,000 people to third countries for $410 million.",
+      "stat": "The Washington Post ran it. Nine other major US outlets didn't.",
+      "grid": [
+        "silent",
+        "broke",
+        "silent",
+        "silent",
+        "silent",
+        "silent",
+        "unchecked",
+        "silent",
+        "silent",
+        "silent",
+        "silent"
+      ],
+      "claim": "A journalism consortium found the US deported 25,447 people to third countries by Aug 31, via deals with 35 countries and $410 million.",
+      "dateline": "Published Sep 21, 2026 · Forbidden Stories consortium",
+      "abroad": [
+        {
+          "name": "The Guardian",
+          "country": "UK"
+        },
+        {
+          "name": "France 24",
+          "country": "France"
+        },
+        {
+          "name": "RFI",
+          "country": "France"
+        },
+        {
+          "name": "Euronews",
+          "country": "France"
+        }
+      ],
+      "us": "WaPo published it Sep 21 as a consortium partner. Checked Oct 12–26: nothing at the other 9; ABC couldn't be checked.",
+      "confidence": "Verified",
+      "days_dark": 36,
+      "meta": "WaPo ran it Sep 21 as a partner · checked Oct 12–26 · ABC not checked"
+    }
+  ],
+  "caption": "A drone deal with Trump's sons' firm. A five-year missile gap. 25,000 deportees. Abroad, news. Here, five weeks of nothing.\n\nThe Financial Times broke the Powerus deal September 16, Bloomberg the missile warning September 18, and the Forbidden Stories consortium the deportation figures September 21; each ran at three or more major foreign outlets. Reuters carried the first and The Washington Post, a consortium partner, the third. In checks from October 12 to 26, none of the other major US outlets we could check followed on any of them; ABC couldn't be checked.\n\nSave this. Check back in a week.\n\nCounts as reported abroad at 3+ major foreign outlets; counts as missing at home when none of the 11 major US outlets ran it, not counting whoever broke it. Board: news.schmim.com\n\n#DeadAir #SchmimKnews #Pakistan #Pentagon #Deportations\n\nSources\nFinancial Times (Sep 16, 2026); Reuters via Arab News (Sep 17, 2026); ThePrint (Sep 18, 2026); Al Jazeera (Sep 23, 2026); Quwa; Powerus merger notice (Oct 1, 2026); Bloomberg (Sep 18, 2026); Forbidden Stories with The Washington Post (Sep 21, 2026); The Guardian, France 24, RFI and Euronews on the deportations.",
+  "reel_caption": "Pakistan's army is buying drones from a company tied to Trump's sons. In the US, only Reuters ran it.\n\n#DeadAir #SchmimKnews\n\nSources\nFinancial Times (Sep 16, 2026); Reuters via Arab News (Sep 17, 2026); ThePrint (Sep 18, 2026); Al Jazeera (Sep 23, 2026); Quwa; Powerus merger notice (Oct 1, 2026); Bloomberg (Sep 18, 2026); Forbidden Stories with The Washington Post (Sep 21, 2026); The Guardian, France 24, RFI and Euronews on the deportations.",
+  "alt": [
+    "Cover: 3 US stories, 11 US outlets, dead air. A drone deal between Pakistan's army and a firm tied to Trump's sons, a five-year missile delivery warning to allies, and 25,000 third-country deportations.",
+    "Story 1 of 3: Pakistan's army ordered drones from Powerus, a firm tied to Trump's sons. Reuters reported it; none of the other 9 major US outlets we could check followed.",
+    "Story 2 of 3: the US warned allies that missile deliveries could take up to five years. None of the 10 major US outlets we could check ran it.",
+    "Story 3 of 3: 25,447 people deported to third countries and $410 million earmarked. The Washington Post published it as a partner; none of the other 9 major US outlets we could check followed.",
+    "How we check: abroad counts at three or more major foreign outlets; at home it counts as missing when none of the 11 major US outlets ran it. Save this. Check back in a week."
+  ],
+  "reel": {
+    "story": {
+      "record_id": "recFIXTURE0000001",
+      "topic": "Pakistan",
+      "title": "Pakistan's army ordered drones from a firm tied to Trump's sons",
+      "count": "Reuters ran it · 9 others didn't · 40 days",
+      "headline": "Pakistan's army is buying drones from a company tied to Trump's sons.",
+      "stat": "Reuters ran it. Nine other major US outlets didn't.",
+      "grid": [
+        "silent",
+        "silent",
+        "silent",
+        "silent",
+        "broke",
+        "silent",
+        "unchecked",
+        "silent",
+        "silent",
+        "silent",
+        "silent"
+      ],
+      "claim": "Pakistan's defence ministry placed an order with Powerus, a US drone maker backed by a fund of Trump's sons, and its army signed a framework deal.",
+      "dateline": "Reported Sep 16, 2026 · Financial Times",
+      "abroad": [
+        {
+          "name": "Financial Times",
+          "country": "UK"
+        },
+        {
+          "name": "Al Jazeera",
+          "country": "Qatar"
+        },
+        {
+          "name": "Times of India",
+          "country": "India"
+        },
+        {
+          "name": "Express Tribune",
+          "country": "Pakistan"
+        }
+      ],
+      "us": "Reuters reported it Sep 17. Checked Oct 12–26: nothing at the other 9; ABC couldn't be checked.",
+      "confidence": "Verified",
+      "days_dark": 40,
+      "meta": "FT broke it Sep 16 · Reuters Sep 17 · checked Oct 12–26 · ABC not checked"
+    },
+    "deep": {
+      "timeline_lede": "From India to Rawalpindi in eleven weeks.",
+      "timeline": [
+        {
+          "d": "Jun 30",
+          "e": "An Indian defence firm says Powerus gave it an exclusive licence to build its Guardian interceptor drone in India.",
+          "key": true
+        },
+        {
+          "d": "Sep 16",
+          "e": "Powerus executives meet Field Marshal Asim Munir at army headquarters in Rawalpindi. A US embassy official attends.",
+          "key": true
+        },
+        {
+          "d": "Sep 17",
+          "e": "Powerus announces an order from Pakistan's defence ministry and a framework deal with its army. No value or contents given."
+        },
+        {
+          "d": "Sep 17",
+          "e": "Filings show a fund of Donald Trump Jr. and Eric Trump set to own about 9.9% of Powerus after a merger."
+        },
+        {
+          "d": "Oct 1",
+          "e": "The merger closes. Powerus trades on Nasdaq as PUSA.",
+          "key": true
+        }
+      ],
+      "timeline_note": "As of Oct 31: no public word on what Pakistan ordered, what it cost, or any US approval.",
+      "claims": [
+        {
+          "who": "Powerus",
+          "src": "CEO Andrew Fox, Sep 17",
+          "say": "The contracts were won on merit; Trump's sons had “no involvement on the business side.”"
+        },
+        {
+          "who": "Trump Jr.",
+          "src": "spokesperson, Sep 17",
+          "say": "He is a passive investor with no role in the company's management or operations."
+        },
+        {
+          "who": "White House",
+          "src": "to Al Jazeera, Sep 23",
+          "say": "There are no conflicts of interest."
+        },
+        {
+          "who": "Pakistan army",
+          "src": "statement, Sep 16",
+          "say": "The talks covered procurement, production and capacity building. It did not mention the deal."
+        }
+      ],
+      "unknown": "What was ordered and its value. Whether US export approval was sought; Powerus says the deal is subject to it. Eric Trump's spokesperson could not be reached."
+    }
+  },
+  "sources": "Financial Times (Sep 16, 2026); Reuters via Arab News (Sep 17, 2026); ThePrint (Sep 18, 2026); Al Jazeera (Sep 23, 2026); Quwa; Powerus merger notice (Oct 1, 2026); Bloomberg (Sep 18, 2026); Forbidden Stories with The Washington Post (Sep 21, 2026); The Guardian, France 24, RFI and Euronews on the deportations."
+}

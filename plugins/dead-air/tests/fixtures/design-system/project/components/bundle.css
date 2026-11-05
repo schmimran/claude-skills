@@ -1,0 +1,119 @@
+/* Dead Air — slide stylesheet. Every value here is a token from tokens.json (tokens.css loads first).
+   Slides are authored at full canvas size (1080x1350 post, 1080x1920 reel) and scaled by the renderer. */
+
+.slide {
+  width: 1080px; height: 1350px; box-sizing: border-box; position: relative; overflow: hidden;
+  background: var(--ground); color: var(--ink);
+  font-family: var(--font-sans);
+  padding: var(--space-9) var(--space-9) var(--space-18);
+  display: flex; flex-direction: column; gap: var(--space-4);
+}
+.slide--reel { height: 1920px; padding: var(--reel-safe-top) var(--space-9) var(--reel-safe-bottom); }
+.slide--flash { background: var(--signal); color: var(--on-signal); }
+
+/* hook slides: headline at the top, stat in the middle, proof (grid + meta) anchored just above the footer,
+   so the 11 squares sit at the same height on every cover and line up across the profile grid */
+.slide--hook .stat { margin-top: auto; }
+.slide--hook .proof { margin-top: auto; }
+.slide--hook .foot { margin-top: 0; }
+
+/* kicker: on-air square + series + date */
+.kicker {
+  display: flex; align-items: center; gap: var(--space-2);
+  font-family: var(--font-mono); font-size: 26px; line-height: 1.2; font-weight: 600; letter-spacing: 4px; text-transform: uppercase;
+  color: var(--ink-muted);
+}
+.kicker .onair { width: 22px; height: 22px; background: var(--signal); flex: none; }
+.kicker b { color: var(--ink); font-weight: 600; }
+.kicker .right { margin-left: auto; }
+.slide--flash .kicker, .slide--flash .kicker b { color: var(--on-signal); }
+.slide--flash .kicker .onair { background: var(--on-signal); }
+
+/* hooks */
+.hook { font-family: var(--font-display); font-weight: 900; text-transform: uppercase; margin: 0; color: var(--ink); }
+.hook--xl { font-size: 168px; line-height: .9; letter-spacing: -1px; }
+.hook--l  { font-size: 136px; line-height: .92; letter-spacing: -.5px; }
+.hook--m  { font-size: 104px; line-height: .95; letter-spacing: 0; font-weight: 800; }
+.slide--flash .hook { color: var(--on-signal); }
+
+.stat { font-family: var(--font-display); font-size: 88px; line-height: .95; font-weight: 800; text-transform: uppercase; color: var(--signal); margin: 0; }
+.slide--flash .stat { color: var(--on-signal); }
+
+.lede { font-size: 48px; line-height: 1.25; font-weight: 600; margin: 0; }
+.body { font-size: 38px; line-height: 1.3; font-weight: 400; margin: 0; }
+.body-small { font-size: 32px; line-height: 1.35; margin: 0; color: var(--ink-muted); }
+.meta { font-family: var(--font-mono); font-size: 28px; line-height: 1.3; color: var(--ink-muted); margin: 0; }
+.slide--flash .meta, .slide--flash .body-small { color: var(--on-signal); }
+.label { font-family: var(--font-mono); font-size: 26px; line-height: 1.2; font-weight: 600; letter-spacing: 4px; text-transform: uppercase; color: var(--ink-muted); margin: 0 0 var(--space-3); }
+
+/* the 11 outlets */
+.grid11 { display: flex; gap: var(--space-2); }
+.grid11 i { display: block; width: 72px; height: 72px; box-sizing: border-box; border: 5px solid var(--static); }
+.grid11 i.on { background: var(--signal); border-color: var(--signal); }
+.grid11 i.broke { border-color: var(--ink); background: repeating-linear-gradient(-45deg, var(--static) 0 5px, transparent 5px 14px); }
+.slide--flash .grid11 i { border-color: var(--on-signal); }
+.slide--flash .grid11 i.on { background: var(--on-signal); }
+.slide--flash .grid11 i.broke { background: repeating-linear-gradient(-45deg, var(--on-signal) 0 5px, transparent 5px 14px); }
+
+/* confidence meter: 1-3 segments */
+.meter { display: inline-flex; gap: var(--space-1); vertical-align: middle; margin-right: var(--space-3); }
+.meter i { display: block; width: 56px; height: 16px; background: var(--static); }
+.meter i.on { background: var(--signal); }
+.status { display: flex; align-items: center; font-family: var(--font-mono); font-size: 28px; color: var(--ink); }
+
+/* outlet chips */
+.outlets { display: flex; flex-wrap: wrap; gap: 12px var(--space-2); }
+.outlet { font-family: var(--font-mono); font-size: 28px; line-height: 1; font-weight: 500; color: var(--ink); border: 3px solid var(--static); padding: 14px 20px; }
+.outlet small { font-size: 22px; color: var(--ink-muted); margin-left: 12px; letter-spacing: 2px; text-transform: uppercase; }
+
+/* panels and rules */
+.panel { background: var(--ground-raised); padding: var(--space-4) var(--space-6); display: flex; flex-direction: column; gap: var(--space-3); }
+.rule { border: 0; border-top: 4px solid var(--signal); margin: 0; }
+.rule--hair { border-top: 2px solid var(--hairline); }
+.hatch { height: 32px; background: repeating-linear-gradient(-45deg, var(--static) 0 4px, transparent 4px 18px); margin: 0 calc(-1 * var(--space-9)); }
+
+/* bundle list */
+.stories { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
+.stories li { display: grid; grid-template-columns: 168px 1fr; gap: var(--space-4); align-items: start; padding-top: var(--space-3); border-top: 2px solid var(--hairline); }
+.stories .num { font-family: var(--font-display); font-size: 160px; line-height: .85; font-weight: 900; letter-spacing: -2px; color: var(--signal); }
+.stories .t { font-size: 44px; line-height: 1.2; font-weight: 600; margin: 0; }
+.stories .m { margin-top: var(--space-2); }
+
+/* deep dive: timeline */
+.tl { list-style: none; margin: 0; padding: 0; }
+.tl li { display: grid; grid-template-columns: 150px 1fr; gap: var(--space-3); padding: 12px 0; border-top: 2px solid var(--hairline); }
+.tl li:first-child { border-top: 0; padding-top: 0; }
+.tl .d { font-family: var(--font-mono); font-size: 28px; line-height: 1.35; color: var(--ink-muted); letter-spacing: 1px; text-transform: uppercase; }
+.tl li.key .d { color: var(--signal); font-weight: 600; }
+.tl .e { font-size: 32px; line-height: 1.35; margin: 0; }
+.tl .e small { display: block; font-family: var(--font-mono); font-size: 24px; color: var(--ink-muted); margin-top: 6px; }
+
+/* deep dive: claims */
+.claims { list-style: none; margin: 0; padding: 0; }
+.claims li { display: grid; grid-template-columns: 220px 1fr; gap: var(--space-3); padding: var(--space-2) 0; border-top: 2px solid var(--hairline); }
+.claims li:first-child { border-top: 0; padding-top: 0; }
+.claims .who { font-family: var(--font-mono); font-size: 24px; line-height: 1.3; letter-spacing: 2px; text-transform: uppercase; color: var(--ink); }
+.claims .who small { display: block; letter-spacing: 0; text-transform: none; color: var(--ink-muted); font-size: 22px; margin-top: 6px; }
+.claims .say { font-size: 32px; line-height: 1.35; margin: 0; }
+.claims .say q { font-style: italic; quotes: "\201C" "\201D"; }
+.unknown { border-left: 6px solid var(--signal); padding-left: var(--space-3); }
+.unknown .label { margin-bottom: 8px; color: var(--signal); }
+.unknown p { font-size: 30px; line-height: 1.35; margin: 0; }
+
+/* smaller outlets: dashed chips, never counted */
+.outlet.small { border-style: dashed; color: var(--ink-muted); }
+
+/* footer: handle left, cue right, sits inside the keep-out zone edge */
+.foot { margin-top: auto; display: flex; justify-content: space-between; align-items: flex-end; font-family: var(--font-mono); font-size: 28px; color: var(--ink-muted); }
+.foot .handle { font-size: 30px; font-weight: 600; color: var(--ink); }
+.foot .cue { color: var(--signal); font-weight: 600; letter-spacing: 2px; text-transform: uppercase; }
+.slide--flash .foot, .slide--flash .foot .handle, .slide--flash .foot .cue { color: var(--on-signal); }
+.wordmark { font-family: var(--font-display); font-weight: 900; font-size: 44px; letter-spacing: 2px; text-transform: uppercase; color: var(--ink); }
+
+/* preview frames (design-system page only): scale a full-size slide into a card */
+.frame { display: inline-block; overflow: hidden; vertical-align: top; }
+.frame--post { width: 360px; height: 450px; }
+.frame--post .slide { transform: scale(.33333); transform-origin: 0 0; }
+.frame--reel { width: 270px; height: 480px; }
+.frame--reel .slide { transform: scale(.25); transform-origin: 0 0; }
+.frames { display: flex; gap: 24px; align-items: flex-start; }

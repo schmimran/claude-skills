@@ -1,0 +1,63 @@
+{
+  "reel_length": "about 57 s",
+  "facts": [
+    [
+      "Format",
+      "Deep dive (standalone Reel; ad-hoc topic, not a dashboard row)"
+    ],
+    [
+      "Flash",
+      "Yes (all deep dives)"
+    ],
+    [
+      "Ask",
+      "Follow for the next one. (Changed from “Send this to someone who reads the Times” so the Reel doesn't go straight from a grieving relative to a jab.)"
+    ],
+    [
+      "Airtable",
+      "No row yet; say if this is for posting"
+    ]
+  ],
+  "calls": [
+    [
+      "Headline rests on the Air Force probe.",
+      "\"Fired on Israelis being dragged into Gaza\" is the Efrat Katz case: an Israeli Air Force probe found a helicopter that fired on a wagon carrying hostages from Nir Oz likely killed her. It does not claim how many died that way."
+    ],
+    [
+      "What the record does not show.",
+      "Nothing here says Israel killed most October 7 victims; the State Department's Matthew Miller rejected that, and the Reel quotes him. Israel has published no count of Israelis killed by Israeli fire."
+    ],
+    [
+      "Be'eri is disputed.",
+      "Brig. Gen. Barak Hiram ordered tank fire on Pessi Cohen's house (15 hostages, 13 died). The IDF's July 2024 review found the tank fire harmed no one inside and that gunmen killed most hostages; survivor Yasmin Porat and families dispute it. Both sides are on the slide."
+    ],
+    [
+      "Families slide",
+      "Yasmin Porat, one of two hostages who survived the Be'eri house, to Kan radio (quoted by ABC Australia): “They eliminated everyone, including the hostages.” She is describing the Israeli assault on the house. Meir Zarbiv, who lost a brother and sister, to AP on Jul 11, 2024, reacting to the army's Be'eri probe: “I don't believe the report and I don't believe anything about it.” Not used: Hadas Dagan's “I am angry … abandoned … betrayed” (one unofficial translation only, and she cautioned against blaming the army)."
+    ],
+    [
+      "New slide type.",
+      "“The families” isn't one of the design system's seven templates. It's built only from existing styles (kicker, headline, lede, body, meta). If you keep it, add it to the design system and the plugin spec."
+    ],
+    [
+      "Gallant quotes are translations.",
+      "From his Channel 12 interview (Feb 2025), as translated in English-language reports; the original Hebrew was not reviewed."
+    ],
+    [
+      "Coverage check, Oct 31 (search-based).",
+      "No report of the Hannibal orders found at the Washington Post, CNN, NPR, Fox, NBC, CBS or ABC (Fox's only hits are from 2014-16). NYT, WSJ, AP and Reuters could not be checked because the search tool rejected those outlets. AP did cover the July 2024 Be'eri probe, and the Times interviewed Hiram in Dec 2023, so the Be'eri tank strike itself reached US readers."
+    ],
+    [
+      "\"846 days dark\".",
+      "Counted from Haaretz's July 7, 2024 report to today; it assumes the single Oct 31 search pass found every report."
+    ],
+    [
+      "Sources.",
+      "Haaretz via Times of Israel (Jul 7, 2024); ABC Australia investigation (Sep 7, 2024; Yedioth/Bergman, Nof Erez, IDF statement, Asa Kasher, survivors); AP via PBS (Jul 11, 2024, Be'eri probe); The Jewish Chronicle (Apr 2024); The Telegraph (UN Commission of Inquiry, Jun 13, 2024); Algemeiner (Miller, Jul 11, 2024); Channel 12 via John Menadue/Pearls and Irritations (Gallant, Feb 2025); Mondoweiss and Media Lens on US/UK coverage."
+    ],
+    [
+      "Reel opens on Be'eri",
+      "The families slide comes first in the Reel and holds about 5.5 s after the last line lands, before the Flash cover. The carousel keeps the Flash cover first (it's the grid image) with the families slide second. The Reel cover image is still the Flash hook."
+    ]
+  ]
+}

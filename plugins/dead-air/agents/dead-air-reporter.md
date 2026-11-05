@@ -42,7 +42,7 @@ The command passes you:
    - `unknown`: what the record does not establish.
    - `us_small`: non-list US outlets that ran it, if any.
    - `family` (only if asked): use only words that pass every test in `${CLAUDE_PLUGIN_ROOT}/references/reel-spec.md` §4. If nothing passes, return `family: null` and say why in `calls`; don't substitute a weaker source.
-5. **Build the story fields:** `headline` (one declarative sentence, named actors, no outlet, no date, no hedges; it will run as a Flash hook, so keep it to about 11 words), `claim` (about 150 characters max), `dateline`, `abroad` (3–5 foreign Tier-A outlets, no state wires), `topic` (14 characters max). **Verbs follow the sources:** "try to seize", not "seize".
+5. **Build the story fields:** `headline` (one declarative sentence, named actors, no outlet, no date, no hedges; it runs as the Reel's Flash hook, so keep it to about 11 words), `headline_short` (the same claim, equally true, in **6 words or fewer**, for a non-Flash single cover, whose 3 lines at hook-l hold about 6 words), `claim` (about 150 characters max), `dateline`, `abroad` (3–5 foreign Tier-A outlets, no state wires), `topic` (14 characters max). **Verbs follow the sources:** "try to seize", not "seize".
 6. **Self-check before returning.** For every line, name its source. Delete any line you can't source. Grep your own output for the banned list in `${CLAUDE_PLUGIN_ROOT}/references/editorial-rules.md` §8 and for "receipt"; there must be no hits.
 
 ## Output
@@ -51,7 +51,7 @@ Return one JSON object as your final message, and nothing else:
 
 ```json
 {
-  "story": {"topic": "", "headline": "", "claim": "", "dateline": "", "abroad": [{"name": "", "country": ""}]},
+  "story": {"topic": "", "headline": "", "headline_short": "", "claim": "", "dateline": "", "abroad": [{"name": "", "country": ""}]},
   "deep": {"timeline_lede": "", "timeline": [{"d": "", "e": "", "key": true}], "timeline_note": "",
            "claims": [{"who": "", "src": "", "say": ""}], "unknown": "", "us_small": [], "family": null},
   "first_foreign_report": {"outlet": "", "date": "YYYY-MM-DD", "url": ""},

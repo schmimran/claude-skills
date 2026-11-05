@@ -97,7 +97,7 @@ For each story, build the grid, `us`, `meta`, `stat`, `confidence` and `days_dar
 ## Phase 5 — Build
 
 Write `dead-air/posts/<date>-<format>.json` and `<date>-<format>-calls.json` per `${CLAUDE_PLUGIN_ROOT}/references/post-schema.md`:
-- the day's post: `stories`, plus `reel` = the lead story (with the reporter's Flash-length `headline`) and its `deep` block;
+- the day's post: `stories`, plus `reel` = the lead story (with the reporter's Flash-length `headline`) and its `deep` block. On a **single** whose cover is not Flash, `stories[0].headline` is the reporter's `headline_short` (a hook-l cover holds about 6 words); on a Flash single it can be the full `headline`. `headline_short` is never written into the post JSON as its own key;
 - the second Reel, if any: a separate DEEP post, `<date>-deep-<slug>.json` + `-calls.json`. It is five slides (Flash cover, timeline, claims, story slide, Closer).
 - captions and alt text per `${CLAUDE_PLUGIN_ROOT}/references/editorial-rules.md` §6; the `sources` line from the reporter's `sources_line` plus the dashboard sources;
 - `facts` in the calls: format, Flash, the carousel slot, the Reel slot (2–4 hours after the carousel), the ask.

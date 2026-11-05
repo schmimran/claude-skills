@@ -39,7 +39,7 @@ The fixtures in `tests/fixtures/` are complete, approved examples of both shapes
 | --- | --- |
 | `record_id` | Stories record ID. Ad-hoc: `null`. |
 | `topic` | 14 characters max ("Pakistan", "Deportations"). Sits in the story-slide kicker. |
-| `headline` | Single, deep and update posts, and every Reel story. One declarative sentence: named actors, no outlet, no date, no hedges. 5–14 words. It must fit **3 lines at hook-l** (non-Flash cover) or **4 lines at hook-m** (Flash cover; every deep Reel is Flash). Measured against the design system: hook-l holds about **6 words** in 3 lines; hook-m holds about 11–12. SPEC §6.1's "12 words or fewer" holds only for Flash covers. |
+| `headline` | Single, deep and update posts, and every Reel story. On a non-Flash single, use the reporter's `headline_short`. One declarative sentence: named actors, no outlet, no date, no hedges. 5–14 words. It must fit **3 lines at hook-l** (non-Flash cover) or **4 lines at hook-m** (Flash cover; every deep Reel is Flash). Measured against the design system: hook-l holds about **6 words** in 3 lines; hook-m holds about 11–12. SPEC §6.1's "12 words or fewer" holds only for Flash covers. |
 | `title`, `count` | Bundles: title 6–11 words, two lines max. Count is one line: `<outlet> ran it · <N> others didn't · <days> days` or `<non-list source> broke it · <N> didn't · <days> days`. |
 | `grid` | 11 states in fixed order NYT, WaPo, WSJ, AP, Reuters, CNN, ABC, NBC, CBS, Fox, NPR: `silent` · `broke` · `ran` · `unchecked`. |
 | `stat` | [editorial-rules.md](editorial-rules.md) §5. 2 lines max. |
@@ -84,7 +84,7 @@ The fixtures in `tests/fixtures/` are complete, approved examples of both shapes
  "calls": [["Bold lead.", "Plain explanation."]]}
 ```
 
-- `reel_length`: the length `render.py` reports, e.g. "44 s".
+- `reel_length`: the length `render.py` reports, e.g. "44 s". Leave it out when no Reel was rendered (update posts, carousel-only runs); the review page then omits its Reel panel.
 - `facts`: label/value pairs shown at the top of the review page.
 - `calls`: one `[lead, explanation]` pair per judgment.
 

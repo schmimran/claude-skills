@@ -52,6 +52,10 @@ def probe(mp4):
 
 def sha(p): return hashlib.sha256(Path(p).read_bytes()).hexdigest()
 
+def length_matches(mp4, secs, tol=0.15):
+    """The delivered MP4 runs as long as render.py says (one 30 fps frame of slack, plus rounding)."""
+    return mp4.exists() and secs is not None and abs(probe(mp4) - secs) <= tol
+
 def final_frame(d, slide_no):
     """The fully revealed frame of Reel slide n (its last reveal step)."""
     return sorted((d / ".reel-frames").glob(f"r{slide_no:02d}-*.png"))[-1]
@@ -69,7 +73,7 @@ def full_render_checks(name, post, pngs, steps, lo, hi, stem):
     mp4, cover = d / f"{stem}-reel.mp4", d / f"{stem}-reel-cover.png"
     problems = json.loads((d / "checks.json").read_text())["problems"] if (d / "checks.json").exists() else ["no checks.json"]
     ok = code == 0 and not problems and n_png == pngs and st == steps and secs is not None and lo <= secs <= hi \
-         and mp4.exists() and cover.exists()
+         and mp4.exists() and cover.exists() and length_matches(mp4, secs)
     record(name, ok, f"exit {code}, {n_png} PNGs, {st} steps, {secs} s reported, {probe(mp4) if mp4.exists() else '-'} s in the MP4, problems={problems}")
     return d
 
@@ -173,7 +177,8 @@ ok = (code == 0
       and sha(d / f"{stem_h}-05.png") == sha(d_h / f"{stem_h}-02.png")   # carousel slide 5 is the families slide
       and sha(final_frame(d, 5)) == sha(d / f"{stem_h}-05.png")          # and so is Reel slide 5
       and sha(final_frame(d, 1)) == sha(d / f"{stem_h}-01.png")          # the Reel now opens on the hook
-      and secs is not None and 50.5 <= secs <= 53.5)
+      and secs is not None and 50.5 <= secs <= 53.5
+      and length_matches(d / f"{stem_h}-reel.mp4", secs))
 record("7a-families at position 5, Reel ~52 s", ok,
        f"exit {code}, {st} steps, {secs} s reported, {probe(d / f'{stem_h}-reel.mp4') if code == 0 else '-'} s in the MP4")
 
@@ -188,6 +193,44 @@ for name, extra, needle in (("flags --budget unknown slide", ("--budget", "intro
                             ("flags --only bad value", ("--only", "gif"), "--only must be")):
     code, log, _ = render(name, BUNDLE, *extra)
     record(name, code != 0 and needle in log, "" if needle in log else log.strip()[-200:])
+
+# ---------- code-review fixes ----------
+# A re-render into the same folder leaves no stale slides: 6 slides, then 5 (families dropped).
+p = copy.deepcopy(DEEP); del p["deep"]["family"]; p["alt"] = p["alt"][:1] + p["alt"][2:]
+code1, _, d = render("stale-slides", DEEP, "--only", "carousel")
+code2, log, _ = render("stale-slides", p, "--only", "carousel")
+left = sorted(x.name for x in d.glob(f"{stem_h}-[0-9][0-9].png"))
+record("stale slides cleared on re-render", code1 == 0 and code2 == 0 and len(left) == 5, f"{left}" + ("" if code2 == 0 else log[-200:]))
+
+# UPDATE posts: one cover, no Reel; review page builds without a Reel panel.
+up = copy.deepcopy(BUNDLE["stories"][0]); up["grid"][5] = "ran"
+up.update(headline="Update: CNN ran it Oct 30.", stat="44 days late.")
+upd = {"date": "2026-10-31", "format": "update", "flash": False, "stories": [up], "sources": BUNDLE["sources"],
+       "alt": ["Update: CNN ran the Powerus story Oct 30, 44 days after it broke abroad."]}
+code, log, d = render("update", upd)
+n = len(list(d.glob("schmimknews-2026-10-31-update-[0-9][0-9].png")))
+record("update post renders one cover, no Reel", code == 0 and n == 1 and not list(d.glob("*.mp4")), f"exit {code}, {n} PNGs " + log.strip()[-200:])
+calls_p = OUT / "update-calls.json"; calls_p.write_text(json.dumps({"facts": [["Format", "Update"]], "calls": []}))
+code, pages, log = review(OUT / "update.json", d, calls_p)
+html_ = pages[0].read_text() if pages else ""
+record("update review page (no Reel panel)", code == 0 and len(pages) == 1 and "update-01.png" in html_ and ".mp4" not in html_,
+       log.strip()[-300:])
+code, log, _ = render("update-only-reel", upd, "--only", "reel")
+record("--only reel on an update refused", code != 0 and "has no Reel" in log, log.strip()[-200:])
+
+# Carousel-only run: calls without reel_length -> no Reel panel, no KeyError.
+calls_c = OUT / "carousel-only-calls.json"
+cj = json.loads((FX / "2026-10-31-calls.json").read_text()); cj.pop("reel_length"); calls_c.write_text(json.dumps(cj))
+code, pages, log = review(FX / "2026-10-31-bundle.json", d_b, calls_c)
+html_ = pages[0].read_text() if pages else ""
+record("carousel-only review page (no reel_length)", code == 0 and "bundle-05.png" in html_ and ".mp4" not in html_
+       and 'id="rcap"' not in html_, log.strip()[-300:])
+shutil.rmtree(d_b / "review", ignore_errors=True)
+
+# A flag followed by another flag is a missing value, not a value.
+r = subprocess.run([A.python, str(SCRIPTS / "render.py"), str(FX / "2026-10-31-bundle.json"), str(DESIGN), str(OUT / "flag-missing"),
+                    "--only", "--fonts", A.fonts], capture_output=True, text=True)
+record("flag with missing value refused", r.returncode != 0 and "--only needs a value" in r.stdout + r.stderr, (r.stdout + r.stderr).strip()[-200:])
 
 # ---------- summary ----------
 failed = [r for r in results if not r[1]]

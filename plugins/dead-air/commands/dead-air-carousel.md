@@ -59,6 +59,8 @@ Singles, bundles and weeklies need `reel` = {lead story, deep block} to pass the
 
 Record every correction in the calls and the report. **The sources win; never edit the Stories row.**
 
+For a non-Flash **single**, the carousel story's `headline` is the reporter's `headline_short` (a hook-l cover holds about 6 words); `reel.story.headline` keeps the full Flash-length line.
+
 ## Phase 5 — Build
 
 Write the post JSON and calls JSON per `${CLAUDE_PLUGIN_ROOT}/references/post-schema.md`, building each grid from the row's recorded checks (`${CLAUDE_PLUGIN_ROOT}/references/editorial-rules.md` §4–5). Name them `<date>-<format>` (or `-vN` for a re-cut).
@@ -69,7 +71,7 @@ Write the post JSON and calls JSON per `${CLAUDE_PLUGIN_ROOT}/references/post-sc
 python3 dead-air/render.py dead-air/posts/<name>.json <design_dir> dead-air/out/<name> --only carousel   # drop --only with --with-reel
 ```
 
-Fix failures per `${CLAUDE_PLUGIN_ROOT}/references/render-guide.md` §5, at most three passes.
+Fix failures per `${CLAUDE_PLUGIN_ROOT}/references/render-guide.md` §5, at most three passes. With `--with-reel`, put the reported Reel length in the calls' `reel_length`; on a carousel-only run, leave `reel_length` out.
 
 ## Phase 7 — QA
 
@@ -77,7 +79,7 @@ Launch `dead-air-qa` (`subagent_type: "dead-air:dead-air-qa"`) with `out_dir`, `
 
 ## Phase 8 — Deliver
 
-1. **Review page** per `${CLAUDE_PLUGIN_ROOT}/references/review-page.md`. Use `--name dead-air-<date>-<format>-vN` for a re-cut. A carousel-only run has no MP4 or cover to attach, so publish the PNGs only. `review_page.py` still draws its Reel panel, which will show an empty player; add a call saying the Reel wasn't rendered.
+1. **Review page** per `${CLAUDE_PLUGIN_ROOT}/references/review-page.md`. Use `--name dead-air-<date>-<format>-vN` for a re-cut. A carousel-only run has no MP4 or cover to attach, so publish the PNGs only. With no `reel_length` in the calls, `review_page.py` leaves out the Reel panel and the Reel caption.
 2. **Project docs:** the post JSON, the calls JSON and `<name>.md` in `dead-air/posts/`.
 3. **IG Posts row**, only if the carousel is for posting:
    - `--post` or an unattended run → write the row, Status Ready.

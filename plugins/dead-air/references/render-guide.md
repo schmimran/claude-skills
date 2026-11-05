@@ -32,7 +32,9 @@ python3 review_page.py <post.json> <out_dir> <calls.json> [--title "…"] [--h1 
 ```
 
 - `--fonts` defaults to the first `node_modules/@fontsource` found next to `render.py`, in the working directory, or in `./dead-air/`.
-- `--only carousel` renders just the PNGs. `--only reel` renders just the MP4 and the cover. Copy checks always run in full.
+- `--only carousel` renders just the PNGs. `--only reel` renders just the MP4 and the cover, and refuses an update post (it has no Reel). Copy checks always run in full.
+- Each run first deletes the outputs it is about to write (the carousel PNGs, and/or the MP4, cover and `.reel-frames/`), so re-rendering into the same `<out_dir>` never leaves a stale slide or frame behind. Other files in `<out_dir>` (the review HTML, `checks.json`) are left alone.
+- The MP4 is cut to exactly the planned length (`-t`), so the length `render.py` prints is the length of the file.
 - `--budget` / `--open-family` override the Reel timing ([reel-spec.md](reel-spec.md) §2). Use them only on purpose, and log it.
 - `review_page.py` creates `<out_dir>` and prints the path of the HTML file it wrote. Use its `--title`, `--h1` and `--name` flags for standalone deep posts ([review-page.md](review-page.md)). Never post-edit the HTML with `sed`.
 

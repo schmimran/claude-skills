@@ -34,6 +34,10 @@ python3 review_page.py <post.json> <out_dir> <calls.json> [--title …] [--h1 �
 
 If the Artifact tool can't publish, follow [render-guide.md](render-guide.md) §6.
 
+## Posts without a Reel
+
+The Reel panel and the Reel caption appear only when the calls JSON has a `reel_length`. Leave `reel_length` out when no Reel was rendered: on update posts (which have none) and on carousel-only `/dead-air-carousel` runs. Update posts may also omit `alt`, `caption` and `reel_caption`.
+
 ## Known quirk
 
-An ad-hoc story has `record_id: null`, so the stories table prints "None" in the record column. This is cosmetic; the script was ported as-is.
+An ad-hoc story has `record_id: null`, so the stories table prints "None" in the record column. This is cosmetic.

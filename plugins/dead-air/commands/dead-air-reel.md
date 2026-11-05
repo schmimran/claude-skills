@@ -176,7 +176,7 @@ Launch `dead-air-qa` (`subagent_type: "dead-air:dead-air-qa"`) with `out_dir`, `
 
 ## Phase 7 — Deliver
 
-1. **Bundle zip:** build it with `python3 -B <DA_ROOT>/scripts/bundle_zip.py <post.json> <DA_WS>/out/<date>-deep-<slug> <calls.json>` after setting the calls JSON's `bundle` to `<date>_deep<NN>`. `${CLAUDE_PLUGIN_ROOT}/references/render-guide.md` §7 has the naming convention, how NN is counted, and what to do when it refuses.
+1. **Bundle zip:** build it with `python3 -B <DA_ROOT>/scripts/bundle_zip.py <post.json> <DA_WS>/out/<date>-deep-<slug> <calls.json> <date>_deep<NN>` (the script records `bundle` in the calls JSON itself). `${CLAUDE_PLUGIN_ROOT}/references/render-guide.md` §7 has the naming convention, how NN is counted, and what to do when it refuses.
 2. **Review page** per `${CLAUDE_PLUGIN_ROOT}/references/review-page.md`:
    `python3 -B <DA_ROOT>/scripts/review_page.py <post.json> <DA_WS>/out/<name> <calls.json> --title "Dead Air: <Slug>" --h1 "Dead Air · <The subject>" --name dead-air-<slug>`
    Publish it as a new artifact with its media and its bundle zip. If it can't be published, follow `${CLAUDE_PLUGIN_ROOT}/references/render-guide.md` §6.

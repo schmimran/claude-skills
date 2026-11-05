@@ -56,7 +56,8 @@ def post_blocks(post, calls, n):
     slides = "".join(f'<figure class="slide"><img src="{f}" alt="{e(a)}" width="1080" height="1350" loading="lazy"><figcaption><span class="n">{i+1:02d} · {labels[i]}</span>'
                      f'<a class="dl-one" href="{f}" download="{f}">Download slide {i+1:02d}</a><span class="alt">{e(a)}</span></figcaption></figure>'
                      for i, (f, a) in enumerate(zip(pngs, alts)))
-    bundle = e(calls.get("bundle") or "")   # 0.4.0: the hand-off zip built by bundle_zip.py, published beside the media
+    bundle = calls.get("bundle")   # 0.4.0: set by bundle_zip.py after a verified build; the zip is published beside the media
+    bundle = bundle if isinstance(bundle, str) and re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}_[a-z]+[0-9]{2}", bundle) else ""
     bundle_btn = f'<a class="dl dl-bundle" href="{bundle}.zip" download="{bundle}.zip">Download bundle zip</a>' if bundle else ""
     zip_btn = bundle_btn + f'<button type="button" class="dl dl-zip" data-zip="{stem}-slides.zip" data-files="{e(" ".join(pngs))}">Download all slides</button>'
     rows = "".join(f'<tr><td class="num">{i+1:02d}</td><td><b>{e(s.get("title") or s["headline"])}</b><br><span class="mono">{s.get("record_id")}</span></td><td>{e(s.get("dateline", ""))}</td><td class="mono">{e(s.get("count") or s.get("stat") or "")}</td><td>{s["confidence"]}</td></tr>' for i, s in enumerate(post["stories"]))

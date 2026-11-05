@@ -119,7 +119,7 @@ python3 -B scripts/render.py <post.json> <design_dir> <out_dir> [--fonts <dir>] 
 python3 -B scripts/review_page.py <post.json> <out_dir> <calls.json> [--companion <update.json> <update-calls.json>]...
                                [--title …] [--h1 …] [--name …]
 python3 -B scripts/plan_day.py <plan-input.json>
-python3 -B scripts/bundle_zip.py <post.json> <out_dir> <calls.json>      # or: --check <file.zip>
+python3 -B scripts/bundle_zip.py <post.json> <out_dir> <calls.json> <folder>   # or: --check <file.zip>
 python3 -B scripts/cache_manifest.py <DA_ROOT> <out VERSION> [--commit <sha>] [--date YYYY-MM-DD]
 ```
 

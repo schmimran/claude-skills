@@ -169,7 +169,7 @@ Launch `dead-air-qa` (`subagent_type: "dead-air:dead-air-qa"`) with `out_dir`, `
 
 ## Phase 8 — Deliver
 
-1. **Bundle zip:** build it with `python3 -B <DA_ROOT>/scripts/bundle_zip.py <post.json> <DA_WS>/out/<name> <calls.json>` after setting the calls JSON's `bundle` to its folder name (a re-cut gets the next NN). Without `--with-reel` the zip holds the slides and `caption_carousel.txt` only. `${CLAUDE_PLUGIN_ROOT}/references/render-guide.md` §7 has the naming convention, how NN is counted, and what to do when it refuses.
+1. **Bundle zip:** build it with `python3 -B <DA_ROOT>/scripts/bundle_zip.py <post.json> <DA_WS>/out/<name> <calls.json> <folder>`, where `<folder>` is its `<date>_<format><NN>` name (a re-cut gets the next NN; the script records `bundle` in the calls JSON itself). Without `--with-reel` the zip holds the slides and `caption_carousel.txt` only. `${CLAUDE_PLUGIN_ROOT}/references/render-guide.md` §7 has the naming convention, how NN is counted, and what to do when it refuses.
 2. **Review page** per `${CLAUDE_PLUGIN_ROOT}/references/review-page.md`, built with `python3 -B <DA_ROOT>/scripts/review_page.py`. Use `--name dead-air-<date>-<format>-vN` for a re-cut. A carousel-only run has no MP4 or cover to attach, so publish the PNGs and the bundle zip only. With no `reel_length` in the calls, `review_page.py` leaves out the Reel panel and the Reel caption.
 3. **Project docs:** upload the post JSON, the calls JSON and `<name>.md` from `<DA_WS>/posts/` to project `dead-air/posts/` with `project_write` and absolute `local_path`s. New files only; nothing from `work/` or `out/`. The `.md` records the bundle folder name.
 4. **IG Posts row**, only if the carousel is for posting:

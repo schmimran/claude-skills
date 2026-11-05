@@ -66,7 +66,7 @@ python3 -B render.py <post.json> <design_dir> <out_dir> [--fonts <dir>] [--only 
 python3 -B review_page.py <post.json> <out_dir> <calls.json> [--companion <update.json> <update-calls.json>]...
                        [--title "…"] [--h1 "…"] [--name <file stem>]
 python3 -B plan_day.py <plan-input.json>
-python3 -B bundle_zip.py <post.json> <out_dir> <calls.json>        # §7; also: bundle_zip.py --check <file.zip>
+python3 -B bundle_zip.py <post.json> <out_dir> <calls.json> <folder>   # §7; also: bundle_zip.py --check <file.zip>
 python3 -B cache_manifest.py <DA_ROOT> <out VERSION> [--commit <sha>] [--date YYYY-MM-DD]
 ```
 
@@ -78,7 +78,7 @@ python3 -B cache_manifest.py <DA_ROOT> <out VERSION> [--commit <sha>] [--date YY
 - `review_page.py` creates `<out_dir>` and prints the path of the HTML file it wrote. `--companion` adds an Update companion's section to the day's page (repeat it for a second; at most two). It refuses a companion with a different date or the day's ask. Use its `--title`, `--h1` and `--name` flags for standalone deep posts ([review-page.md](review-page.md)). Never post-edit the HTML with `sed`.
 
 - `plan_day.py` prints the day's plan as JSON ([post-schema.md](post-schema.md) §3). It reads no files but its input and writes nothing.
-- `bundle_zip.py` writes `<out_dir>/<bundle>.zip` for one post (§7) and prints its path. It refuses, writes nothing and exits 1 if the naming convention isn't met. `--check <file.zip>` checks an existing zip against the convention.
+- `bundle_zip.py <post.json> <out_dir> <calls.json> <folder>` writes `<out_dir>/<folder>.zip` for one post (§7), records `bundle` in the calls JSON and prints the zip's path. It refuses, writes nothing, removes any `bundle` from the calls and exits 1 if the naming convention isn't met. `--check <file.zip>` checks an existing zip against the convention.
 - `cache_manifest.py` writes the cache's `VERSION` doc for `DA_ROOT` (§2) and prints the files it listed.
 
 **Outputs** in `<out_dir>`: `schmimknews-<date>-<format>-NN.png` (carousel; an update adds its slug, `schmimknews-<date>-update-<slug>-NN.png`), `-reel.mp4`, `-reel-cover.png`, `checks.json` (`{files, problems}`), and `.reel-frames/` (the per-step frames; QA may use them, but don't publish them).
@@ -141,8 +141,8 @@ Every post gets one zip of its raw media and captions, in a fixed layout, linked
 
 Names are lowercase, use `_` only between the date and the format and inside `slide_`/`video`/`caption_` names, and never change from post to post.
 
-**The counter `NN`** is 01 or higher, and separate for each date and format. Count the post JSONs (not `-calls.json`, not `.md`) in project `dead-air/posts/` and `dead-air/posts/legacy/` whose names contain both the post's date and its format. `NN` = that count + 1 + the number of posts of the same date and format already zipped earlier in this run. So a second bundle on one day is `bundle02`, a `-v2` re-cut gets the next number, and two Update companions on one day are `update01` and `update02`. Without the Projects tool, `NN` is the number of matching post JSONs in `DA_WS/posts/`, this post's own included. Never reuse a number.
+**The counter `NN`** is 01 or higher, and separate for each date and format. A post belongs to a date and format when its JSON file name is `<date>-<format>.json`, `<date>-<format>-<anything>.json` (slugs, `-vN` re-cuts) or the pre-v2 `<format>-<date>.json`: match the name from its start, never as a substring, so `2026-11-05-deep-bundle-fraud.json` is a deep post and not a bundle. Count those file names (not `-calls.json`, not `.md`) in project `dead-air/posts/` and `dead-air/posts/legacy/`, then add the number of posts of the same date and format already zipped earlier in this run. `NN` = that total + 1. So a second bundle on one day is `bundle02`, a `-v2` re-cut gets the next number, and two Update companions on one day are `update01` and `update02`. Without the Projects tool, count the matching names in `DA_WS/posts/` instead of the project folders, leaving out the post being zipped and any post not yet zipped. Never reuse a number. Dry-run posts are in the archive too, so they use up numbers; gaps are fine.
 
-**Running it.** After QA, set the calls JSON's `bundle` to the folder name, then `python3 -B <DA_ROOT>/scripts/bundle_zip.py <post.json> <DA_WS>/out/<name> <calls.json>`. It checks the folder name against the post's date and format, the slide count against `alt`, that every source file and caption exists, then builds the zip, reads it back (names, CRC, every media file byte for byte) and only then keeps it. A refusal prints each problem: fix the cause (never the check) and run again. If it can't be fixed, leave `bundle` out of the calls, so the review page has no zip button, and list it under Open calls. Never hand-build a zip.
+**Running it.** After QA, run `python3 -B <DA_ROOT>/scripts/bundle_zip.py <post.json> <DA_WS>/out/<name> <calls.json> <folder>` with the folder name from above. It checks the folder name against the post's date and format, the slide count against `alt`, that every source file and caption exists, then builds the zip, reads it back (names, CRC, every byte) and only then keeps it and records `"bundle": "<folder>"` in the calls JSON. A refusal prints each problem and leaves no `bundle` in the calls (it removes a stale one): fix the cause (never the check) and run again. If it can't be fixed, say so under Open calls; the review page then has no zip button, because it links the zip only when `bundle` is there. Never set `bundle` by hand and never hand-build a zip.
 
 The zip is published with the review page ([review-page.md](review-page.md)). It is not uploaded to the project, and it is not written to Airtable.

@@ -1,0 +1,124 @@
+{
+  "date": "2026-10-31",
+  "format": "deep",
+  "mode": "adhoc",
+  "flash": true,
+  "ask": "Follow for the next one.",
+  "stories": [
+    {
+      "record_id": null,
+      "topic": "Israel",
+      "headline": "On October 7, Israel's army fired on Israelis being dragged into Gaza.",
+      "stat": "Seven major US outlets didn't run it.",
+      "grid": [
+        "unchecked",
+        "silent",
+        "unchecked",
+        "unchecked",
+        "unchecked",
+        "silent",
+        "silent",
+        "silent",
+        "silent",
+        "silent",
+        "silent"
+      ],
+      "claim": "On October 7, Israeli commanders invoked the Hannibal Directive, an order cancelled in 2016, to stop Israelis being taken into Gaza.",
+      "dateline": "Reported Jul 7, 2024 · Haaretz",
+      "abroad": [
+        {
+          "name": "Haaretz",
+          "country": "Israel"
+        },
+        {
+          "name": "Yedioth Ahronoth",
+          "country": "Israel"
+        },
+        {
+          "name": "Times of Israel",
+          "country": "Israel"
+        },
+        {
+          "name": "ABC",
+          "country": "Australia"
+        }
+      ],
+      "us": "No report of the orders at seven of the 11. NYT, WSJ, AP and Reuters couldn't be checked.",
+      "confidence": "Probable",
+      "days_dark": 846,
+      "meta": "Haaretz broke it Jul 7, 2024 · checked Oct 31 · NYT, WSJ, AP, Reuters not checked"
+    }
+  ],
+  "deep": {
+    "timeline_lede": "An order cancelled in 2016, used anyway.",
+    "timeline": [
+      {
+        "d": "7:18 am",
+        "e": "Gunmen try to seize soldiers at the Erez crossing. Command orders “Hannibal at Erez” and sends an attack drone.",
+        "key": true
+      },
+      {
+        "d": "Before noon",
+        "e": "Soldiers are told no vehicle may return to Gaza. “Everyone knew” they could be carrying captives, an officer later says."
+      },
+      {
+        "d": "Oct 7",
+        "e": "An Israeli helicopter fires on a wagon taking hostages from Nir Oz. An Air Force probe finds it likely killed Efrat Katz, 68."
+      },
+      {
+        "d": "Evening",
+        "e": "On a general's order, a tank fires on a Be'eri house where gunmen hold 15 hostages. Thirteen die.",
+        "key": true
+      },
+      {
+        "d": "Feb 2025",
+        "e": "Former defence minister Yoav Gallant confirms on TV the order was given “in various places.”",
+        "key": true
+      }
+    ],
+    "timeline_note": "As of Oct 31: Israel has published no count of Israelis killed by Israeli fire that day.",
+    "claims": [
+      {
+        "who": "Yoav Gallant",
+        "src": "defence minister on Oct 7; Channel 12, Feb 2025",
+        "say": "The order was given “tactically” and “in various places.” “In other places it was not given, and that is a problem.”"
+      },
+      {
+        "who": "Col. Nof Erez",
+        "src": "Israeli Air Force (res.), quoted by ABC",
+        "say": "“This was a mass Hannibal.”"
+      },
+      {
+        "who": "IDF",
+        "src": "statement to ABC, Sep 2024",
+        "say": "It neither confirms nor denies using the directive: “Questions of this kind will be looked into at a later stage.”"
+      },
+      {
+        "who": "State Dept",
+        "src": "Matthew Miller, Jul 11, 2024",
+        "say": "“It was Hamas that was responsible for the overwhelming number of deaths on Oct. 7.”"
+      }
+    ],
+    "unknown": "How many Israelis died by Israeli fire. A UN inquiry says at least 14 civilians likely did; the IDF says the Be'eri tank fire killed no one inside, which survivors dispute.",
+    "us_small": [],
+    "family": {
+      "kicker": "Deep dive · Be'eri",
+      "quote": "“They eliminated everyone, including the hostages.”",
+      "who": "Yasmin Porat, one of two hostages who survived the Be'eri house, on the Israeli assault on it.",
+      "quote2": "“I don't believe the report and I don't believe anything about it.” Meir Zarbiv, whose brother and sister were killed on October 7, on the army's probe.",
+      "src": "Porat to Kan radio, quoted by ABC · Zarbiv to AP, Jul 2024",
+      "open": true
+    }
+  },
+  "caption": "Israel's own defence minister, air force and army probes describe the order. America's biggest newsrooms didn't run it.\n\nHaaretz reported on July 7, 2024 that commanders invoked the Hannibal Directive at Erez, Re'im and Nahal Oz on October 7, and ordered that no vehicle return to Gaza. An Israeli Air Force probe found a helicopter likely killed hostage Efrat Katz, and a UN inquiry found 14 or more Israeli civilians were likely killed by Israeli fire. We found no report of the orders at seven of the 11 major US outlets; NYT, WSJ, AP and Reuters couldn't be checked.\n\nFollow for the next one.\n\nCounts as reported abroad at 3+ major foreign outlets; counts as missing at home when none of the 11 major US outlets ran it, not counting whoever broke it. Board: news.schmim.com\n\n#DeadAir #SchmimKnews #October7 #Israel #Gaza\n\nSources\nHaaretz via Times of Israel (Jul 7, 2024); ABC Australia (Sep 7, 2024); AP via PBS (Jul 11, 2024); The Jewish Chronicle (Apr 2024); The Telegraph on the UN COI (Jun 13, 2024); Algemeiner on Matthew Miller (Jul 11, 2024); Channel 12 Gallant interview as reported in English (Feb 2025); Mondoweiss (Jul 10, 2024) and Media Lens (Feb 2025) on coverage.",
+  "reel_caption": "On October 7, Israel's army fired on Israelis being taken into Gaza. Its own probes say so. US newsrooms didn't run it.\n\n#DeadAir #SchmimKnews\n\nSources\nHaaretz via Times of Israel (Jul 7, 2024); ABC Australia (Sep 7, 2024); AP via PBS (Jul 11, 2024); The Jewish Chronicle (Apr 2024); The Telegraph on the UN COI (Jun 13, 2024); Algemeiner on Matthew Miller (Jul 11, 2024); Channel 12 Gallant interview as reported in English (Feb 2025); Mondoweiss (Jul 10, 2024) and Media Lens (Feb 2025) on coverage.",
+  "alt": [
+    "Cover: On October 7, Israel's army fired on Israelis being dragged into Gaza. Seven major US outlets didn't run it.",
+    "Be'eri: survivor Yasmin Porat: “They eliminated everyone, including the hostages.” Meir Zarbiv, who lost a brother and sister, on the army's probe: “I don't believe the report.”",
+    "Timeline of October 7: the Hannibal order at Erez, the no-vehicle order, the helicopter strike at Nir Oz, the tank fire at Be'eri, and Gallant's confirmation.",
+    "What each side says: Yoav Gallant, Air Force Col. Nof Erez, the IDF and the US State Department, plus what is not established.",
+    "Who ran it: Haaretz, Yedioth Ahronoth, Times of Israel and ABC Australia. No report of the orders found at seven of the 11 major US outlets.",
+    "How we check: abroad counts at three or more major foreign outlets; at home it counts as missing when none of the 11 major US outlets ran it."
+  ],
+  "sources": "Haaretz via Times of Israel (Jul 7, 2024); ABC Australia (Sep 7, 2024); AP via PBS (Jul 11, 2024); The Jewish Chronicle (Apr 2024); The Telegraph on the UN COI (Jun 13, 2024); Algemeiner on Matthew Miller (Jul 11, 2024); Channel 12 Gallant interview as reported in English (Feb 2025); Mondoweiss (Jul 10, 2024) and Media Lens (Feb 2025) on coverage."
+}

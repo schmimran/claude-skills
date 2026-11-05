@@ -3,3 +3,7 @@
 .env.*
 .claude
 node_modules/
+
+# dead-air fixture tests: rendered output and locally installed fonts
+plugins/dead-air/tests/out/
+plugins/dead-air/tests/.fonts/

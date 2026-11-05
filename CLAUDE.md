@@ -160,6 +160,35 @@ plugins/
       reconciliation-rubric.md    # Priority order and decision matrix for Phase 6 reconciliation
       parity-guardrails.md        # Rules for honoring the parity registry (match behavior, not implementation)
     README.md                     # Plugin-specific documentation
+  dead-air/                       # Plugin: Schmim Knews "Dead Air" Instagram carousels + reported deep-dive Reels (claude.ai-first)
+    .claude-plugin/
+      plugin.json                 # Plugin manifest
+    commands/
+      dead-air.md                 # Daily editor — dashboard → format/stories → report → build → render → QA → deliver → report
+      dead-air-carousel.md        # One carousel from chosen Stories records, or a -vN re-cut of an existing post JSON
+      dead-air-reel.md            # One reported deep-dive Reel on any topic (record, URLs, plain language); ad-hoc coverage check
+    agents/
+      dead-air-reporter.md        # Reports one story: timeline, named statements, unknowns, sources, dashboard corrections
+      dead-air-coverage.md        # 11-outlet US coverage check for one claim — ran / didn't / unchecked, never inferred
+      dead-air-qa.md              # Reads every PNG + a Reel tile sheet; pass or numbered copy fixes; never edits files
+    references/
+      editorial-rules.md          # Format choice, eligibility/ranking, Flash, grid, count line, captions, Reel content, voice
+      post-schema.md              # Post JSON, story object, deep block, calls JSON — field by field
+      reel-spec.md                # Reel structure, timing, ad-hoc mode, families slide
+      render-guide.md             # Workspace setup, script lookup, render.py/review_page.py flags, checks, fix loop, fallbacks
+      review-page.md              # What the review page shows; title/h1/name rules; publishing
+      airtable-guide.md           # IG Posts fields by NAME only + quirks; never write Stories; IDs come from config.md
+      coverage-guide.md           # Outlet domains, search-tool quirks, robots blocks, verdict rules
+      report-format.md            # The §11 run report + clean-stop wording
+      carousel-spec.md            # Historical v3 rules from the claude.ai session, reconciled to SPEC v2
+    scripts/
+      render.py                   # Post JSON + design system → carousel PNGs, Reel MP4, cover, checks.json (Playwright + ffmpeg)
+      review_page.py              # Post JSON + calls JSON → review-page HTML
+    tests/
+      run-fixture.sh              # Runs the fixture tests (needs a Python with Playwright, ffmpeg, npm)
+      check_fixtures.py           # SPEC §13 tests 1–7a + mode: adhoc, stdlib only
+      fixtures/                   # Two approved posts + calls, and an offline design-system snapshot (tests only)
+    README.md                     # Plugin-specific documentation
 ```
 
 Each plugin lives under `plugins/<name>/` and is independently installable. Plugins use the **commands + agents** pattern: commands are user-invocable orchestrators, agents are specialized workers launched by commands.
@@ -318,6 +347,7 @@ claude --plugin-dir /path/to/claude-skills/plugins/feature-creator
 | feature-creator | Feature state machine: `feature - ready for claude`, `feature - planned`, `feature - human review`, `feature - in progress`, `feature - complete`. Bug state machine (shared with bug-sweeper): `bug`, `bug - ready for claude`, `bug - triaged`, `bug - planned`, `bug - human review`, `bug - in progress`, `bug - complete`, `bug - high`, `bug - medium`, `bug - low`. |
 | bug-sweeper | Files issues with `bug`, `bug - ready for claude`, and one of the severity labels (`bug - high|medium|low`) — all defined in feature-creator's set; bug-sweeper does not introduce its own labels |
 | security-scanner | Security state machine (its own, shared with no other plugin): `security`, `security - ready for claude`, `security - suppressed`, `security - human review` |
+| dead-air | None — it reads and writes Airtable, not GitHub Issues. Its base, table and field IDs and its artifact URLs live in the private project doc `dead-air/config.md` and must never be committed to this public repo. |
 
 Where label names are shared across plugins (notably `feature - ready for claude` and the entire `bug - *` set), the colors and descriptions in feature-creator's README are canonical — use those when creating labels.
 
@@ -331,7 +361,15 @@ When adding a new plugin that files issues, give it its own `<type> - ready for 
 
 ## Build & Test Commands
 
-No build or test commands. This is a pure-markdown plugin repository.
+No build commands. Most plugins are pure markdown.
+
+Exception: `dead-air` ships Python scripts with fixture tests. Run them after any change to its `scripts/` or `tests/fixtures/`:
+
+```bash
+DEAD_AIR_PYTHON=/path/to/python-with-playwright plugins/dead-air/tests/run-fixture.sh
+```
+
+It needs Playwright (`pip install playwright && python -m playwright install chromium`; use a throwaway venv), ffmpeg/ffprobe and npm. The fonts install into the gitignored `plugins/dead-air/tests/.fonts/`, and the output goes to the gitignored `tests/out/`.
 
 ## Behavioral Rules for AI Contributors
 
